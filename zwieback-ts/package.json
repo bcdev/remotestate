@@ -1,13 +1,13 @@
 {
-  "name": "pyre",
+  "name": "zwieback",
   "version": "0.1.0",
   "type": "module",
-  "main": "./dist/pyre.js",
-  "types": "./dist/pyre.d.ts",
+  "main": "./dist/zwieback.js",
+  "types": "./dist/zwieback.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/pyre.js",
-      "types": "./dist/pyre.d.ts"
+      "import": "./dist/zwieback.js",
+      "types": "./dist/zwieback.d.ts"
     }
   },
   "scripts": {

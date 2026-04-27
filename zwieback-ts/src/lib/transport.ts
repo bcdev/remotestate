@@ -1,12 +1,12 @@
 import type { IncomingMessage, OutgoingMessage } from "./protocol";
-import type { IPyreTransport } from "./types";
+import type { Transport } from "./types";
 
 type MessageHandler = (msg: OutgoingMessage) => void;
 
 const RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
-export class PyreTransport implements IPyreTransport {
+export class TransportImpl implements Transport {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
   private pendingRequests: IncomingMessage[] = [];

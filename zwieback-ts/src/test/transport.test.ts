@@ -1,6 +1,6 @@
 // src/test/transport.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { PyreTransport } from "../lib/transport";
+import { TransportImpl } from "../lib/transport";
 
 interface MockWs {
   onopen: (() => void) | null;
@@ -37,23 +37,23 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", MockWebSocket);
 });
 
-describe("PyreTransport", () => {
+describe("TransportImpl", () => {
   it("sends message immediately when connected", () => {
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 1; // OPEN
     transport.send({ type: "get", id: "1", path: "count" });
     expect(lastMockWs.send).toHaveBeenCalledOnce();
   });
 
   it("queues messages when not yet connected", () => {
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 0; // CONNECTING
     transport.send({ type: "get", id: "1", path: "count" });
     expect(lastMockWs.send).not.toHaveBeenCalled();
   });
 
   it("flushes queued messages on connect", () => {
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 0; // CONNECTING
 
     transport.send({ type: "get", id: "1", path: "count" });
@@ -68,7 +68,7 @@ describe("PyreTransport", () => {
   });
 
   it("notifies subscribers on incoming message", () => {
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     const handler = vi.fn();
     transport.subscribe(handler);
 
@@ -81,7 +81,7 @@ describe("PyreTransport", () => {
   });
 
   it("unsubscribe stops notifications", () => {
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     const handler = vi.fn();
     const unsubscribe = transport.subscribe(handler);
     unsubscribe();
@@ -96,7 +96,7 @@ describe("PyreTransport", () => {
 
   it("reconnects after disconnect with exponential backoff", () => {
     vi.useFakeTimers();
-    new PyreTransport("ws://localhost:9753/ws");
+    new TransportImpl("ws://localhost:9753/ws");
 
     if (lastMockWs.onclose) {
       lastMockWs.onclose();
@@ -109,7 +109,7 @@ describe("PyreTransport", () => {
 
   it("does not reconnect after close()", () => {
     vi.useFakeTimers();
-    const transport = new PyreTransport("ws://localhost:9753/ws");
+    const transport = new TransportImpl("ws://localhost:9753/ws");
     transport.close();
 
     if (lastMockWs.onclose) {

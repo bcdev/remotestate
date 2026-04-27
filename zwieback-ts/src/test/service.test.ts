@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { PyreService } from "../lib/service";
+import { ServiceImpl } from "../lib/service";
 import { mockTransportWithHandler, asTransport } from "./mocks";
 
-describe("PyreService", () => {
+describe("ServiceImpl", () => {
   describe("action", () => {
     it("sends action message", () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       void service.action("increment");
 
@@ -17,14 +17,14 @@ describe("PyreService", () => {
 
     it("resolves immediately without awaitInvalidate", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       await expect(service.action("increment")).resolves.toBeUndefined();
     });
 
     it("waits for invalidate when awaitInvalidate is true", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.action(
         "increment",
@@ -45,7 +45,7 @@ describe("PyreService", () => {
 
     it("rejects on error message", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.action(
         "increment",
@@ -68,7 +68,7 @@ describe("PyreService", () => {
   describe("query", () => {
     it("sends query message", () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       void service.query("compute", [5.0]);
 
@@ -79,7 +79,7 @@ describe("PyreService", () => {
 
     it("resolves with query_result value", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
       const sentMsg = transport.send.mock.calls[0][0] as { id: string };
@@ -95,7 +95,7 @@ describe("PyreService", () => {
 
     it("rejects on error message", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
       const sentMsg = transport.send.mock.calls[0][0] as { id: string };
@@ -111,7 +111,7 @@ describe("PyreService", () => {
 
     it("ignores messages with different id", async () => {
       const transport = mockTransportWithHandler();
-      const service = new PyreService(asTransport(transport));
+      const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
 

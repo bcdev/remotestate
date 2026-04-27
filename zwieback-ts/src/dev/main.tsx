@@ -1,6 +1,6 @@
-// src/dev/main.tsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { ClientProvider } from "../lib";
 import App from "./App";
 
 const root = document.getElementById("root");
@@ -9,6 +9,8 @@ if (!root) {
 }
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ClientProvider url={"http://localhost:9753"}>
+      <App />
+    </ClientProvider>
   </StrictMode>,
 );

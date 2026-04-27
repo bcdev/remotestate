@@ -1,25 +1,30 @@
-// src/lib/service.ts
-import type { IPyreTransport } from "./types";
+import type { Service, Transport } from "./types";
 
 type Args = unknown[];
 type Kwargs = Record<string, unknown>;
 
 export interface ActionOptions {
-  // If true, waits for the InvalidateMessage before resolving.
+  /**
+   * If true, waits for the InvalidateMessage before resolving.
+   */
   awaitInvalidate?: boolean;
-  // Client-supplied task ID for progress tracking via useTask().
-  // Defaults to the auto-generated call ID if not provided.
+  /**
+   * Client-supplied task ID for progress tracking via useTask().
+   * Defaults to the auto-generated call ID if not provided.
+   */
   taskId?: string;
 }
 
 export interface QueryOptions {
-  // Client-supplied task ID for progress tracking via useTask().
-  // Defaults to the auto-generated call ID if not provided.
+  /**
+   * Client-supplied task ID for progress tracking via useTask().
+   * Defaults to the auto-generated call ID if not provided.
+   */
   taskId?: string;
 }
 
-export class PyreService {
-  constructor(private readonly transport: IPyreTransport) {}
+export class ServiceImpl implements Service {
+  constructor(private readonly transport: Transport) {}
 
   async action(
     method: string,

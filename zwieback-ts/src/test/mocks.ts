@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { IPyreTransport, IPyreStore } from "../lib/types";
+import type { Transport, Store } from "../lib/types";
 
 export interface MockTransport {
   send: ReturnType<typeof vi.fn>;
@@ -18,12 +18,12 @@ export interface MockStore {
   dispose: ReturnType<typeof vi.fn>;
 }
 
-export function asTransport(mock: MockTransport): IPyreTransport {
-  return mock as unknown as IPyreTransport;
+export function asTransport(mock: MockTransport): Transport {
+  return mock as unknown as Transport;
 }
 
-export function asStore(mock: MockStore): IPyreStore {
-  return mock as unknown as IPyreStore;
+export function asStore(mock: MockStore): Store {
+  return mock as unknown as Store;
 }
 
 export function mockTransport(): MockTransport {

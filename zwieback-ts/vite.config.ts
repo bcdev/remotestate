@@ -7,8 +7,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, "src/lib/index.ts"),
-      name: "pyre",
-      fileName: "pyre",
+      name: "zwieback",
+      fileName: "zwieback",
       formats: ["es"],
     },
     rollupOptions: {
