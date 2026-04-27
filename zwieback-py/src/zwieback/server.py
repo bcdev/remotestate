@@ -1,4 +1,4 @@
-# pyre/server.py
+# zwieback/server.py
 from __future__ import annotations
 
 import logging
@@ -9,7 +9,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import TypeAdapter
 
-from pyre.protocol import (
+from zwieback.protocol import (
     ActionMessage,
     ErrorMessage,
     GetMessage,
@@ -21,13 +21,13 @@ from pyre.protocol import (
     QueryResultMessage,
     TaskUpdateMessage,
 )
-from pyre.service import PythonService
-from pyre.transport import PyreTransport
+from zwieback.service import Service
+from zwieback.transport import Transport
 
 _incoming_adapter = TypeAdapter(IncomingMessage)
 
 
-class WebSocketTransport(PyreTransport):
+class WebSocketTransport(Transport):
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
 
@@ -80,7 +80,7 @@ class WebSocketTransport(PyreTransport):
 class PyreServer:
     def __init__(
         self,
-        service: PythonService,
+        service: Service,
         *,
         ui_dist_path: str | None = None,
     ) -> None:
@@ -98,7 +98,9 @@ class PyreServer:
             await self._transport._handle_ws(websocket, self._dispatch)
 
         if ui_dist_path:
-            app.mount("/", StaticFiles(directory=ui_dist_path, html=True), name="ui")
+            app.mount(
+                "/", StaticFiles(directory=ui_dist_path, html=True), name="ui-dist"
+            )
 
         return app
 
@@ -173,4 +175,4 @@ def _write_error(e: Exception, msg_text: str) -> None:
             msg_text + "\n",
         ]
     )
-    pathlib.Path(f"pyre-error-{uuid.uuid4()}.txt").write_text(content)
+    pathlib.Path(f"zwieback-error-{uuid.uuid4()}.txt").write_text(content)

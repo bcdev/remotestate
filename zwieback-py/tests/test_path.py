@@ -1,6 +1,6 @@
 import pytest
 
-from pyre.path import (
+from zwieback.path import (
     Index,
     Property,
     from_jsonpath,

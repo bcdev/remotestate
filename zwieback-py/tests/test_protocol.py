@@ -2,7 +2,12 @@ import json
 
 from pydantic import TypeAdapter
 
-from pyre.protocol import IncomingMessage, GetMessage, OutgoingMessage, ActionMessage
+from zwieback.protocol import (
+    IncomingMessage,
+    GetMessage,
+    OutgoingMessage,
+    ActionMessage,
+)
 
 _incoming_adapter = TypeAdapter(IncomingMessage)
 _outgoing_adapter = TypeAdapter(OutgoingMessage)

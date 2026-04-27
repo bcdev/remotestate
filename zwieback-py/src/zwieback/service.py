@@ -1,4 +1,4 @@
-# pyre/service.py
+# zwieback/service.py
 from __future__ import annotations
 
 import asyncio
@@ -7,9 +7,9 @@ import inspect
 from collections.abc import Callable
 from typing import Any, Awaitable
 
-from pyre.context import _call_context, _CallContext
-from pyre.protocol import TaskUpdateMessage
-from pyre.store import PendingUpdates, PythonStore, _batch_pending_updates
+from zwieback.context import _call_context, _CallContext
+from zwieback.protocol import TaskUpdateMessage
+from zwieback.store import PendingUpdates, PythonStore, _batch_pending_updates
 
 
 class _ActionMarker:
@@ -41,7 +41,7 @@ def query(fn: Callable) -> _QueryMarker:
     return _QueryMarker(_ensure_async(fn))
 
 
-class PythonService:
+class Service:
     store: PythonStore
     _actions: dict[str, Callable]
     _queries: dict[str, Callable]

@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 
 # noinspection PyProtectedMember
-from pyre.store import PythonStore, _batch_pending_updates
+from zwieback.store import PythonStore, _batch_pending_updates
 
 # --- Fixtures ---
 

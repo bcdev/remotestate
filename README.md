@@ -2,8 +2,10 @@
 
 > **Twice baked.** Once in Python, once in TypeScript.
 
-Zwieback is a lightweight framework for building reactive UIs where **all state and logic live in Python** — only the rendering happens in the browser. Write your backend in Python, your frontend in React, and let zwieback handle the rest.
-
+Zwieback is a lightweight framework for building reactive UIs where 
+**all state and logic live in Python** — only the rendering happens in the browser. 
+Write your backend in Python, your frontend in React, 
+and let zwieback handle the rest.
 ---
 
 ## ✨ Why zwieback?

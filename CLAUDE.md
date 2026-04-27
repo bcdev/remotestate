@@ -1,14 +1,21 @@
-# pyre — Python/React Bridge
+# zwieback — Python/React Bridge
+
+> **Twice baked.** Once in Python, once in TypeScript.
+
+Zwieback is a lightweight framework for building reactive UIs where 
+**all state and logic live in Python** — only the rendering happens in the browser. 
+Write your backend in Python, your frontend in React, 
+and let zwieback handle the rest.
 
 ## Vision
 
 A lightweight bridge between Python and React, allowing developers to build
 React UIs with Python backends. Event handlers and state live in Python;
-the React UI is pure TypeScript/React. Renders inside Jupyter notebooks
+the React UI is pure TS/JS. Renders inside Jupyter notebooks
 (as IFrame) or as a standalone app.
 
-The Python backend library is located in `./pyre-py`, 
-the React/TS frontend library in `-/pyre-re`.
+The Python backend library is located in `./zwieback-py`, 
+the React/TS frontend library in `-/zwieback-ts`.
 
 ## Usage (target API)
 
@@ -23,6 +30,7 @@ store = pyre.PythonStore({
     "count": 0,
 })
 
+
 class MyService(pyre.PythonService):
     @pyre.action
     async def increment(self):
@@ -36,7 +44,8 @@ class MyService(pyre.PythonService):
     async def compute(self, x: float) -> float:
         return x * self.store.get("factor")
 
-pyre.show(MyService(store), ui_dist_path="pyre-re/dist")
+
+pyre.show(MyService(store), ui_dist_path="zwieback-ts/dist")
 ```
 
 ### TypeScript/React
@@ -118,8 +127,8 @@ Python → JS:
 ## Project Structure
 
 ```
-pyre/
-  pyre-py/                  # Python package
+zwieback/
+  zwieback-py/              # Python package
     src/pyre/
       context.py            # _readonly_store ContextVar
       path.py               # PyrePath parser (Property, Index, prefixes)
@@ -134,7 +143,7 @@ pyre/
       service_test.py
       server_test.py
 
-  pyre-re/                  # TypeScript/React package (name: "pyre")
+zwieback-ts/                # TypeScript/React package (name: "pyre")
     src/
       lib/                  # library code (built by vite lib mode)
         protocol.ts

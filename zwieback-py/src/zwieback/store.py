@@ -1,12 +1,12 @@
-# pyre/store.py
+# zwieback/store.py
 from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
 from typing import Any
 
-from pyre.context import _call_context
-from pyre.path import (
+from zwieback.context import _call_context
+from zwieback.path import (
     Index,
     Path,
     PathSegment,

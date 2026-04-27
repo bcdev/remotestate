@@ -3429,12 +3429,6 @@ packages:
   - pkg:pypi/pyobjc-framework-cocoa?source=hash-mapping
   size: 374792
   timestamp: 1763160601898
-- pypi: ./
-  name: pyre
-  version: 0.1.0
-  sha256: 3d5e70f4f60406a0d8cd696e5d090b3d743f93aa02686862bbbac5542f3f8f03
-  requires_python: '>=3.12'
-  editable: true
 - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyh09c184e_7.conda
   sha256: d016e04b0e12063fbee4a2d5fbb9b39a8d191b5a0042f0b8459188aedeabb0ca
   md5: e2fd202833c4a981ce8a65974fe4abd1
@@ -4960,3 +4954,9 @@ packages:
   purls: []
   size: 388453
   timestamp: 1764777142545
+- pypi: ./
+  name: zwieback
+  version: 0.1.0
+  sha256: e445bde2334df32bc353f982a8963e119b8873de763e72b49f1b6d064c298e93
+  requires_python: '>=3.12'
+  editable: true

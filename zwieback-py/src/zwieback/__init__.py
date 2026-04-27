@@ -1,10 +1,10 @@
-from .service import PythonService, action, query
+from .service import Service, action, query
 from .show import show
 from .store import PythonStore
 
 __all__ = [
     "PythonStore",
-    "PythonService",
+    "Service",
     "action",
     "query",
     "show",

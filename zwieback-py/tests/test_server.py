@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from pyre.protocol import (
+from zwieback.protocol import (
     ActionMessage,
     ErrorMessage,
     GetMessage,
@@ -11,9 +11,9 @@ from pyre.protocol import (
     QueryMessage,
     QueryResultMessage,
 )
-from pyre.server import PyreServer, WebSocketTransport
-from pyre.service import PythonService, action, query
-from pyre.store import PythonStore
+from zwieback.server import PyreServer, WebSocketTransport
+from zwieback.service import Service, action, query
+from zwieback.store import PythonStore
 
 # --- Fixtures ---
 
@@ -25,7 +25,7 @@ def store():
 
 @pytest.fixture
 def service(store):
-    class MyService(PythonService):
+    class MyService(Service):
         @action
         async def increment(self):
             self.store.set("count", self.store.get("count") + 1)

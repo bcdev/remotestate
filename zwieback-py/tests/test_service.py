@@ -3,10 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyre.context import _call_context
-from pyre.protocol import TaskUpdateMessage
-from pyre.service import PythonService, action, query
-from pyre.store import PythonStore
+from zwieback.context import _call_context
+from zwieback.protocol import TaskUpdateMessage
+from zwieback.service import Service, action, query
+from zwieback.store import PythonStore
 from tests.conftest import make_sender
 
 # --- Fixtures ---
@@ -23,8 +23,8 @@ def store():
     )
 
 
-def make_service(store: PythonStore) -> PythonService:
-    class MyService(PythonService):
+def make_service(store: PythonStore) -> Service:
+    class MyService(Service):
         @action
         async def increment(self):
             self.store.set("count", self.store.get("count") + 1)
@@ -171,7 +171,7 @@ async def test_query_with_args(store):
 
 @pytest.mark.asyncio
 async def test_query_cannot_mutate(store):
-    class BadService(PythonService):
+    class BadService(Service):
         @query
         async def bad(self):
             self.store.set("count", 1)
@@ -277,7 +277,7 @@ async def test_progress_no_effect_outside_dispatch(store):
 
 @pytest.mark.asyncio
 async def test_progress_available_in_query(store):
-    class ProgressQuery(PythonService):
+    class ProgressQuery(Service):
         @query
         async def slow_query(self) -> int:
             self.progress(name="Computing", progress=50)

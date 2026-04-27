@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
-from pyre.protocol import OutgoingMessage
+from zwieback.protocol import OutgoingMessage
 
 
-class PyreTransport(ABC):
+class Transport(ABC):
     @abstractmethod
     async def send(self, msg: OutgoingMessage) -> None: ...
 

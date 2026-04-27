@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 # noinspection PyProtectedMember
-from pyre.context import _call_context, _CallContext
-from pyre.protocol import TaskUpdateMessage
+from zwieback.context import _call_context, _CallContext
+from zwieback.protocol import TaskUpdateMessage
 
 
 def make_sender(

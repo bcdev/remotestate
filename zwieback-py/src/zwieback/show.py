@@ -7,10 +7,10 @@ import webbrowser
 
 import uvicorn
 
-from pyre.server import PyreServer
-from pyre.service import PythonService
+from zwieback.server import PyreServer
+from zwieback.service import Service
 
-# Imported at module level so tests can patch pyre.show._get_ipython.
+# Imported at module level so tests can patch zwieback.show._get_ipython.
 try:
     from IPython import get_ipython as _get_ipython
 except ImportError:
@@ -63,7 +63,7 @@ def _wait_for_port_free(host: str, port: int, timeout: float = 5.0) -> None:
 
 
 def show(
-    service: PythonService,
+    service: Service,
     *,
     ui_dist_path: str | None = None,
     host: str = DEFAULT_HOST,
@@ -72,7 +72,7 @@ def show(
     open_iframe: bool | None = None,
     iframe_height: int = DEFAULT_IFRAME_HEIGHT,
 ) -> None:
-    """Start the pyre server and display the UI.
+    """Start the zwieback server and display the UI.
 
     Args:
         service: The PythonService instance to serve.
