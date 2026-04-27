@@ -9,7 +9,7 @@ from typing import Any, Awaitable
 
 from zwieback.context import _call_context, _CallContext
 from zwieback.protocol import TaskUpdateMessage
-from zwieback.store import PendingUpdates, PythonStore, _batch_pending_updates
+from zwieback.store import PendingUpdates, Store, _batch_pending_updates
 
 
 class _ActionMarker:
@@ -42,7 +42,7 @@ def query(fn: Callable) -> _QueryMarker:
 
 
 class Service:
-    store: PythonStore
+    store: Store
     _actions: dict[str, Callable]
     _queries: dict[str, Callable]
 
@@ -59,7 +59,7 @@ class Service:
                 cls._queries[name] = value.fn
                 setattr(cls, name, value.fn)
 
-    def __init__(self, store: PythonStore) -> None:
+    def __init__(self, store: Store) -> None:
         self.store = store
 
     def progress(
@@ -95,7 +95,7 @@ class Service:
         # noinspection PyTypeChecker
         asyncio.create_task(message_coro)
 
-    async def _pyre_invoke_action(
+    async def _zw_invoke_action(
         self,
         method: str,
         args: list[Any],
@@ -125,7 +125,7 @@ class Service:
         finally:
             _call_context.reset(token)
 
-    async def _pyre_invoke_query(
+    async def _zw_invoke_query(
         self,
         method: str,
         args: list[Any],

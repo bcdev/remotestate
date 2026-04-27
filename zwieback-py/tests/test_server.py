@@ -11,16 +11,16 @@ from zwieback.protocol import (
     QueryMessage,
     QueryResultMessage,
 )
-from zwieback.server import PyreServer, WebSocketTransport
+from zwieback.server import Server, WebSocketTransport
 from zwieback.service import Service, action, query
-from zwieback.store import PythonStore
+from zwieback.store import Store
 
 # --- Fixtures ---
 
 
 @pytest.fixture
 def store():
-    return PythonStore({"count": 0, "user": {"name": "Norman"}})
+    return Store({"count": 0, "user": {"name": "Norman"}})
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def service(store):
 
 @pytest.fixture
 def server(service):
-    return PyreServer(service=service)
+    return Server(service)
 
 
 # --- WebSocketTransport ---

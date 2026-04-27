@@ -95,7 +95,7 @@ _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
 )
 
 
-class PythonStore:
+class Store:
     def __init__(self, initial: dict[str, Any]) -> None:
         self._state = initial
         self._subscribers: list[Callable[[PendingUpdates], None]] = []

@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 
 # noinspection PyProtectedMember
-from zwieback.store import PythonStore, _batch_pending_updates
+from zwieback.store import Store, _batch_pending_updates
 
 # --- Fixtures ---
 
@@ -22,7 +22,7 @@ class User(BaseModel):
 
 @pytest.fixture
 def simple_store():
-    return PythonStore(
+    return Store(
         {
             "user": {"name": "Norman", "age": 42},
             "items": [{"id": 0, "label": "foo"}, {"id": 1, "label": "bar"}],
@@ -33,7 +33,7 @@ def simple_store():
 
 @pytest.fixture
 def pydantic_store():
-    return PythonStore(
+    return Store(
         {
             "user": User(
                 name="Norman",

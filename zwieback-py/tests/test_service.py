@@ -6,7 +6,7 @@ import pytest
 from zwieback.context import _call_context
 from zwieback.protocol import TaskUpdateMessage
 from zwieback.service import Service, action, query
-from zwieback.store import PythonStore
+from zwieback.store import Store
 from tests.conftest import make_sender
 
 # --- Fixtures ---
@@ -14,7 +14,7 @@ from tests.conftest import make_sender
 
 @pytest.fixture
 def store():
-    return PythonStore(
+    return Store(
         {
             "count": 0,
             "user": {"name": "Norman"},
@@ -23,7 +23,7 @@ def store():
     )
 
 
-def make_service(store: PythonStore) -> Service:
+def make_service(store: Store) -> Service:
     class MyService(Service):
         @action
         async def increment(self):
@@ -70,7 +70,7 @@ def make_service(store: PythonStore) -> Service:
 def invoke_action(service, method, *, args=None, kwargs=None):
     sender, sender_impl = make_sender()
     return (
-        service._pyre_invoke_action(
+        service._zw_invoke_action(
             method,
             args or [],
             kwargs or {},
@@ -85,7 +85,7 @@ def invoke_action(service, method, *, args=None, kwargs=None):
 def invoke_query(service, method, args=None, kwargs=None):
     sender, _sender_impl = make_sender()
     return (
-        service._pyre_invoke_query(
+        service._zw_invoke_query(
             method,
             args or [],
             kwargs or {},
@@ -285,7 +285,7 @@ async def test_progress_available_in_query(store):
 
     svc = ProgressQuery(store)
     sender, sender_impl = make_sender()
-    result = await svc._pyre_invoke_query(
+    result = await svc._zw_invoke_query(
         "slow_query",
         [],
         {},

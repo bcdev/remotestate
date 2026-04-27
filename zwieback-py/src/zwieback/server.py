@@ -1,12 +1,12 @@
-# zwieback/server.py
 from __future__ import annotations
 
 import logging
-
+import pathlib
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from starlette.staticfiles import PathLike
 from pydantic import TypeAdapter
 
 from zwieback.protocol import (
@@ -25,6 +25,109 @@ from zwieback.service import Service
 from zwieback.transport import Transport
 
 _incoming_adapter = TypeAdapter(IncomingMessage)
+
+
+class Server:
+    def __init__(
+        self,
+        service: Service,
+        *,
+        mounts: dict[str, PathLike | StaticFiles] | None = None,
+    ) -> None:
+        self._store = service.store
+        self._service = service
+        self._transport = WebSocketTransport()
+        self._app = self._build_app(mounts)
+
+    def _build_app(self, mounts: dict[str, PathLike | StaticFiles] | None) -> FastAPI:
+        app = FastAPI()
+
+        @app.websocket("/ws")
+        async def ws_endpoint(websocket: WebSocket) -> None:
+            # noinspection PyProtectedMember
+            await self._transport._handle_ws(websocket, self._dispatch)
+
+        if mounts:
+            for k, v in mounts.items():
+                if isinstance(v, StaticFiles):
+                    files = v
+                else:
+                    files = StaticFiles(directory=v)
+                app.mount(k, files)
+
+        return app
+
+    @property
+    def app(self) -> FastAPI:
+        return self._app
+
+    def _make_sender(self) -> Callable[[TaskUpdateMessage], Awaitable[None]]:
+        async def sender(msg: TaskUpdateMessage) -> None:
+            await self._transport.send(msg)
+
+        return sender
+
+    # noinspection PyShadowingBuiltins,PyProtectedMember
+    async def _dispatch(self, msg: IncomingMessage) -> None:
+        try:
+            await self.__dispatch(msg)
+        except Exception as e:
+            logging.getLogger("uvicorn").error(
+                "unknown message received", exc_info=True
+            )
+            await self._transport.send(
+                ErrorMessage(type="error", id=msg.id, message=str(e))
+            )
+
+    async def __dispatch(self, msg: IncomingMessage) -> None:
+        match msg:
+            case GetMessage(id=id, path=path):
+                value = self._store.get(path)
+                await self._transport.send(
+                    GetResultMessage(type="get_result", id=id, path=path, value=value)
+                )
+
+            case ActionMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+                updates = await self._service._zw_invoke_action(
+                    method,
+                    args,
+                    kwargs,
+                    call_id=id,
+                    task_id=tid,
+                    sender=self._make_sender(),
+                )
+                await self._transport.send(
+                    InvalidateMessage(type="invalidate", id=id, updates=updates)
+                )
+
+            case QueryMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+                result = await self._service._zw_invoke_query(
+                    method,
+                    args,
+                    kwargs,
+                    call_id=id,
+                    task_id=tid,
+                    sender=self._make_sender(),
+                )
+                await self._transport.send(
+                    QueryResultMessage(type="query_result", id=id, value=result)
+                )
+            case _:
+                logging.getLogger("uvicorn").error("received unknown ws message")
+
+
+def _write_error(e: Exception, msg_text: str) -> None:
+    import traceback
+    import uuid
+
+    content = "".join(
+        [
+            *traceback.format_exception(e),
+            "\n\nFor message:\n\n",
+            msg_text + "\n",
+        ]
+    )
+    pathlib.Path(f"zwieback-error-{uuid.uuid4()}.txt").write_text(content)
 
 
 class WebSocketTransport(Transport):
@@ -75,104 +178,3 @@ class WebSocketTransport(Transport):
             pass
         finally:
             self._connections.discard(websocket)
-
-
-class PyreServer:
-    def __init__(
-        self,
-        service: Service,
-        *,
-        ui_dist_path: str | None = None,
-    ) -> None:
-        self._store = service.store
-        self._service = service
-        self._transport = WebSocketTransport()
-        self._app = self._build_app(ui_dist_path)
-
-    def _build_app(self, ui_dist_path: str | None) -> FastAPI:
-        app = FastAPI()
-
-        @app.websocket("/ws")
-        async def ws_endpoint(websocket: WebSocket) -> None:
-            # noinspection PyProtectedMember
-            await self._transport._handle_ws(websocket, self._dispatch)
-
-        if ui_dist_path:
-            app.mount(
-                "/", StaticFiles(directory=ui_dist_path, html=True), name="ui-dist"
-            )
-
-        return app
-
-    @property
-    def app(self) -> FastAPI:
-        return self._app
-
-    def _make_sender(self) -> Callable[[TaskUpdateMessage], Awaitable[None]]:
-        async def sender(msg: TaskUpdateMessage) -> None:
-            await self._transport.send(msg)
-
-        return sender
-
-    # noinspection PyShadowingBuiltins,PyProtectedMember
-    async def _dispatch(self, msg: IncomingMessage) -> None:
-        try:
-            await self.__dispatch(msg)
-        except Exception as e:
-            logging.getLogger("uvicorn").error(
-                "unknown message received", exc_info=True
-            )
-            await self._transport.send(
-                ErrorMessage(type="error", id=msg.id, message=str(e))
-            )
-
-    async def __dispatch(self, msg: IncomingMessage) -> None:
-        match msg:
-            case GetMessage(id=id, path=path):
-                value = self._store.get(path)
-                await self._transport.send(
-                    GetResultMessage(type="get_result", id=id, path=path, value=value)
-                )
-
-            case ActionMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
-                updates = await self._service._pyre_invoke_action(
-                    method,
-                    args,
-                    kwargs,
-                    call_id=id,
-                    task_id=tid,
-                    sender=self._make_sender(),
-                )
-                await self._transport.send(
-                    InvalidateMessage(type="invalidate", id=id, updates=updates)
-                )
-
-            case QueryMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
-                result = await self._service._pyre_invoke_query(
-                    method,
-                    args,
-                    kwargs,
-                    call_id=id,
-                    task_id=tid,
-                    sender=self._make_sender(),
-                )
-                await self._transport.send(
-                    QueryResultMessage(type="query_result", id=id, value=result)
-                )
-            case _:
-                logging.getLogger("uvicorn").error("received unknown ws message")
-
-
-def _write_error(e: Exception, msg_text: str) -> None:
-    import pathlib
-    import traceback
-    import uuid
-
-    content = "".join(
-        [
-            *traceback.format_exception(e),
-            "\n\nFor message:\n\n",
-            msg_text + "\n",
-        ]
-    )
-    pathlib.Path(f"zwieback-error-{uuid.uuid4()}.txt").write_text(content)
