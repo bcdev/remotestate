@@ -6,7 +6,8 @@
       import { createRoot } from "https://esm.sh/react-dom@19/client";
 
       // zwieback client inline — no bundle required.
-      // here we use a raw WebSocket without the zwieback library.
+      // here we use a raw WebSocket without the
+      // zwieback JavaScript library.
 
       const ws = new WebSocket("ws://localhost:9753/ws");
 
@@ -51,7 +52,8 @@
         );
       }
 
-      createRoot(document.getElementById("root")).render(React.createElement(App));
+      const rootElem = document.getElementById("root");
+      createRoot(rootElem).render(React.createElement(App));
     </script>
   </body>
 </html>
