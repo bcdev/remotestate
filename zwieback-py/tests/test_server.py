@@ -139,6 +139,26 @@ async def test_dispatch_call_action(server):
 
 
 @pytest.mark.asyncio
+async def test_dispatch_builtin_set_state_action(server):
+    sent = []
+    server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
+
+    await server._dispatch(
+        ActionMessage(
+            id="abc",
+            tid="abc",
+            method="set_state",
+            args=["count", 7],
+            kwargs={},
+        )
+    )
+
+    assert server._store.get("count") == 7
+    assert isinstance(sent[0], InvalidateMessage)
+    assert sent[0].updates["count"] == 7
+
+
+@pytest.mark.asyncio
 async def test_dispatch_call_unknown_action(server):
     sent = []
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
