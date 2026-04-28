@@ -73,6 +73,11 @@ export function useState<T = unknown>(
   const client = useClient();
   const value = useStateValue<T>(path);
   const hasInitialized = useRef(false);
+  const valueRef = useRef<T | undefined>(value);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (hasInitialized.current || value !== undefined || initialValue === undefined) {
@@ -85,11 +90,11 @@ export function useState<T = unknown>(
   const setValue = useCallback(
     async (next: SetStateValue<T>) => {
       const nextValue = typeof next === "function"
-        ? (next as (prev: T | undefined) => T)(value)
+        ? (next as (prev: T | undefined) => T)(valueRef.current)
         : next;
       await client.action("set_state", [path, nextValue], {}, { awaitInvalidate: true });
     },
-    [client, path, value],
+    [client, path],
   );
 
   return [value, setValue];
