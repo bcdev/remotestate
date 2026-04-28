@@ -10,11 +10,10 @@ import { ClientContext } from "./context";
 import { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
+/**
+ * Get the nearest zwieback client from React context.
+ */
 export function useClient<TService>(): Client<TService> {
-  /**
-   * Gets the nearest zwieback client.
-   * Throws an error if it cannot be found.
-   */
   const client = useContext(ClientContext);
   if (!client) {
     throw new Error("useClient must be used inside <ClientProvider>");
@@ -22,27 +21,27 @@ export function useClient<TService>(): Client<TService> {
   return client as Client<TService>;
 }
 
+/**
+ * Get the nearest reactive store from the current client.
+ */
 export function useStore(): Store {
-  /**
-   * Gets the nearest zwieback store.
-   */
   const client = useClient();
   return client.store;
 }
 
+/**
+ * Get the nearest task store from the current client.
+ */
 export function useTaskStore(): TaskStore {
-  /**
-   * Gets the nearest zwieback task store.
-   */
   const client = useClient();
   return client.tasks;
 }
 
-// eslint-disable-next-line
+/**
+ * Subscribe to one store path and return its current cached value.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useStateValue<T = unknown>(path: string): T | undefined {
-  /**
-   * Gets a value from the state at the given `path`.
-   */
   const store = useStore();
 
   // Trigger fetch if not cached — runs after render, not during,
@@ -64,8 +63,14 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+/**
+ * Functional-update shape accepted by `useState`.
+ */
 export type SetStateValue<T> = T | ((prev: T | undefined) => T);
 
+/**
+ * Bind a store path to a React-friendly getter/setter pair.
+ */
 export function useState<T = unknown>(
   path: string,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
@@ -122,10 +127,10 @@ export function useState<T = unknown>(
   return [value, setValue];
 }
 
+/**
+ * Observe one tracked task by its user-supplied task ID.
+ */
 export function useTask(tid: string): TaskState | undefined {
-  /**
-   * Gets progress metadata for an action or query task.
-   */
   const taskStore = useTaskStore();
 
   const subscribe = useCallback(
@@ -141,10 +146,10 @@ export function useTask(tid: string): TaskState | undefined {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
+/**
+ * Observe all tracked tasks, newest first.
+ */
 export function useTasks(): readonly TaskState[] {
-  /**
-   * Gets all known action and query tasks, newest first.
-   */
   const taskStore = useTaskStore();
 
   const subscribe = useCallback(

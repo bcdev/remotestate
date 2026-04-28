@@ -37,6 +37,9 @@ type MethodArgs<TService, K> = K extends keyof TService
     : never
   : unknown[];
 
+/**
+ * Typed client facade used by applications and React hooks.
+ */
 export interface Client<TService = unknown> {
   store: Store;
   tasks: WritableTaskStore;
@@ -58,10 +61,19 @@ export interface Client<TService = unknown> {
   dispose: () => void;
 }
 
+/**
+ * Optional client integrations.
+ *
+ * Supplying `taskStore` lets applications keep task state in a custom store
+ * instead of the built-in in-memory implementation.
+ */
 export interface ClientOptions {
   taskStore?: WritableTaskStore;
 }
 
+/**
+ * Create a zwieback client bound to one websocket endpoint.
+ */
 export function createClient<TService = unknown>(
   url: string,
   options: ClientOptions = {},

@@ -3,6 +3,9 @@ import { createClient } from "../client";
 import { ClientContext } from "./context";
 import type { WritableTaskStore } from "../tasks";
 
+/**
+ * React provider that creates and exposes one client instance to child hooks.
+ */
 export function ClientProvider({
   url,
   taskStore,
@@ -12,9 +15,6 @@ export function ClientProvider({
   taskStore?: WritableTaskStore;
   children: ReactNode;
 }) {
-  /**
-   * Convenience context for a zwieback client created for the given `url`.
-   */
   const client = useMemo(
     () => createClient(url, taskStore ? { taskStore } : {}),
     [url, taskStore],
