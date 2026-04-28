@@ -57,15 +57,13 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
 
 export type SetStateValue<T> = T | ((prev: T | undefined) => T);
 
-/* eslint-disable @typescript-eslint/unified-signatures */
 export function useState<T = unknown>(
   path: string,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
 export function useState<T = unknown>(
   path: string,
   initialValue: T,
-): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
-/* eslint-enable @typescript-eslint/unified-signatures */
+): [T, (next: SetStateValue<T>) => Promise<void>];
 export function useState<T = unknown>(
   path: string,
   initialValue?: T,
@@ -80,19 +78,34 @@ export function useState<T = unknown>(
   }, [value]);
 
   useEffect(() => {
-    if (hasInitialized.current || value !== undefined || initialValue === undefined) {
+    if (
+      hasInitialized.current ||
+      value !== undefined ||
+      initialValue === undefined
+    ) {
       return;
     }
     hasInitialized.current = true;
-    void client.action("set_state", [path, initialValue], {}, { awaitInvalidate: true });
+    void client.action(
+      "set_state",
+      [path, initialValue],
+      {},
+      { awaitInvalidate: true },
+    );
   }, [client, path, value, initialValue]);
 
   const setValue = useCallback(
     async (next: SetStateValue<T>) => {
-      const nextValue = typeof next === "function"
-        ? (next as (prev: T | undefined) => T)(valueRef.current)
-        : next;
-      await client.action("set_state", [path, nextValue], {}, { awaitInvalidate: true });
+      const nextValue =
+        typeof next === "function"
+          ? (next as (prev: T | undefined) => T)(valueRef.current)
+          : next;
+      await client.action(
+        "set_state",
+        [path, nextValue],
+        {},
+        { awaitInvalidate: true },
+      );
     },
     [client, path],
   );
