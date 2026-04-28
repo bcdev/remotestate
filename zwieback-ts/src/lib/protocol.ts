@@ -2,12 +2,18 @@
 // JS --> Python
 // -------------------------------------------
 
+/**
+ * Request the current value at one store path.
+ */
 export interface GetMessage {
   type: "get";
   id: string;
   path: string;
 }
 
+/**
+ * Invoke a state-mutating service method.
+ */
 export interface ActionMessage {
   type: "action";
   id: string;
@@ -17,6 +23,9 @@ export interface ActionMessage {
   kwargs: Record<string, unknown>;
 }
 
+/**
+ * Invoke a read-only service method that returns a value.
+ */
 export interface QueryMessage {
   type: "query";
   id: string;
@@ -30,6 +39,9 @@ export interface QueryMessage {
 // Python --> JS
 // -------------------------------------------
 
+/**
+ * Return one value requested by a previous `GetMessage`.
+ */
 export interface GetResultMessage {
   type: "get_result";
   id: string;
@@ -37,18 +49,27 @@ export interface GetResultMessage {
   value: unknown;
 }
 
+/**
+ * Return the result of a previous `QueryMessage`.
+ */
 export interface QueryResultMessage {
   type: "query_result";
   id: string;
   value: unknown;
 }
 
+/**
+ * Deliver the batched store updates produced by an action.
+ */
 export interface InvalidateMessage {
   type: "invalidate";
   id: string;
   updates: Record<string, unknown>; // path --> value mapping
 }
 
+/**
+ * Report progress for a tracked action or query.
+ */
 export interface TaskUpdateMessage {
   type: "task_update";
   id: string;
@@ -61,6 +82,9 @@ export interface TaskUpdateMessage {
   error?: string;
 }
 
+/**
+ * Return an error for a previous request.
+ */
 export interface ErrorMessage {
   type: "error";
   id: string;
@@ -71,7 +95,14 @@ export interface ErrorMessage {
 // Derived
 // -------------------------------------------
 
+/**
+ * Any message the client can send to Python.
+ */
 export type IncomingMessage = GetMessage | ActionMessage | QueryMessage;
+
+/**
+ * Any message Python can send back to the client.
+ */
 export type OutgoingMessage =
   | GetResultMessage
   | InvalidateMessage

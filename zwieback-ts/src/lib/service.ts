@@ -5,6 +5,9 @@ import type { ActionMessage, QueryMessage } from "./protocol";
 type Args = unknown[];
 type Kwargs = Record<string, unknown>;
 
+/**
+ * Options controlling action dispatch and optional task tracking.
+ */
 export interface ActionOptions {
   /**
    * If true, waits for the InvalidateMessage before resolving.
@@ -17,6 +20,9 @@ export interface ActionOptions {
   taskId?: string;
 }
 
+/**
+ * Options controlling query dispatch and optional task tracking.
+ */
 export interface QueryOptions {
   /**
    * Client-supplied task ID for progress tracking via useTask().
@@ -25,6 +31,12 @@ export interface QueryOptions {
   taskId?: string;
 }
 
+/**
+ * Sends action and query requests over the transport layer.
+ *
+ * When a `taskId` is supplied, the service also registers the request with the
+ * task controller so progress updates can be surfaced to the UI.
+ */
 export class ServiceImpl implements Service {
   constructor(
     private readonly transport: Transport,

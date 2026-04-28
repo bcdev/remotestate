@@ -13,16 +13,22 @@ from zwieback.store import PendingUpdates, Store, _batch_pending_updates
 
 
 class _ActionMarker:
+    """Marker object used while collecting ``@action`` methods."""
+
     def __init__(self, fn: Callable) -> None:
         self.fn = fn
 
 
 class _QueryMarker:
+    """Marker object used while collecting ``@query`` methods."""
+
     def __init__(self, fn: Callable) -> None:
         self.fn = fn
 
 
 def _ensure_async(fn: Callable) -> Callable:
+    """Wrap a sync function so the service runtime can await it."""
+
     if inspect.iscoroutinefunction(fn):
         return fn
 
@@ -34,14 +40,39 @@ def _ensure_async(fn: Callable) -> Callable:
 
 
 def action(fn: Callable) -> _ActionMarker:
+    """Declare a service method as a state-mutating action.
+
+    Args:
+        fn: The method to expose to the JavaScript client.
+
+    Returns:
+        A marker consumed by ``Service.__init_subclass__``.
+    """
+
     return _ActionMarker(_ensure_async(fn))
 
 
 def query(fn: Callable) -> _QueryMarker:
+    """Declare a service method as a read-only query.
+
+    Args:
+        fn: The method to expose to the JavaScript client.
+
+    Returns:
+        A marker consumed by ``Service.__init_subclass__``.
+    """
+
     return _QueryMarker(_ensure_async(fn))
 
 
 class Service:
+    """Base class for Python services exposed over the websocket bridge.
+
+    Subclasses define ``@action`` and ``@query`` methods. Dispatch helpers take
+    care of call scoping, read-only enforcement for queries, and batched store
+    invalidation after actions complete.
+    """
+
     store: Store
     _actions: dict[str, Callable]
     _queries: dict[str, Callable]
@@ -114,6 +145,20 @@ class Service:
         task_id: str | None,
         sender: Callable[[TaskUpdateMessage], Awaitable[None]],
     ) -> PendingUpdates:
+        """Invoke one registered action inside a tracked call scope.
+
+        Args:
+            method: Name of the registered action.
+            args: Positional arguments from the client.
+            kwargs: Keyword arguments from the client.
+            call_id: Internal request ID for protocol correlation.
+            task_id: Optional task ID for progress updates.
+            sender: Coroutine used to emit ``TaskUpdateMessage`` objects.
+
+        Returns:
+            The batched store updates produced by the action.
+        """
+
         fn = self._actions.get(method)
         if fn is None:
             raise ValueError(f"No action {method!r}")
@@ -144,6 +189,20 @@ class Service:
         task_id: str | None,
         sender: Callable[[TaskUpdateMessage], Awaitable[None]],
     ) -> Any:
+        """Invoke one registered query inside a read-only call scope.
+
+        Args:
+            method: Name of the registered query.
+            args: Positional arguments from the client.
+            kwargs: Keyword arguments from the client.
+            call_id: Internal request ID for protocol correlation.
+            task_id: Optional task ID for progress updates.
+            sender: Coroutine used to emit ``TaskUpdateMessage`` objects.
+
+        Returns:
+            The query result returned by the user-defined method.
+        """
+
         fn = self._queries.get(method)
         if fn is None:
             raise ValueError(f"No query {method!r}")

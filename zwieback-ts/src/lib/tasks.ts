@@ -5,8 +5,17 @@ import type {
 } from "./protocol";
 import type { Transport } from "./types";
 
+/**
+ * Terminal and non-terminal task states as reported by Python.
+ */
 export type TaskStatus = TaskUpdateMessage["status"];
 
+/**
+ * Snapshot of one tracked action or query call.
+ *
+ * The `tid` is the user-visible task key. `id` is the internal call ID used
+ * to correlate protocol messages belonging to the same request.
+ */
 export interface TaskState {
   id: string;
   tid: string;
@@ -20,12 +29,21 @@ export interface TaskState {
   updatedAt: number;
 }
 
+/**
+ * Read-only task store API consumed by React hooks and external observers.
+ */
 export interface TaskStore {
   getSnapshot(tid: string): TaskState | undefined;
   getAllSnapshot(): readonly TaskState[];
   subscribe(listener: () => void): () => void;
 }
 
+/**
+ * Mutable task store API used by the built-in controller.
+ *
+ * Custom stores can implement this interface to keep task state in another
+ * state container such as Zustand.
+ */
 export interface WritableTaskStore extends TaskStore {
   setTask(task: TaskState): void;
   deleteTask(tid: string): void;
@@ -33,6 +51,9 @@ export interface WritableTaskStore extends TaskStore {
   dispose?: () => void;
 }
 
+/**
+ * Minimal metadata needed to register a newly started task.
+ */
 export interface TaskStart {
   id: string;
   tid: string;
@@ -42,6 +63,12 @@ export interface TaskStart {
 type TaskListener = () => void;
 type TerminalTaskStatus = Extract<TaskStatus, "done" | "error">;
 
+/**
+ * Default in-memory task store.
+ *
+ * It keeps the latest snapshot per task ID and exposes a sorted list for
+ * simple UI rendering.
+ */
 export class TaskStoreImpl implements WritableTaskStore {
   private tasks: Map<string, TaskState> = new Map();
   private allSnapshot: TaskState[] = [];
@@ -104,10 +131,21 @@ export class TaskStoreImpl implements WritableTaskStore {
   }
 }
 
+/**
+ * Create the default in-memory task store used by `createClient`.
+ */
 export function createTaskStore(): WritableTaskStore {
   return new TaskStoreImpl();
 }
 
+/**
+ * Bridges transport-level messages to task store updates.
+ *
+ * The controller tracks which internal call ID belongs to which user-facing
+ * task ID, applies `task_update` messages while a call is running, and marks
+ * the task as done or failed when the corresponding response arrives. It also
+ * guards against stale updates when the same task ID is reused for a newer call.
+ */
 export class TaskController {
   private readonly unsubscribeTransport: () => void;
   private callToTaskId: Map<string, string> = new Map();

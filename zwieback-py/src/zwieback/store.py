@@ -96,6 +96,12 @@ _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
 
 
 class Store:
+    """Reactive Python-side state container addressed by zwieback paths.
+
+    Values live here as the single source of truth. Actions and queries read
+    from it, while actions may also mutate it to trigger UI invalidation.
+    """
+
     def __init__(self, initial: dict[str, Any]) -> None:
         self._state = initial
         self._subscribers: list[Callable[[PendingUpdates], None]] = []
