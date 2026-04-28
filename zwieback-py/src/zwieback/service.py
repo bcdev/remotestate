@@ -62,6 +62,16 @@ class Service:
     def __init__(self, store: Store) -> None:
         self.store = store
 
+    @action
+    def set_state(self, path: str, value: Any) -> None:
+        """Set a store value by path.
+
+        This built-in action enables simple UI patterns such as a
+        zwieback-side `useState(path, initial)` helper without requiring a
+        custom action on every user service.
+        """
+        self.store.set(path, value)
+
     def progress(
         self,
         *,

@@ -3,6 +3,7 @@ import {
   useEffect,
   useSyncExternalStore,
   useCallback,
+  useRef,
 } from "react";
 import { Client } from "../client";
 import { ClientContext } from "./context";
@@ -17,7 +18,7 @@ export function useClient<TService>(): Client<TService> {
   if (!client) {
     throw new Error("useClient must be used inside <ClientProvider>");
   }
-  return client;
+  return client as Client<TService>;
 }
 
 export function useStore(): Store {
@@ -52,4 +53,49 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   );
 
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+export type SetStateValue<T> = T | ((prev: T | undefined) => T);
+
+/* eslint-disable @typescript-eslint/unified-signatures */
+export function useState<T = unknown>(
+  path: string,
+): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
+export function useState<T = unknown>(
+  path: string,
+  initialValue: T,
+): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
+/* eslint-enable @typescript-eslint/unified-signatures */
+export function useState<T = unknown>(
+  path: string,
+  initialValue?: T,
+): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
+  const client = useClient();
+  const value = useStateValue<T>(path);
+  const hasInitialized = useRef(false);
+  const valueRef = useRef<T | undefined>(value);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    if (hasInitialized.current || value !== undefined || initialValue === undefined) {
+      return;
+    }
+    hasInitialized.current = true;
+    void client.action("set_state", [path, initialValue], {}, { awaitInvalidate: true });
+  }, [client, path, value, initialValue]);
+
+  const setValue = useCallback(
+    async (next: SetStateValue<T>) => {
+      const nextValue = typeof next === "function"
+        ? (next as (prev: T | undefined) => T)(valueRef.current)
+        : next;
+      await client.action("set_state", [path, nextValue], {}, { awaitInvalidate: true });
+    },
+    [client, path],
+  );
+
+  return [value, setValue];
 }
