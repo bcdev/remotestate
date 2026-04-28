@@ -6,7 +6,7 @@ interface MyService {
 
 export default function App() {
   const client = useClient<MyService>();
-  const [counter, setCounter] = useState("counter", 0);
+  const [count, setCount] = useState("count", 0);
 
   const handleIncrementClicked = () => {
     void client.action("increment");
@@ -14,9 +14,9 @@ export default function App() {
 
   return (
     <div>
-      <div>{`Counter: ${counter.toString()}`}</div>
+      <div>{`Counter: ${count.toString()}`}</div>
       <button onClick={handleIncrementClicked}>Increment</button>
-      <button onClick={() => void setCounter(counter + 2)}>Add 2</button>
+      <button onClick={() => void setCount(count + 2)}>Add 2</button>
     </div>
   );
 }
