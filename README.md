@@ -16,7 +16,7 @@ and let zwieback handle the rest.
 - **Progress reporting** — long-running queries can push progress updates to the UI via `self.progress()`
 - **Works in Jupyter** — renders as an IFrame in JupyterLab, zero extra config
 - **Works standalone** — serves a React app from a local FastAPI server, opens in your browser
-- **Minimal React API** — `ClientProvider`, `useClient`, and `useStateValue`, with typed `client.action/query` calls
+- **Minimal React API** — `ClientProvider`, `useClient`, and `useState`, with typed `client.action/query` calls
 - **TypeScript-first** — generate a typed service interface from your Python class, get full autocompletion
 
 ---
@@ -57,18 +57,18 @@ export interface MyService {
 ```
 
 ```tsx
-import { ClientProvider, useClient, useStateValue } from "zwieback";
+import { ClientProvider, useClient, useState } from "zwieback";
 import type { MyService } from "./MyService";
 
 function AppInner() {
   const client = useClient<MyService>();
-  const count = useStateValue<number>("count");
-  const name = useStateValue<string>("user.name");
+  const [count, setCount] = useState<number>("count", 0);
+  const [name] = useState<string>("user.name");
 
   return (
     <div>
       <p>Hello, {name ?? "..."}! Count: {count ?? "..."}</p>
-      <button onClick={() => void client.action("increment")}>+1</button>
+      <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>+1</button>
       <button
         onClick={async () => {
           const result = await client.query("compute", [5.0]);
@@ -201,11 +201,12 @@ React context wrapper for a client bound to a WebSocket URL, plus hook to access
 const client = useClient<MyService>();
 ```
 
-#### `useStateValue<T>(path)`
-React hook for store values. Returns `undefined` while loading and re-renders on invalidation.
+#### `useState<T>(path, initialValue?)`
+React-like state hook backed by the Python store. It returns `[value, setValue]`.
 
 ```typescript
-const count = useStateValue<number>("count");
+const [count, setCount] = useState<number>("count", 0);
+await setCount((prev) => (prev ?? 0) + 1);
 ```
 
 #### `client.action(method, args?, kwargs?, options?)`
@@ -223,6 +224,9 @@ Calls a Python `@query` and returns the result.
 ```typescript
 const result = await client.query("compute", [5.0]);
 ```
+
+#### `useStateValue<T>(path)`
+Low-level read hook for store values. Returns `undefined` while loading and re-renders on invalidation.
 
 ---
 
@@ -248,7 +252,7 @@ pixi run pytest
 # TypeScript
 cd ../zwieback-ts
 npm install
-npm test
+npm run tests
 npm run checks
 ```
 
@@ -313,7 +317,7 @@ Contributions are very welcome! Please open an issue first to discuss larger cha
 ```bash
 # Run all tests
 cd zwieback-py && pixi run pytest
-cd zwieback-ts && npm test
+cd zwieback-ts && npm run tests
 
 # Lint
 cd zwieback-py && pixi run ruff check src

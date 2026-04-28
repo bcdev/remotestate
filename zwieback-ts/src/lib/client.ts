@@ -15,28 +15,37 @@ type QueryKeys<TService> = {
   [K in keyof TService]: ReturnType<TService[K]> extends undefined ? never : K;
 }[keyof TService];
 
-type MethodArgs<TService, K extends keyof TService> = TService[K] extends (
-  ...args: infer A
-) => unknown
-  ? A
-  : never;
+type ActionMethod<TService> = unknown extends TService
+  ? string
+  : ActionKeys<TService>;
+
+type QueryMethod<TService> = unknown extends TService ? string : QueryKeys<TService>;
+type QueryResult<TService, M> = M extends keyof TService
+  ? ReturnType<TService[M]>
+  : unknown;
+
+type MethodArgs<TService, K> = K extends keyof TService
+  ? TService[K] extends (...args: infer A) => unknown
+    ? A
+    : never
+  : unknown[];
 
 export interface Client<TService = unknown> {
   store: Store;
 
-  action: <M extends ActionKeys<TService>>(
+  action: <M extends ActionMethod<TService>>(
     method: M,
     args?: MethodArgs<TService, M>,
     kwargs?: Record<string, unknown>,
     options?: ActionOptions,
   ) => Promise<void>;
 
-  query: <M extends QueryKeys<TService>>(
+  query: <M extends QueryMethod<TService>>(
     method: M,
     args?: MethodArgs<TService, M>,
     kwargs?: Record<string, unknown>,
     options?: QueryOptions,
-  ) => Promise<ReturnType<TService[M]>>;
+  ) => Promise<QueryResult<TService, M>>;
 
   dispose: () => void;
 }
@@ -52,14 +61,11 @@ export function createClient<TService>(url: string): Client<TService> {
     action: (method, args = [] as never, kwargs = {}, options = {}) =>
       service.action(method as string, args, kwargs, options),
 
-    query: <M extends QueryKeys<TService>>(
+    query: <M extends QueryMethod<TService>>(
       method: M,
       args: MethodArgs<TService, M> = [] as never,
       kwargs: Record<string, unknown> = {},
-    ) =>
-      service.query(method as string, args, kwargs) as Promise<
-        ReturnType<TService[M]>
-      >,
+    ) => service.query(method as string, args, kwargs) as Promise<QueryResult<TService, M>>,
 
     dispose: () => {
       store.dispose();

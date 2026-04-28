@@ -1,6 +1,6 @@
 [project]
 authors = [{name = "Norman Fomferra", email = "norman.fomferra@brockmann-consult.de"}]
-dependencies = []
+dependencies = ["pydantic>=2.13.3,<3"]
 name = "zwieback"
 requires-python = ">= 3.12"
 version = "0.1.0"
@@ -47,4 +47,3 @@ format = "ruff format src"
 checks = "ruff check src"
 tests = "pytest tests"
 isort = "isort src"
-
