@@ -86,7 +86,7 @@ class Service:
         of a dispatched action or query (e.g. during testing).
         """
         ctx = _call_context.get()
-        if ctx is None:
+        if ctx is None or ctx.task_id is None:
             return
 
         message = TaskUpdateMessage(
@@ -111,7 +111,7 @@ class Service:
         args: list[Any],
         kwargs: dict[str, Any],
         call_id: str,
-        task_id: str,
+        task_id: str | None,
         sender: Callable[[TaskUpdateMessage], Awaitable[None]],
     ) -> PendingUpdates:
         fn = self._actions.get(method)
@@ -141,7 +141,7 @@ class Service:
         args: list[Any],
         kwargs: dict[str, Any],
         call_id: str,
-        task_id: str,
+        task_id: str | None,
         sender: Callable[[TaskUpdateMessage], Awaitable[None]],
     ) -> Any:
         fn = self._queries.get(method)

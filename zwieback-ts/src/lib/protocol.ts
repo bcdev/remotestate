@@ -11,7 +11,7 @@ export interface GetMessage {
 export interface ActionMessage {
   type: "action";
   id: string;
-  tid: string;
+  tid?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;
@@ -20,7 +20,7 @@ export interface ActionMessage {
 export interface QueryMessage {
   type: "query";
   id: string;
-  tid: string;
+  tid?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;

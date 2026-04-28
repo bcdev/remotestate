@@ -82,6 +82,21 @@ def invoke_action(service, method, *, args=None, kwargs=None):
     )
 
 
+def invoke_action_without_task_id(service, method, *, args=None, kwargs=None):
+    sender, sender_impl = make_sender()
+    return (
+        service._zw_invoke_action(
+            method,
+            args or [],
+            kwargs or {},
+            call_id="test-call-id",
+            task_id=None,
+            sender=sender,
+        ),
+        sender_impl,
+    )
+
+
 def invoke_query(service, method, args=None, kwargs=None):
     sender, _sender_impl = make_sender()
     return (
@@ -273,6 +288,15 @@ async def test_progress_no_effect_outside_dispatch(store):
     service = make_service(store)
     # Should not raise — just silently does nothing
     service.progress(name="test", progress=50)
+
+
+@pytest.mark.asyncio
+async def test_progress_no_effect_without_task_id(store):
+    service = make_service(store)
+    coro, sender_impl = invoke_action_without_task_id(service, "set_with_progress")
+    await coro
+    await asyncio.sleep(0.01)
+    sender_impl.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -18,11 +18,12 @@ export interface Service {
     method: string,
     args?: unknown[],
     kwargs?: Record<string, unknown>,
-    options?: { awaitInvalidate?: boolean },
+    options?: { awaitInvalidate?: boolean; taskId?: string },
   ): Promise<void>;
   query(
     method: string,
     args?: unknown[],
     kwargs?: Record<string, unknown>,
+    options?: { taskId?: string },
   ): Promise<unknown>;
 }
