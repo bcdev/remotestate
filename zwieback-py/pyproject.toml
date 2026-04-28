@@ -1,6 +1,10 @@
 [project]
 authors = [{name = "Norman Fomferra", email = "norman.fomferra@brockmann-consult.de"}]
-dependencies = ["pydantic>=2.13.3,<3"]
+dependencies = [
+  "fastapi>=0.136,<0.137",
+  "pydantic>=2,<3",
+  "uvicorn>=0.46,<0.47"
+]
 name = "zwieback"
 requires-python = ">= 3.12"
 version = "0.1.0"
@@ -24,20 +28,20 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
+# library dependencies
+fastapi = ">=0.136.1,<0.137"
 pydantic = ">=2.13.3,<3"
-pyaml = ">=26.2.1,<27"
+uvicorn = ">=0.46.0,<0.47"
+# development dependencies
+httpx = ">=0.28.1,<0.29"
+isort = ">=8.0.1,<9"
+jupyter = ">=1.1.1,<2"
+mypy = ">=1.20.2,<2"
+pixi-pycharm = ">=0.0.11,<0.0.12"
 pytest = ">=9.0.3,<10"
 pytest-asyncio = ">=1.3.0,<2"
 pytest-cov = ">=7.1.0,<8"
-pixi-pycharm = ">=0.0.11,<0.0.12"
 ruff = ">=0.15.11,<0.16"
-mypy = ">=1.20.2,<2"
-isort = ">=8.0.1,<9"
-fastapi = ">=0.136.1,<0.137"
-uvicorn = ">=0.46.0,<0.47"
-websocket = ">=0.2.1,<0.3"
-httpx = ">=0.28.1,<0.29"
-jupyter = ">=1.1.1,<2"
 
 [tool.pixi.pypi-dependencies]
 zwieback = { path = ".", editable = true }
