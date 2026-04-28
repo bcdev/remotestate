@@ -18,7 +18,7 @@
 
       function App() {
         const client = useClient();
-        const [count, setCount] = useState("counter", 0);
+        const [count, setCount] = useState("count", 0);
 
         function handleIncrementClick() {
           client.action("increment");

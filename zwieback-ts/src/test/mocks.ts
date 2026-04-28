@@ -35,16 +35,20 @@ export function mockTransport(): MockTransport {
 }
 
 export function mockTransportWithHandler(): MockTransportWithTrigger {
-  let handler: (msg: unknown) => void = () => {};
+  const handlers: Set<(msg: unknown) => void> = new Set();
   return {
     subscribe: vi.fn((h: (msg: unknown) => void) => {
-      handler = h;
-      return vi.fn();
+      handlers.add(h);
+      return vi.fn(() => {
+        handlers.delete(h);
+      });
     }),
     send: vi.fn(),
     close: vi.fn(),
     _trigger: (msg) => {
-      handler(msg);
+      for (const handler of handlers) {
+        handler(msg);
+      }
     },
   };
 }

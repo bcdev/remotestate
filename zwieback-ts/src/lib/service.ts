@@ -1,4 +1,6 @@
 import type { Service, Transport } from "./types";
+import type { TaskController } from "./tasks";
+import type { ActionMessage, QueryMessage } from "./protocol";
 
 type Args = unknown[];
 type Kwargs = Record<string, unknown>;
@@ -10,7 +12,7 @@ export interface ActionOptions {
   awaitInvalidate?: boolean;
   /**
    * Client-supplied task ID for progress tracking via useTask().
-   * Defaults to the auto-generated call ID if not provided.
+   * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;
 }
@@ -18,13 +20,16 @@ export interface ActionOptions {
 export interface QueryOptions {
   /**
    * Client-supplied task ID for progress tracking via useTask().
-   * Defaults to the auto-generated call ID if not provided.
+   * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;
 }
 
 export class ServiceImpl implements Service {
-  constructor(private readonly transport: Transport) {}
+  constructor(
+    private readonly transport: Transport,
+    private readonly taskController?: TaskController,
+  ) {}
 
   async action(
     method: string,
@@ -34,25 +39,29 @@ export class ServiceImpl implements Service {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const id = crypto.randomUUID();
-      const tid = options.taskId ?? id;
+      if (options.taskId !== undefined) {
+        this.taskController?.startTask({ id, tid: options.taskId, method });
+      }
 
-      const unsubscribe = this.transport.subscribe((msg) => {
-        if (msg.type === "error" && msg.id === id) {
-          unsubscribe();
-          reject(new Error(msg.message));
-          return;
-        }
-        if (
-          options.awaitInvalidate &&
-          msg.type === "invalidate" &&
-          msg.id === id
-        ) {
-          unsubscribe();
-          resolve();
-        }
-      });
+      if (options.awaitInvalidate) {
+        const unsubscribe = this.transport.subscribe((msg) => {
+          if (msg.type === "error" && msg.id === id) {
+            unsubscribe();
+            reject(new Error(msg.message));
+            return;
+          }
+          if (msg.type === "invalidate" && msg.id === id) {
+            unsubscribe();
+            resolve();
+          }
+        });
+      }
 
-      this.transport.send({ type: "action", id, tid, method, args, kwargs });
+      const message: ActionMessage =
+        options.taskId === undefined
+          ? { type: "action", id, method, args, kwargs }
+          : { type: "action", id, tid: options.taskId, method, args, kwargs };
+      this.transport.send(message);
 
       if (!options.awaitInvalidate) {
         resolve();
@@ -68,7 +77,9 @@ export class ServiceImpl implements Service {
   ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = crypto.randomUUID();
-      const tid = options.taskId ?? id;
+      if (options.taskId !== undefined) {
+        this.taskController?.startTask({ id, tid: options.taskId, method });
+      }
 
       const unsubscribe = this.transport.subscribe((msg) => {
         if (!("id" in msg) || msg.id !== id) {
@@ -82,7 +93,11 @@ export class ServiceImpl implements Service {
         }
       });
 
-      this.transport.send({ type: "query", id, tid, method, args, kwargs });
+      const message: QueryMessage =
+        options.taskId === undefined
+          ? { type: "query", id, method, args, kwargs }
+          : { type: "query", id, tid: options.taskId, method, args, kwargs };
+      this.transport.send(message);
     });
   }
 }

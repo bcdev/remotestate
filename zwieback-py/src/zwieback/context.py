@@ -9,7 +9,7 @@ from zwieback.protocol import TaskUpdateMessage
 @dataclass
 class _CallContext:
     call_id: str
-    task_id: str
+    task_id: str | None
     method: str
     sender: Callable[[TaskUpdateMessage], Awaitable[None]]
     readonly: bool = False

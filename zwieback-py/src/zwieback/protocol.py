@@ -25,8 +25,8 @@ class ActionMessage(BaseModel):
     id: str
     """The internal action-ID."""
 
-    tid: str
-    """User-supplied or auto-generated task identifier."""
+    tid: str | None = None
+    """User-supplied task identifier for progress tracking."""
 
     method: str
     """The action method's name."""
@@ -45,8 +45,8 @@ class QueryMessage(BaseModel):
     id: str
     """The internal query-ID."""
 
-    tid: str
-    """User-supplied or auto-generated task identifier."""
+    tid: str | None = None
+    """User-supplied task identifier for progress tracking."""
 
     method: str
     """The query method's name."""

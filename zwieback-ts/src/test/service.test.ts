@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ServiceImpl } from "../lib/service";
 import { mockTransportWithHandler, asTransport } from "./mocks";
+import { TaskController, TaskStoreImpl } from "../lib/tasks";
 
 describe("ServiceImpl", () => {
   describe("action", () => {
@@ -13,6 +14,42 @@ describe("ServiceImpl", () => {
       expect(transport.send).toHaveBeenCalledWith(
         expect.objectContaining({ type: "action", method: "increment" }),
       );
+    });
+
+    it("omits action tid when taskId is not provided", () => {
+      const transport = mockTransportWithHandler();
+      const service = new ServiceImpl(asTransport(transport));
+
+      void service.action("increment");
+
+      expect(transport.send).toHaveBeenCalledWith(
+        expect.not.objectContaining({ tid: expect.any(String) }),
+      );
+    });
+
+    it("uses provided taskId as action tid", () => {
+      const transport = mockTransportWithHandler();
+      const service = new ServiceImpl(asTransport(transport));
+
+      void service.action("increment", [], {}, { taskId: "counter-task" });
+
+      expect(transport.send).toHaveBeenCalledWith(
+        expect.objectContaining({ tid: "counter-task" }),
+      );
+    });
+
+    it("does not track action tasks without taskId", () => {
+      const transport = mockTransportWithHandler();
+      const taskStore = new TaskStoreImpl();
+      const taskController = new TaskController(
+        taskStore,
+        asTransport(transport),
+      );
+      const service = new ServiceImpl(asTransport(transport), taskController);
+
+      void service.action("increment");
+
+      expect(taskStore.getAllSnapshot()).toEqual([]);
     });
 
     it("resolves immediately without awaitInvalidate", async () => {
@@ -75,6 +112,42 @@ describe("ServiceImpl", () => {
       expect(transport.send).toHaveBeenCalledWith(
         expect.objectContaining({ type: "query", method: "compute" }),
       );
+    });
+
+    it("omits query tid when taskId is not provided", () => {
+      const transport = mockTransportWithHandler();
+      const service = new ServiceImpl(asTransport(transport));
+
+      void service.query("compute", [5.0]);
+
+      expect(transport.send).toHaveBeenCalledWith(
+        expect.not.objectContaining({ tid: expect.any(String) }),
+      );
+    });
+
+    it("uses provided taskId as query tid", () => {
+      const transport = mockTransportWithHandler();
+      const service = new ServiceImpl(asTransport(transport));
+
+      void service.query("compute", [5.0], {}, { taskId: "compute-task" });
+
+      expect(transport.send).toHaveBeenCalledWith(
+        expect.objectContaining({ tid: "compute-task" }),
+      );
+    });
+
+    it("does not track query tasks without taskId", () => {
+      const transport = mockTransportWithHandler();
+      const taskStore = new TaskStoreImpl();
+      const taskController = new TaskController(
+        taskStore,
+        asTransport(transport),
+      );
+      const service = new ServiceImpl(asTransport(transport), taskController);
+
+      void service.query("compute", [5.0]);
+
+      expect(taskStore.getAllSnapshot()).toEqual([]);
     });
 
     it("resolves with query_result value", async () => {

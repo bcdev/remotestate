@@ -8,6 +8,7 @@ import {
 import { Client } from "../client";
 import { ClientContext } from "./context";
 import { Store } from "../types";
+import type { TaskState, TaskStore } from "../tasks";
 
 export function useClient<TService>(): Client<TService> {
   /**
@@ -27,6 +28,14 @@ export function useStore(): Store {
    */
   const client = useClient();
   return client.store;
+}
+
+export function useTaskStore(): TaskStore {
+  /**
+   * Gets the nearest zwieback task store.
+   */
+  const client = useClient();
+  return client.tasks;
 }
 
 // eslint-disable-next-line
@@ -111,4 +120,42 @@ export function useState<T = unknown>(
   );
 
   return [value, setValue];
+}
+
+export function useTask(tid: string): TaskState | undefined {
+  /**
+   * Gets progress metadata for an action or query task.
+   */
+  const taskStore = useTaskStore();
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => taskStore.subscribe(onStoreChange),
+    [taskStore],
+  );
+
+  const getSnapshot = useCallback(
+    () => taskStore.getSnapshot(tid),
+    [taskStore, tid],
+  );
+
+  return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+export function useTasks(): readonly TaskState[] {
+  /**
+   * Gets all known action and query tasks, newest first.
+   */
+  const taskStore = useTaskStore();
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => taskStore.subscribe(onStoreChange),
+    [taskStore],
+  );
+
+  const getSnapshot = useCallback(
+    () => taskStore.getAllSnapshot(),
+    [taskStore],
+  );
+
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
