@@ -68,9 +68,9 @@ def serve(
         _stop_server(_servers[registry_key])
         _wait_for_port_free(host, port)
 
-    mounts_ = mounts or {}
+    mounts_ = dict(mounts) if mounts else {}
     if dist_dir is not None:
-        mounts_["/"] = StaticFiles(directory=dist_dir, html=True)
+        mounts_["/app"] = StaticFiles(directory=dist_dir, html=True)
 
     zw_server = Server(service=service, mounts=mounts_)
 
@@ -91,7 +91,9 @@ def serve(
         time.sleep(0.05)
 
     # noinspection HttpUrlsUsage
-    url = f"http://{host}:{port}"
+    url = f"http://{host}:{port}/app"
+
+    # print("serving from " + url)
 
     if should_open_iframe:
         from IPython.display import IFrame, display

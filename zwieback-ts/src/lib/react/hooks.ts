@@ -66,15 +66,13 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
 
 export type SetStateValue<T> = T | ((prev: T | undefined) => T);
 
-/* eslint-disable @typescript-eslint/unified-signatures */
 export function useState<T = unknown>(
   path: string,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
 export function useState<T = unknown>(
   path: string,
   initialValue: T,
-): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
-/* eslint-enable @typescript-eslint/unified-signatures */
+): [T, (next: SetStateValue<T>) => Promise<void>];
 export function useState<T = unknown>(
   path: string,
   initialValue?: T,

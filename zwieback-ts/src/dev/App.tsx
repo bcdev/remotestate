@@ -1,12 +1,12 @@
-import { useClient, useStateValue } from "../lib";
+import { useClient, useState } from "../lib";
 
 interface MyService {
-  increment(): void;
+  increment: () => void;
 }
 
 export default function App() {
   const client = useClient<MyService>();
-  const counter = useStateValue<number>("counter");
+  const [counter, setCounter] = useState("counter", 0);
 
   const handleIncrementClicked = () => {
     void client.action("increment");
@@ -14,8 +14,9 @@ export default function App() {
 
   return (
     <div>
-      <div>{`Counter: ${typeof counter === "number" ? counter.toString() : ""}`}</div>
+      <div>{`Counter: ${counter.toString()}`}</div>
       <button onClick={handleIncrementClicked}>Increment</button>
+      <button onClick={() => void setCounter(counter + 2)}>Add 2</button>
     </div>
   );
 }
