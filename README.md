@@ -10,13 +10,13 @@ and let zwieback handle the rest.
 
 ## ✨ Why zwieback?
 
-- **Python is the single source of truth** — your entire app state lives in a `PythonStore`, no synchronization hell
+- **Python is the single source of truth** — your entire app state lives in a `Store`, no synchronization hell
 - **Reactive without duplication** — the JS client caches values lazily and invalidates on change, no duplicate state in the browser
 - **Actions and queries** — decorate Python methods with `@action` (mutates state) or `@query` (read-only, returns a value)
 - **Progress reporting** — long-running queries can push progress updates to the UI via `self.progress()`
 - **Works in Jupyter** — renders as an IFrame in JupyterLab, zero extra config
 - **Works standalone** — serves a React app from a local FastAPI server, opens in your browser
-- **Minimal React API** — one hook, a proxy object, done. No boilerplate, no context providers
+- **Minimal React API** — `ClientProvider`, `useClient`, and `useStateValue`, with typed `client.action/query` calls
 - **TypeScript-first** — generate a typed service interface from your Python class, get full autocompletion
 
 ---
@@ -28,12 +28,12 @@ and let zwieback handle the rest.
 ```python
 import zwieback as zw
 
-store = zw.PythonStore({
+store = zw.Store({
     "count": 0,
     "user": {"name": "Norman"},
 })
 
-class MyService(zw.PythonService):
+class MyService(zw.Service):
     @zw.action
     async def increment(self):
         self.store.set("count", self.store.get("count") + 1)
@@ -43,13 +43,13 @@ class MyService(zw.PythonService):
         self.progress(name="Computing...", progress=50)
         return x * self.store.get("count")
 
-zw.show(MyService(store), ui_dist_path="my-ui/dist")
+zw.serve(MyService(store), dist_dir="my-ui/dist")
 ```
 
 ### TypeScript / React
 
 ```typescript
-// MyService.ts — write manually or generate with: zwieback generate my_service.py
+// MyService.ts — define your service contract (can be handwritten)
 export interface MyService {
   increment(): Promise<void>;
   compute(x: number): Promise<number>;
@@ -57,26 +57,35 @@ export interface MyService {
 ```
 
 ```tsx
-import { createZwiebackClient } from "zwieback";
+import { ClientProvider, useClient, useStateValue } from "zwieback";
 import type { MyService } from "./MyService";
 
-const zw = createZwiebackClient<MyService>("ws://localhost:9753/ws");
-
-export default function App() {
-  const count = zw.useStore<number>("count");
-  const name = zw.useStore<string>("user.name");
+function AppInner() {
+  const client = useClient<MyService>();
+  const count = useStateValue<number>("count");
+  const name = useStateValue<string>("user.name");
 
   return (
     <div>
       <p>Hello, {name ?? "..."}! Count: {count ?? "..."}</p>
-      <button onClick={() => zw.action("increment")}>+1</button>
-      <button onClick={async () => {
-        const result = await zw.query("compute", [5.0]);
-        console.log(result);
-      }}>
+      <button onClick={() => void client.action("increment")}>+1</button>
+      <button
+        onClick={async () => {
+          const result = await client.query("compute", [5.0]);
+          console.log(result);
+        }}
+      >
         Compute
       </button>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ClientProvider url="ws://localhost:9753/ws">
+      <AppInner />
+    </ClientProvider>
   );
 }
 ```
@@ -126,11 +135,11 @@ my-project/
 
 ### Python
 
-#### `PythonStore(initial: dict)`
+#### `Store(initial: dict)`
 Holds all application state. Supports nested dicts, lists, Pydantic models, and dataclasses.
 
 ```python
-store = zw.PythonStore({"items": [], "user": UserModel(name="Norman")})
+store = zw.Store({"items": [], "user": UserModel(name="Norman")})
 store.get("user.name")          # "Norman"
 store.set("items[0].label", "foo")
 ```
@@ -155,13 +164,13 @@ async def process(self, path: str) -> dict:
     return result
 ```
 
-#### `zw.show(service, *, ui_dist_path, host, port, open_browser, open_iframe, iframe_height)`
+#### `zw.serve(service, *, dist_dir, host, port, open_browser, open_iframe, iframe_height)`
 Starts the zwieback server and displays the UI.
 
 | Parameter | Default | Description |
 |---|---|---|
-| `service` | required | A `PythonService` instance |
-| `ui_dist_path` | `None` | Path to the React build output (`dist/`) |
+| `service` | required | A `Service` instance |
+| `dist_dir` | `None` | Path to the React build output (`dist/`) |
 | `host` | `"localhost"` | Server host |
 | `port` | `9753` | Server port |
 | `open_browser` | auto | Open in browser (default outside Jupyter) |
@@ -174,49 +183,45 @@ Re-executing the same Jupyter cell restarts the server automatically.
 
 ### TypeScript
 
-#### `createZwiebackClient<TService>(url)`
-Creates a typed zwieback client. Pass your service interface as a generic parameter for full type safety.
+#### `createClient<TService>(url)`
+Creates a typed zwieback client.
 
 ```typescript
-const zw = createZwiebackClient<MyService>("ws://localhost:9753/ws");
+const client = createClient<MyService>("ws://localhost:9753/ws");
 ```
 
-#### `zw.useStore<T>(path)`
-React hook. Returns the current value at `path`, or `undefined` while loading. Fetches lazily, re-renders on invalidation.
+#### `ClientProvider` + `useClient<TService>()`
+React context wrapper for a client bound to a WebSocket URL, plus hook to access it.
+
+```tsx
+<ClientProvider url="ws://localhost:9753/ws">
+  <App />
+</ClientProvider>
+
+const client = useClient<MyService>();
+```
+
+#### `useStateValue<T>(path)`
+React hook for store values. Returns `undefined` while loading and re-renders on invalidation.
 
 ```typescript
-const count = zw.useStore<number>("count");
+const count = useStateValue<number>("count");
 ```
 
-#### `zw.action(method, args?, kwargs?, options?)`
+#### `client.action(method, args?, kwargs?, options?)`
 Calls a Python `@action`. Fire-and-forget by default.
 
 ```typescript
-await zw.action("increment");
-await zw.action("set_name", ["Norman"]);
-await zw.action("save", [], {}, { awaitInvalidate: true }); // wait for store update
-await zw.action("export", [], {}, { taskId: "my-export" }); // trackable via useTask
+await client.action("increment");
+await client.action("set_name", ["Norman"]);
+await client.action("save", [], {}, { awaitInvalidate: true });
 ```
 
-#### `zw.query(method, args?, kwargs?, options?)`
+#### `client.query(method, args?, kwargs?, options?)`
 Calls a Python `@query` and returns the result.
 
 ```typescript
-const result = await zw.query("compute", [5.0]);
-await zw.query("analyze", [], {}, { taskId: "analysis-1" }); // trackable
-```
-
-#### `zw.useTasks()`
-Returns all active and recently completed tasks as a reactive list.
-
-#### `zw.useTask(taskId)`
-Returns the task state for a specific `taskId`.
-
-```typescript
-const task = zw.useTask("analysis-1");
-// task.status: "running" | "done" | "error"
-// task.progress: number | undefined
-// task.name: string | undefined
+const result = await client.query("compute", [5.0]);
 ```
 
 ---
@@ -241,10 +246,10 @@ pixi install
 pixi run pytest
 
 # TypeScript
-cd ../zwieback-re
+cd ../zwieback-ts
 npm install
 npm test
-npm run lint
+npm run checks
 ```
 
 ### Running the dev example
@@ -265,7 +270,6 @@ npm run dev
 zwieback generate my_service.py --out ui/src/MyService.ts
 ```
 
-> ⚠️ The CLI generator is planned for a future release. For now, write the interface manually — it's just a few lines.
 
 ---
 
@@ -274,14 +278,14 @@ zwieback generate my_service.py --out ui/src/MyService.ts
 ```
 Python (server)                    TypeScript (browser)
 ──────────────────────────────     ──────────────────────────────
-PythonStore                        PyrStore (cache)
+Store                          StoreImpl (cache)
   state (single source of truth)     lazy fetch per path
-  set() → batch invalidate    ──►    invalidate → re-render
+  set() → batch updates        ──►    invalidate → re-render
 
-PythonService
-  @action → mutates store     ──►  zw.action()
-  @query  → read-only result  ──►  zw.query() → Promise
-  progress()                  ──►  zw.useTask()
+Service
+  @action → mutates store     ──►  client.action()
+  @query  → read-only result  ──►  client.query() → Promise
+  progress()                  ──►  task_update messages
 
 FastAPI + WebSocket
   ws://localhost:9753/ws
@@ -309,11 +313,11 @@ Contributions are very welcome! Please open an issue first to discuss larger cha
 ```bash
 # Run all tests
 cd zwieback-py && pixi run pytest
-cd zwieback-re && npm test
+cd zwieback-ts && npm test
 
 # Lint
 cd zwieback-py && pixi run ruff check src
-cd zwieback-re && npm run lint
+cd zwieback-ts && npm run checks
 ```
 
 Please follow the existing code style — ruff + black on the Python side, ESLint + TypeScript strict on the JS side.
