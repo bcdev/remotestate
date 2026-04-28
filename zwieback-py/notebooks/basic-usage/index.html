@@ -5,6 +5,8 @@
       import React, { useState, useEffect } from "https://esm.sh/react@19";
       import { createRoot } from "https://esm.sh/react-dom@19/client";
 
+      const RE = React.createElement;
+
       // zwieback client inline:
       // here we use a raw WebSocket without the
       // zwieback JavaScript library.
@@ -44,16 +46,14 @@
           }));
         }
 
-        return React.createElement("div", null,
-          React.createElement("p", null, `Count: ${count ?? "..."}`),
-          React.createElement("button", {
-            onClick: handleIncrementClick
-          }, "Increment")
+        return RE("div", null,
+          RE("p", null, `Count: ${count ?? "..."}`),
+          RE("button", { onClick: handleIncrementClick }, "Increment"),
         );
       }
 
       const rootElem = document.getElementById("root");
-      createRoot(rootElem).render(React.createElement(App));
+      createRoot(rootElem).render(RE(App));
     </script>
   </body>
 </html>
