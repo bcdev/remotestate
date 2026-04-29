@@ -43,7 +43,7 @@ export class StoreImpl implements Store {
     this.pendingFetches.add(path);
     this.transport.send({
       type: "get",
-      id: crypto.randomUUID(),
+      call_id: crypto.randomUUID(),
       path,
     });
   }

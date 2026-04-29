@@ -16,7 +16,7 @@ describe("TaskStoreImpl", () => {
     store.subscribe(listener);
 
     store.setTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
       status: "running",
@@ -39,13 +39,13 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
 
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
 
     expect(store.getTask("export")).toMatchObject({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
       status: "running",
@@ -57,14 +57,14 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "task_update",
-      id: "call-1",
+      call_id: "call-1",
       task_id: "export",
       method: "export_report",
       status: "running",
@@ -88,8 +88,8 @@ describe("TaskController", () => {
 
     transport._trigger({
       type: "task_update",
-      id: "call-1",
-      taskId: "export",
+      call_id: "call-1",
+      task_id: "export",
       method: "export_report",
       status: "running",
       progress: 40,
@@ -103,14 +103,14 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "invalidate",
-      id: "call-1",
+      call_id: "call-1",
       updates: { result: "ok" },
     });
 
@@ -125,14 +125,14 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "compute",
       method: "compute",
     });
 
     transport._trigger({
       type: "query_result",
-      id: "call-1",
+      call_id: "call-1",
       value: 42,
     });
 
@@ -147,14 +147,14 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "error",
-      id: "call-1",
+      call_id: "call-1",
       message: "boom",
     });
 
@@ -169,24 +169,24 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
     controller.startTask({
-      id: "call-2",
+      callId: "call-2",
       taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "invalidate",
-      id: "call-1",
+      call_id: "call-1",
       updates: {},
     });
 
     expect(store.getTask("export")).toMatchObject({
-      id: "call-2",
+      callId: "call-2",
       status: "running",
     });
   });
@@ -196,19 +196,19 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
+      callId: "call-1",
       taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "invalidate",
-      id: "call-1",
+      call_id: "call-1",
       updates: {},
     });
     transport._trigger({
       type: "task_update",
-      id: "call-1",
+      call_id: "call-1",
       taskId: "export",
       method: "export_report",
       status: "running",

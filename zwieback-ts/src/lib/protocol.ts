@@ -7,7 +7,7 @@
  */
 export interface GetMessage {
   type: "get";
-  id: string;
+  call_id: string;
   path: string;
 }
 
@@ -16,7 +16,7 @@ export interface GetMessage {
  */
 export interface ActionMessage {
   type: "action";
-  id: string;
+  call_id: string;
   task_id?: string;
   method: string;
   args: unknown[];
@@ -28,7 +28,7 @@ export interface ActionMessage {
  */
 export interface QueryMessage {
   type: "query";
-  id: string;
+  call_id: string;
   task_id?: string;
   method: string;
   args: unknown[];
@@ -44,7 +44,7 @@ export interface QueryMessage {
  */
 export interface GetResultMessage {
   type: "get_result";
-  id: string;
+  call_id: string;
   path: string;
   value: unknown;
 }
@@ -54,7 +54,7 @@ export interface GetResultMessage {
  */
 export interface QueryResultMessage {
   type: "query_result";
-  id: string;
+  call_id: string;
   value: unknown;
 }
 
@@ -63,7 +63,7 @@ export interface QueryResultMessage {
  */
 export interface InvalidateMessage {
   type: "invalidate";
-  id: string;
+  call_id: string;
   updates: Record<string, unknown>; // path --> value mapping
 }
 
@@ -72,7 +72,7 @@ export interface InvalidateMessage {
  */
 export interface TaskUpdateMessage {
   type: "task_update";
-  id: string;
+  call_id: string;
   task_id: string;
   method: string;
   status: "running" | "done" | "error";
@@ -87,7 +87,7 @@ export interface TaskUpdateMessage {
  */
 export interface ErrorMessage {
   type: "error";
-  id: string;
+  call_id: string;
   message: string;
 }
 

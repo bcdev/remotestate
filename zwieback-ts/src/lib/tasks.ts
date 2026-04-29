@@ -13,11 +13,12 @@ export type TaskStatus = TaskUpdateMessage["status"];
 /**
  * Snapshot of one tracked action or query call.
  *
- * The `taskId` is the user-visible task key. `id` is the internal call ID used
- * to correlate protocol messages belonging to the same request.
+ * - The `callId` is an internal call ID used
+ *   to correlate protocol messages belonging to the same request.
+ * - The `taskId` is the user-visible task key.
  */
 export interface TaskState {
-  id: string;
+  callId: string;
   taskId: string;
   method: string;
   status: TaskStatus;
@@ -90,7 +91,7 @@ export interface WritableTaskStore extends TaskStore {
  * Minimal metadata needed to register a newly started task.
  */
 export interface TaskStart {
-  id: string;
+  callId: string;
   taskId: string;
   method: string;
 }
@@ -190,12 +191,12 @@ export class TaskController {
   startTask(task: TaskStart): void {
     const now = Date.now();
     const sequence = this.nextCallSequence();
-    this.finishedCallIds.delete(task.id);
-    this.callToTaskId.set(task.id, task.taskId);
-    this.callSequences.set(task.id, sequence);
+    this.finishedCallIds.delete(task.callId);
+    this.callToTaskId.set(task.callId, task.taskId);
+    this.callSequences.set(task.callId, sequence);
     this.latestSequenceByTaskId.set(task.taskId, sequence);
     this.store.setTask({
-      id: task.id,
+      callId: task.callId,
       taskId: task.taskId,
       method: task.method,
       status: "running",
@@ -216,19 +217,19 @@ export class TaskController {
     if (msg.type === "task_update") {
       this.applyTaskUpdate(msg);
     } else if (msg.type === "invalidate" || msg.type === "query_result") {
-      this.finishTask(msg.id, "done");
+      this.finishTask(msg.call_id, "done");
     } else if (msg.type === "error") {
-      this.finishTask(msg.id, "error", msg.message);
+      this.finishTask(msg.call_id, "error", msg.message);
     }
   }
 
   private applyTaskUpdate(msg: TaskUpdateMessage): void {
-    if (this.finishedCallIds.has(msg.id)) {
+    if (this.finishedCallIds.has(msg.call_id)) {
       return;
     }
 
-    const sequence = this.callSequences.get(msg.id);
-    const expectedTid = this.callToTaskId.get(msg.id);
+    const sequence = this.callSequences.get(msg.call_id);
+    const expectedTid = this.callToTaskId.get(msg.call_id);
     if (sequence === undefined || expectedTid !== msg.task_id) {
       return;
     }
@@ -239,12 +240,12 @@ export class TaskController {
     }
 
     const previous = this.store.getTask(msg.task_id);
-    const isSameCall = previous?.id === msg.id;
+    const isSameCall = previous?.callId === msg.call_id;
     const now = Date.now();
     this.latestSequenceByTaskId.set(msg.task_id, sequence);
 
     this.store.setTask({
-      id: msg.id,
+      callId: msg.call_id,
       taskId: msg.task_id,
       method: msg.method,
       status: msg.status,
@@ -268,26 +269,26 @@ export class TaskController {
   }
 
   private finishTask(
-    id: string,
+    callId: string,
     status: TerminalTaskStatus,
     error?: ErrorMessage["message"],
   ): void {
-    const taskId = this.callToTaskId.get(id);
+    const taskId = this.callToTaskId.get(callId);
     if (!taskId) {
       return;
     }
 
-    const sequence = this.callSequences.get(id);
-    this.finishedCallIds.add(id);
-    this.callToTaskId.delete(id);
-    this.callSequences.delete(id);
+    const sequence = this.callSequences.get(callId);
+    this.finishedCallIds.add(callId);
+    this.callToTaskId.delete(callId);
+    this.callSequences.delete(callId);
 
     if (sequence !== undefined && this.isStale(taskId, sequence)) {
       return;
     }
 
     const previous = this.store.getTask(taskId);
-    if (!previous || previous.id !== id) {
+    if (!previous || previous.callId !== callId) {
       return;
     }
 
@@ -314,8 +315,8 @@ export class TaskController {
     if (msg.status === "running") {
       return;
     }
-    this.callToTaskId.delete(msg.id);
-    this.callSequences.delete(msg.id);
-    this.finishedCallIds.add(msg.id);
+    this.callToTaskId.delete(msg.call_id);
+    this.callSequences.delete(msg.call_id);
+    this.finishedCallIds.add(msg.call_id);
   }
 }

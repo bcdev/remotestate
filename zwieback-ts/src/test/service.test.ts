@@ -69,11 +69,11 @@ describe("ServiceImpl", () => {
         {},
         { awaitInvalidate: true },
       );
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
       transport._trigger({
         type: "invalidate",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         updates: { count: 1 },
       });
 
@@ -90,11 +90,11 @@ describe("ServiceImpl", () => {
         {},
         { awaitInvalidate: true },
       );
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
       transport._trigger({
         type: "error",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         message: "oops",
       });
 
@@ -155,11 +155,11 @@ describe("ServiceImpl", () => {
       const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
       transport._trigger({
         type: "query_result",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         value: 15.0,
       });
 
@@ -171,18 +171,18 @@ describe("ServiceImpl", () => {
       const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
       transport._trigger({
         type: "error",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         message: "oops",
       });
 
       await expect(promise).rejects.toThrow("oops");
     });
 
-    it("ignores messages with different id", async () => {
+    it("ignores messages with different call_id", async () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
@@ -190,14 +190,14 @@ describe("ServiceImpl", () => {
 
       transport._trigger({
         type: "query_result",
-        id: "wrong-id",
+        call_id: "i_am_not_ok",
         value: 999,
       });
 
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
       transport._trigger({
         type: "query_result",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         value: 15.0,
       });
 

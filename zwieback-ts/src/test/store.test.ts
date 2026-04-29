@@ -14,7 +14,7 @@ describe("StoreImpl", () => {
 
     transport._trigger({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 42,
     });
@@ -28,7 +28,7 @@ describe("StoreImpl", () => {
 
     transport._trigger({
       type: "invalidate",
-      id: "abc",
+      call_id: "abc",
       updates: { count: 99, "user.name": "Norman" },
     });
 
@@ -44,7 +44,7 @@ describe("StoreImpl", () => {
 
     transport._trigger({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
@@ -61,7 +61,7 @@ describe("StoreImpl", () => {
 
     transport._trigger({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
@@ -86,7 +86,7 @@ describe("StoreImpl", () => {
 
     transport._trigger({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 42,
     });
@@ -114,7 +114,7 @@ describe("StoreImpl", () => {
     store._fetchIfNeeded("count");
     transport._trigger({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
