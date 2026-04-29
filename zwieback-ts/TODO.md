@@ -2,8 +2,11 @@
 
 ## Refactorings
 
+- [x] Drop _snapshot_ in method names. Document snapshot behavior.
 - [ ] Rename `id` to `callId` (`call_id` in protocol)
 - [ ] Rename `tid` to `taskId` (`tasK_id` in protocol)
+- [ ] Rename and/or move `Store._fetchIfNeeded`, 
+      it should not appear in interface
 
 ## Potential problems
 

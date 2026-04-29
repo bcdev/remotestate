@@ -5,7 +5,7 @@ import { mockTransport, mockTransportWithHandler, asTransport } from "./mocks";
 describe("StoreImpl", () => {
   it("returns undefined for uncached path", () => {
     const store = new StoreImpl(asTransport(mockTransport()));
-    expect(store.getSnapshot("count")).toBeUndefined();
+    expect(store.get("count")).toBeUndefined();
   });
 
   it("caches value from GetResultMessage", () => {
@@ -19,7 +19,7 @@ describe("StoreImpl", () => {
       value: 42,
     });
 
-    expect(store.getSnapshot("count")).toBe(42);
+    expect(store.get("count")).toBe(42);
   });
 
   it("updates cache from InvalidateMessage", () => {
@@ -32,8 +32,8 @@ describe("StoreImpl", () => {
       updates: { count: 99, "user.name": "Norman" },
     });
 
-    expect(store.getSnapshot("count")).toBe(99);
-    expect(store.getSnapshot("user.name")).toBe("Norman");
+    expect(store.get("count")).toBe(99);
+    expect(store.get("user.name")).toBe("Norman");
   });
 
   it("notifies listeners on value update", () => {

@@ -49,7 +49,7 @@ describe("ServiceImpl", () => {
 
       void service.action("increment");
 
-      expect(taskStore.getAllSnapshot()).toEqual([]);
+      expect(taskStore.getAllTasks()).toEqual([]);
     });
 
     it("resolves immediately without awaitInvalidate", async () => {
@@ -147,7 +147,7 @@ describe("ServiceImpl", () => {
 
       void service.query("compute", [5.0]);
 
-      expect(taskStore.getAllSnapshot()).toEqual([]);
+      expect(taskStore.getAllTasks()).toEqual([]);
     });
 
     it("resolves with query_result value", async () => {

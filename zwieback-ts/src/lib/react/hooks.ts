@@ -56,7 +56,7 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   );
 
   const getSnapshot = useCallback(
-    () => store.getSnapshot(path) as T | undefined,
+    () => store.get(path) as T | undefined,
     [store, path],
   );
 
@@ -139,7 +139,7 @@ export function useTask(tid: string): TaskState | undefined {
   );
 
   const getSnapshot = useCallback(
-    () => taskStore.getSnapshot(tid),
+    () => taskStore.getTask(tid),
     [taskStore, tid],
   );
 
@@ -147,7 +147,7 @@ export function useTask(tid: string): TaskState | undefined {
 }
 
 /**
- * Observe all tracked tasks, newest first.
+ * Observe all tracked tasks. The list is not sorted.
  */
 export function useTasks(): readonly TaskState[] {
   const taskStore = useTaskStore();
@@ -158,7 +158,7 @@ export function useTasks(): readonly TaskState[] {
   );
 
   const getSnapshot = useCallback(
-    () => taskStore.getAllSnapshot(),
+    () => taskStore.getAllTasks(),
     [taskStore],
   );
 

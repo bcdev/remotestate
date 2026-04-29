@@ -6,8 +6,8 @@ describe("TaskStoreImpl", () => {
   it("returns undefined for unknown tasks", () => {
     const store = new TaskStoreImpl();
 
-    expect(store.getSnapshot("missing")).toBeUndefined();
-    expect(store.getAllSnapshot()).toEqual([]);
+    expect(store.getTask("missing")).toBeUndefined();
+    expect(store.getAllTasks()).toEqual([]);
   });
 
   it("stores tasks and notifies listeners", () => {
@@ -24,7 +24,7 @@ describe("TaskStoreImpl", () => {
       updatedAt: 1,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       method: "export_report",
       status: "running",
     });
@@ -44,7 +44,7 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       id: "call-1",
       tid: "export",
       method: "export_report",
@@ -73,7 +73,7 @@ describe("TaskController", () => {
       progress: 40,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       name: "Rendering",
       detail: "Page 2",
       progress: 40,
@@ -95,7 +95,7 @@ describe("TaskController", () => {
       progress: 40,
     });
 
-    expect(store.getAllSnapshot()).toEqual([]);
+    expect(store.getAllTasks()).toEqual([]);
   });
 
   it("marks actions done on invalidate", () => {
@@ -114,7 +114,7 @@ describe("TaskController", () => {
       updates: { result: "ok" },
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "done",
       progress: 100,
     });
@@ -136,7 +136,7 @@ describe("TaskController", () => {
       value: 42,
     });
 
-    expect(store.getSnapshot("compute")).toMatchObject({
+    expect(store.getTask("compute")).toMatchObject({
       status: "done",
       progress: 100,
     });
@@ -158,7 +158,7 @@ describe("TaskController", () => {
       message: "boom",
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "error",
       error: "boom",
     });
@@ -185,7 +185,7 @@ describe("TaskController", () => {
       updates: {},
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       id: "call-2",
       status: "running",
     });
@@ -215,7 +215,7 @@ describe("TaskController", () => {
       progress: 20,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "done",
       progress: 100,
     });

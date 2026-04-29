@@ -19,7 +19,7 @@ export class StoreImpl implements Store {
     });
   }
 
-  getSnapshot(path: string): unknown {
+  get(path: string): unknown {
     return this.cache.get(path);
   }
 

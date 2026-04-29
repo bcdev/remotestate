@@ -33,8 +33,24 @@ export interface TaskState {
  * Read-only task store API consumed by React hooks and external observers.
  */
 export interface TaskStore {
-  getSnapshot(taskId: string): TaskState | undefined;
-  getAllSnapshot(): readonly TaskState[];
+  /**
+   * Get the current task snapshot for the given task-ID.
+   * 
+   * @param taskId the task-ID passed to an action or query call.
+   */
+  getTask(taskId: string): TaskState | undefined;
+
+  /**
+   * Get snapshots of all current tasks sorted by
+   */
+  getAllTasks(): readonly TaskState[];
+
+  /**
+   * Subscribes to this store by registering a listener.
+   *
+   * @param listener a listener that is informed about task state changes
+   * @returns a function that will unregister the listener
+   */
   subscribe(listener: () => void): () => void;
 }
 
@@ -45,9 +61,28 @@ export interface TaskStore {
  * state container such as Zustand.
  */
 export interface WritableTaskStore extends TaskStore {
+  /**
+   * Set the task state.
+   *
+   * @param task the new task state.
+   */
   setTask(task: TaskState): void;
+
+  /**
+   * Delete a task from this store.
+   * 
+   * @param taskId the task-ID
+   */
   deleteTask(taskId: string): void;
+
+  /**
+   * Clear this store. Removes tasks and notifies listeners.
+   */
   clearTasks(): void;
+  
+  /**
+   * Disposes this store. Removes tasks and listeners.
+   */
   dispose?: () => void;
 }
 
@@ -71,15 +106,19 @@ type TerminalTaskStatus = Extract<TaskStatus, "done" | "error">;
  */
 export class TaskStoreImpl implements WritableTaskStore {
   private tasks: Map<string, TaskState> = new Map();
-  private allSnapshot: TaskState[] = [];
   private listeners: Set<TaskListener> = new Set();
 
-  getSnapshot(tid: string): TaskState | undefined {
+  getTask(tid: string): TaskState | undefined {
     return this.tasks.get(tid);
   }
 
-  getAllSnapshot(): readonly TaskState[] {
-    return this.allSnapshot;
+  getAllTasks(): readonly TaskState[] {
+    return Array.from(this.tasks.values());
+  }
+
+  setTask(task: TaskState): void {
+    this.tasks.set(task.tid, { ...task });
+    this.notify();
   }
 
   subscribe(listener: TaskListener): () => void {
@@ -89,17 +128,10 @@ export class TaskStoreImpl implements WritableTaskStore {
     };
   }
 
-  setTask(task: TaskState): void {
-    this.tasks.set(task.tid, { ...task });
-    this.rebuildSnapshot();
-    this.notify();
-  }
-
   deleteTask(tid: string): void {
     if (!this.tasks.delete(tid)) {
       return;
     }
-    this.rebuildSnapshot();
     this.notify();
   }
 
@@ -108,20 +140,12 @@ export class TaskStoreImpl implements WritableTaskStore {
       return;
     }
     this.tasks.clear();
-    this.rebuildSnapshot();
     this.notify();
   }
 
   dispose(): void {
     this.listeners.clear();
     this.tasks.clear();
-    this.allSnapshot = [];
-  }
-
-  private rebuildSnapshot(): void {
-    this.allSnapshot = Array.from(this.tasks.values()).sort(
-      (a, b) => b.updatedAt - a.updatedAt,
-    );
   }
 
   private notify(): void {
@@ -214,7 +238,7 @@ export class TaskController {
       return;
     }
 
-    const previous = this.store.getSnapshot(msg.tid);
+    const previous = this.store.getTask(msg.tid);
     const isSameCall = previous?.id === msg.id;
     const now = Date.now();
     this.latestSequenceByTaskId.set(msg.tid, sequence);
@@ -262,7 +286,7 @@ export class TaskController {
       return;
     }
 
-    const previous = this.store.getSnapshot(tid);
+    const previous = this.store.getTask(tid);
     if (!previous || previous.id !== id) {
       return;
     }
