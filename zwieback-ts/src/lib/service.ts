@@ -10,7 +10,7 @@ type Kwargs = Record<string, unknown>;
  */
 export interface ActionOptions {
   /**
-   * If true, waits for the InvalidateMessage before resolving.
+   * If true, waits for the ActionResultMessage before resolving.
    */
   awaitInvalidate?: boolean;
   /**
@@ -66,7 +66,7 @@ export class ServiceImpl implements Service {
             reject(new Error(msg.message));
             return;
           }
-          if (msg.type === "invalidate" && msg.call_id === callId) {
+          if (msg.type === "action_result" && msg.call_id === callId) {
             unsubscribe();
             resolve();
           }

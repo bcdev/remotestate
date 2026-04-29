@@ -98,7 +98,7 @@ describe("TaskController", () => {
     expect(store.getAllTasks()).toEqual([]);
   });
 
-  it("marks actions done on invalidate", () => {
+  it("marks actions done on action_result", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
@@ -109,7 +109,7 @@ describe("TaskController", () => {
     });
 
     transport._trigger({
-      type: "invalidate",
+      type: "action_result",
       call_id: "call-1",
       updates: { result: "ok" },
     });
@@ -180,7 +180,7 @@ describe("TaskController", () => {
     });
 
     transport._trigger({
-      type: "invalidate",
+      type: "action_result",
       call_id: "call-1",
       updates: {},
     });
@@ -202,7 +202,7 @@ describe("TaskController", () => {
     });
 
     transport._trigger({
-      type: "invalidate",
+      type: "action_result",
       call_id: "call-1",
       updates: {},
     });

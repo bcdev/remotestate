@@ -7,7 +7,7 @@ from zwieback.protocol import (
     ErrorMessage,
     GetMessage,
     GetResultMessage,
-    InvalidateMessage,
+    ActionResultMessage,
     QueryMessage,
     QueryResultMessage,
 )
@@ -135,7 +135,7 @@ async def test_dispatch_call_action(server):
     )
 
     assert server._store.get("count") == 1
-    assert isinstance(sent[0], InvalidateMessage)
+    assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].call_id == "abc"
     assert "count" in sent[0].updates
 
@@ -156,7 +156,7 @@ async def test_dispatch_builtin_set_state_action(server):
     )
 
     assert server._store.get("count") == 7
-    assert isinstance(sent[0], InvalidateMessage)
+    assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].updates["count"] == 7
 
 

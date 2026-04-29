@@ -216,7 +216,7 @@ export class TaskController {
   private handleMessage(msg: OutgoingMessage): void {
     if (msg.type === "task_update") {
       this.applyTaskUpdate(msg);
-    } else if (msg.type === "invalidate" || msg.type === "query_result") {
+    } else if (msg.type === "action_result" || msg.type === "query_result") {
       this.finishTask(msg.call_id, "done");
     } else if (msg.type === "error") {
       this.finishTask(msg.call_id, "error", msg.message);

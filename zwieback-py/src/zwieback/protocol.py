@@ -93,6 +93,19 @@ class GetResultMessage(BaseModel):
     """The JSON value of the state value."""
 
 
+class ActionResultMessage(BaseModel):
+    """Return the batched store updates produced by a previous ``ActionMessage``."""
+
+    type: Literal["action_result"] = "action_result"
+    """Message type."""
+
+    call_id: str
+    """An internal action- or query-ID."""
+
+    updates: dict[str, Any]
+    """Mapping from state paths to changed state values. May be empty."""
+
+
 class QueryResultMessage(BaseModel):
     """Return the computed result for a previous ``QueryMessage``."""
 
@@ -140,19 +153,6 @@ class TaskUpdateMessage(BaseModel):
     """Error message. Valid only if status is `"error"`."""
 
 
-class InvalidateMessage(BaseModel):
-    """Return the batched store updates produced by an action."""
-
-    type: Literal["invalidate"] = "invalidate"
-    """Message type."""
-
-    call_id: str
-    """An internal action- or query-ID."""
-
-    updates: dict[str, Any]
-    """Mapping from state paths to changed state values."""
-
-
 class ErrorMessage(BaseModel):
     """Return an error for a previous action, query, or parse failure."""
 
@@ -180,7 +180,7 @@ OutgoingMessage = Annotated[
     GetResultMessage
     | QueryResultMessage
     | TaskUpdateMessage
-    | InvalidateMessage
+    | ActionResultMessage
     | ErrorMessage,
     Field(discriminator="type"),
 ]

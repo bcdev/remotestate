@@ -14,7 +14,7 @@ from zwieback.protocol import (
     GetMessage,
     GetResultMessage,
     IncomingMessage,
-    InvalidateMessage,
+    ActionResultMessage,
     OutgoingMessage,
     QueryMessage,
     QueryResultMessage,
@@ -79,7 +79,7 @@ class Server:
                 f"error while dispatching message of type {type!r}", exc_info=True
             )
             await self._transport.send(
-                ErrorMessage(type="error", call_id=msg.call_id, message=str(e))
+                ErrorMessage(call_id=msg.call_id, message=str(e))
             )
 
     async def __dispatch(self, msg: IncomingMessage) -> None:
@@ -88,9 +88,7 @@ class Server:
             case GetMessage(call_id=call_id, path=path):
                 value = self._store.get(path)
                 await self._transport.send(
-                    GetResultMessage(
-                        type="get_result", call_id=call_id, path=path, value=value
-                    )
+                    GetResultMessage(call_id=call_id, path=path, value=value)
                 )
 
             case ActionMessage(
@@ -110,9 +108,7 @@ class Server:
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    InvalidateMessage(
-                        type="invalidate", call_id=call_id, updates=updates
-                    )
+                    ActionResultMessage(call_id=call_id, updates=updates)
                 )
 
             case QueryMessage(
@@ -132,9 +128,7 @@ class Server:
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    QueryResultMessage(
-                        type="query_result", call_id=call_id, value=result
-                    )
+                    QueryResultMessage(call_id=call_id, value=result)
                 )
             case _:
                 raise AssertionError(f"unknown message type {msg.type!r}")
@@ -178,9 +172,7 @@ class WebSocketTransport(Transport):
                     msg = None
                     error_mag = f"WebSocket message decoding failed: {e}"
                     LOG.exception(error_mag)
-                    await self.send(
-                        ErrorMessage(type="error", call_id="unknown", message=error_mag)
-                    )
+                    await self.send(ErrorMessage(call_id="unknown", message=error_mag))
                 if msg is not None:
                     await handler(msg)
         except WebSocketDisconnect:

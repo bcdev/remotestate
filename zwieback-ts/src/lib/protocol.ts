@@ -50,21 +50,21 @@ export interface GetResultMessage {
 }
 
 /**
+ * Return the batched store updates produced by an action.
+ */
+export interface ActionResultMessage {
+  type: "action_result";
+  call_id: string;
+  updates: Record<string, unknown>; // path --> value mapping
+}
+
+/**
  * Return the result of a previous `QueryMessage`.
  */
 export interface QueryResultMessage {
   type: "query_result";
   call_id: string;
   value: unknown;
-}
-
-/**
- * Deliver the batched store updates produced by an action.
- */
-export interface InvalidateMessage {
-  type: "invalidate";
-  call_id: string;
-  updates: Record<string, unknown>; // path --> value mapping
 }
 
 /**
@@ -105,7 +105,7 @@ export type IncomingMessage = GetMessage | ActionMessage | QueryMessage;
  */
 export type OutgoingMessage =
   | GetResultMessage
-  | InvalidateMessage
+  | ActionResultMessage
   | QueryResultMessage
   | TaskUpdateMessage
   | ErrorMessage;

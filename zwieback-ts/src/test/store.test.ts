@@ -22,12 +22,12 @@ describe("StoreImpl", () => {
     expect(store.get("count")).toBe(42);
   });
 
-  it("updates cache from InvalidateMessage", () => {
+  it("updates cache from ActionResultMessage", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
     transport._trigger({
-      type: "invalidate",
+      type: "action_result",
       call_id: "abc",
       updates: { count: 99, "user.name": "Norman" },
     });

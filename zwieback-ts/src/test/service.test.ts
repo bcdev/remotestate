@@ -59,7 +59,7 @@ describe("ServiceImpl", () => {
       await expect(service.action("increment")).resolves.toBeUndefined();
     });
 
-    it("waits for invalidate when awaitInvalidate is true", async () => {
+    it("waits for action_result when awaitInvalidate is true", async () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
@@ -72,7 +72,7 @@ describe("ServiceImpl", () => {
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
       transport._trigger({
-        type: "invalidate",
+        type: "action_result",
         call_id: sentMsg.call_id,
         updates: { count: 1 },
       });
