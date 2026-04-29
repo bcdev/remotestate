@@ -33,8 +33,8 @@ class ActionMessage(BaseModel):
     id: str
     """An internal action-ID."""
 
-    tid: str | None = None
-    """User-supplied task identifier for progress tracking."""
+    task_id: str | None = None
+    """User-supplied task identifier for status and progress tracking."""
 
     method: str
     """The action method's name."""
@@ -59,8 +59,8 @@ class QueryMessage(BaseModel):
     id: str
     """An internal query-ID."""
 
-    tid: str | None = None
-    """User-supplied task identifier for progress tracking."""
+    task_id: str | None = None
+    """User-supplied task identifier for status and progress tracking."""
 
     method: str
     """The query method's name."""
@@ -118,17 +118,26 @@ class TaskUpdateMessage(BaseModel):
     id: str
     """An internal action- or query-ID."""
 
-    tid: str
+    task_id: str
     """User-supplied task identifier."""
 
     method: str
     """The method name."""
 
     status: Literal["running", "done", "error"]
+    """Task status."""
+
     name: str | None = None
+    """Task name."""
+
     detail: str | None = None
-    progress: float | None = None  # 0-100
+    """Task detail text."""
+
+    progress: float | None = Field(None, ge=0, le=100)
+    """Task progress, a number between 0 and 100."""
+
     error: str | None = None
+    """Error message. Valid only if status is `"error"`."""
 
 
 class InvalidateMessage(BaseModel):

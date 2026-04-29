@@ -13,12 +13,12 @@ export type TaskStatus = TaskUpdateMessage["status"];
 /**
  * Snapshot of one tracked action or query call.
  *
- * The `tid` is the user-visible task key. `id` is the internal call ID used
+ * The `taskId` is the user-visible task key. `id` is the internal call ID used
  * to correlate protocol messages belonging to the same request.
  */
 export interface TaskState {
   id: string;
-  tid: string;
+  taskId: string;
   method: string;
   status: TaskStatus;
   name?: string;
@@ -35,7 +35,7 @@ export interface TaskState {
 export interface TaskStore {
   /**
    * Get the current task snapshot for the given task-ID.
-   * 
+   *
    * @param taskId the task-ID passed to an action or query call.
    */
   getTask(taskId: string): TaskState | undefined;
@@ -70,7 +70,7 @@ export interface WritableTaskStore extends TaskStore {
 
   /**
    * Delete a task from this store.
-   * 
+   *
    * @param taskId the task-ID
    */
   deleteTask(taskId: string): void;
@@ -79,7 +79,7 @@ export interface WritableTaskStore extends TaskStore {
    * Clear this store. Removes tasks and notifies listeners.
    */
   clearTasks(): void;
-  
+
   /**
    * Disposes this store. Removes tasks and listeners.
    */
@@ -91,7 +91,7 @@ export interface WritableTaskStore extends TaskStore {
  */
 export interface TaskStart {
   id: string;
-  tid: string;
+  taskId: string;
   method: string;
 }
 
@@ -108,8 +108,8 @@ export class TaskStoreImpl implements WritableTaskStore {
   private tasks: Map<string, TaskState> = new Map();
   private listeners: Set<TaskListener> = new Set();
 
-  getTask(tid: string): TaskState | undefined {
-    return this.tasks.get(tid);
+  getTask(taskId: string): TaskState | undefined {
+    return this.tasks.get(taskId);
   }
 
   getAllTasks(): readonly TaskState[] {
@@ -117,7 +117,7 @@ export class TaskStoreImpl implements WritableTaskStore {
   }
 
   setTask(task: TaskState): void {
-    this.tasks.set(task.tid, { ...task });
+    this.tasks.set(task.taskId, { ...task });
     this.notify();
   }
 
@@ -128,8 +128,8 @@ export class TaskStoreImpl implements WritableTaskStore {
     };
   }
 
-  deleteTask(tid: string): void {
-    if (!this.tasks.delete(tid)) {
+  deleteTask(taskId: string): void {
+    if (!this.tasks.delete(taskId)) {
       return;
     }
     this.notify();
@@ -191,12 +191,12 @@ export class TaskController {
     const now = Date.now();
     const sequence = this.nextCallSequence();
     this.finishedCallIds.delete(task.id);
-    this.callToTaskId.set(task.id, task.tid);
+    this.callToTaskId.set(task.id, task.taskId);
     this.callSequences.set(task.id, sequence);
-    this.latestSequenceByTaskId.set(task.tid, sequence);
+    this.latestSequenceByTaskId.set(task.taskId, sequence);
     this.store.setTask({
       id: task.id,
-      tid: task.tid,
+      taskId: task.taskId,
       method: task.method,
       status: "running",
       startedAt: now,
@@ -229,23 +229,23 @@ export class TaskController {
 
     const sequence = this.callSequences.get(msg.id);
     const expectedTid = this.callToTaskId.get(msg.id);
-    if (sequence === undefined || expectedTid !== msg.tid) {
+    if (sequence === undefined || expectedTid !== msg.task_id) {
       return;
     }
 
-    if (this.isStale(msg.tid, sequence)) {
+    if (this.isStale(msg.task_id, sequence)) {
       this.forgetTerminalCall(msg);
       return;
     }
 
-    const previous = this.store.getTask(msg.tid);
+    const previous = this.store.getTask(msg.task_id);
     const isSameCall = previous?.id === msg.id;
     const now = Date.now();
-    this.latestSequenceByTaskId.set(msg.tid, sequence);
+    this.latestSequenceByTaskId.set(msg.task_id, sequence);
 
     this.store.setTask({
       id: msg.id,
-      tid: msg.tid,
+      taskId: msg.task_id,
       method: msg.method,
       status: msg.status,
       name: msg.name ?? (isSameCall ? previous.name : undefined),
@@ -272,8 +272,8 @@ export class TaskController {
     status: TerminalTaskStatus,
     error?: ErrorMessage["message"],
   ): void {
-    const tid = this.callToTaskId.get(id);
-    if (!tid) {
+    const taskId = this.callToTaskId.get(id);
+    if (!taskId) {
       return;
     }
 
@@ -282,11 +282,11 @@ export class TaskController {
     this.callToTaskId.delete(id);
     this.callSequences.delete(id);
 
-    if (sequence !== undefined && this.isStale(tid, sequence)) {
+    if (sequence !== undefined && this.isStale(taskId, sequence)) {
       return;
     }
 
-    const previous = this.store.getTask(tid);
+    const previous = this.store.getTask(taskId);
     if (!previous || previous.id !== id) {
       return;
     }
@@ -305,8 +305,8 @@ export class TaskController {
     return this.nextSequence;
   }
 
-  private isStale(tid: string, sequence: number): boolean {
-    const latest = this.latestSequenceByTaskId.get(tid);
+  private isStale(taskId: string, sequence: number): boolean {
+    const latest = this.latestSequenceByTaskId.get(taskId);
     return latest !== undefined && sequence < latest;
   }
 

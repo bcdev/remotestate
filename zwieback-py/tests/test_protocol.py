@@ -25,8 +25,10 @@ def test_get():
 
 def test_action():
     assert _incoming_adapter.validate_json(
-        to_json(type="action", id="x", tid="y", method="set_model", args=[], kwargs={})
-    ) == ActionMessage(id="x", tid="y", method="set_model", args=[], kwargs={})
+        to_json(
+            type="action", id="x", task_id="y", method="set_model", args=[], kwargs={}
+        )
+    ) == ActionMessage(id="x", task_id="y", method="set_model", args=[], kwargs={})
 
 
 def test_action_without_task_id():

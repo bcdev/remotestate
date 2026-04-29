@@ -123,7 +123,7 @@ class Service:
         message = TaskUpdateMessage(
             type="task_update",
             id=ctx.call_id,
-            tid=ctx.task_id,
+            task_id=ctx.task_id,
             method=ctx.method,
             status="running",
             name=name,

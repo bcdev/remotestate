@@ -3,11 +3,10 @@
 ## Refactorings
 
 - [ ] Rename protocol `id` to `call_id`
-- [ ] Rename protocol `tid` to `task_id`
+- [x] Rename protocol `tid` to `task_id`
 - [ ] Rename `Service.process` to something better
 - [ ] Rename `"invalidate"` message to `"action_result"`  
 - [ ] Rename `InvalidatetMessage` to `ActionResultMessage`
-
 
 ## Improve error handling 
 

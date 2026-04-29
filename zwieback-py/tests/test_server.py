@@ -129,7 +129,7 @@ async def test_dispatch_call_action(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        ActionMessage(id="abc", tid="abc", method="increment", args=[], kwargs={})
+        ActionMessage(id="abc", task_id="abc", method="increment", args=[], kwargs={})
     )
 
     assert server._store.get("count") == 1
@@ -146,7 +146,7 @@ async def test_dispatch_builtin_set_state_action(server):
     await server._dispatch(
         ActionMessage(
             id="abc",
-            tid="abc",
+            task_id="abc",
             method="set_state",
             args=["count", 7],
             kwargs={},
@@ -164,7 +164,7 @@ async def test_dispatch_call_unknown_action(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        ActionMessage(id="abc", tid="abc", method="nonexistent", args=[], kwargs={})
+        ActionMessage(id="abc", task_id="abc", method="nonexistent", args=[], kwargs={})
     )
 
     assert isinstance(sent[0], ErrorMessage)
@@ -177,7 +177,7 @@ async def test_dispatch_invoke_query(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        QueryMessage(id="xyz", tid="xyz", method="get_count", args=[], kwargs={})
+        QueryMessage(id="xyz", task_id="xyz", method="get_count", args=[], kwargs={})
     )
 
     assert isinstance(sent[0], QueryResultMessage)
@@ -191,7 +191,7 @@ async def test_dispatch_invoke_unknown_query(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        QueryMessage(id="xyz", tid="xyz", method="nonexistent", args=[], kwargs={})
+        QueryMessage(id="xyz", task_id="xyz", method="nonexistent", args=[], kwargs={})
     )
 
     assert isinstance(sent[0], ErrorMessage)

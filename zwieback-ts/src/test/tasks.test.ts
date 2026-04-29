@@ -17,7 +17,7 @@ describe("TaskStoreImpl", () => {
 
     store.setTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
       status: "running",
       startedAt: 1,
@@ -40,13 +40,13 @@ describe("TaskController", () => {
 
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
     expect(store.getTask("export")).toMatchObject({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
       status: "running",
     });
@@ -58,14 +58,14 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
     transport._trigger({
       type: "task_update",
       id: "call-1",
-      tid: "export",
+      task_id: "export",
       method: "export_report",
       status: "running",
       name: "Rendering",
@@ -89,7 +89,7 @@ describe("TaskController", () => {
     transport._trigger({
       type: "task_update",
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
       status: "running",
       progress: 40,
@@ -104,7 +104,7 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
@@ -126,7 +126,7 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "compute",
+      taskId: "compute",
       method: "compute",
     });
 
@@ -148,7 +148,7 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
@@ -170,12 +170,12 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
     controller.startTask({
       id: "call-2",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
@@ -197,7 +197,7 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
     });
 
@@ -209,7 +209,7 @@ describe("TaskController", () => {
     transport._trigger({
       type: "task_update",
       id: "call-1",
-      tid: "export",
+      taskId: "export",
       method: "export_report",
       status: "running",
       progress: 20,

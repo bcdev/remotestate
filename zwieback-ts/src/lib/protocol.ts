@@ -17,7 +17,7 @@ export interface GetMessage {
 export interface ActionMessage {
   type: "action";
   id: string;
-  tid?: string;
+  task_id?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;
@@ -29,7 +29,7 @@ export interface ActionMessage {
 export interface QueryMessage {
   type: "query";
   id: string;
-  tid?: string;
+  task_id?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;
@@ -73,7 +73,7 @@ export interface InvalidateMessage {
 export interface TaskUpdateMessage {
   type: "task_update";
   id: string;
-  tid: string;
+  task_id: string;
   method: string;
   status: "running" | "done" | "error";
   name?: string;

@@ -91,28 +91,32 @@ class Server:
                     GetResultMessage(type="get_result", id=id, path=path, value=value)
                 )
 
-            case ActionMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+            case ActionMessage(
+                id=id, task_id=task_id, method=method, args=args, kwargs=kwargs
+            ):
                 # noinspection PyProtectedMember
                 updates = await self._service._zw_invoke_action(
                     method,
                     args,
                     kwargs,
                     call_id=id,
-                    task_id=tid,
+                    task_id=task_id,
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
                     InvalidateMessage(type="invalidate", id=id, updates=updates)
                 )
 
-            case QueryMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+            case QueryMessage(
+                id=id, task_id=task_id, method=method, args=args, kwargs=kwargs
+            ):
                 # noinspection PyProtectedMember
                 result = await self._service._zw_invoke_query(
                     method,
                     args,
                     kwargs,
                     call_id=id,
-                    task_id=tid,
+                    task_id=task_id,
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
