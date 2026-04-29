@@ -70,7 +70,7 @@ class Server:
 
         return sender
 
-    # noinspection PyShadowingBuiltins,PyProtectedMember
+    # noinspection PyProtectedMember
     async def _dispatch(self, msg: IncomingMessage) -> None:
         try:
             await self.__dispatch(msg)
@@ -79,48 +79,62 @@ class Server:
                 f"error while dispatching message of type {type!r}", exc_info=True
             )
             await self._transport.send(
-                ErrorMessage(type="error", id=msg.id, message=str(e))
+                ErrorMessage(type="error", call_id=msg.call_id, message=str(e))
             )
 
     async def __dispatch(self, msg: IncomingMessage) -> None:
         # noinspection PyShadowingBuiltins
         match msg:
-            case GetMessage(id=id, path=path):
+            case GetMessage(call_id=call_id, path=path):
                 value = self._store.get(path)
                 await self._transport.send(
-                    GetResultMessage(type="get_result", id=id, path=path, value=value)
+                    GetResultMessage(
+                        type="get_result", call_id=call_id, path=path, value=value
+                    )
                 )
 
             case ActionMessage(
-                id=id, task_id=task_id, method=method, args=args, kwargs=kwargs
+                call_id=call_id,
+                task_id=task_id,
+                method=method,
+                args=args,
+                kwargs=kwargs,
             ):
                 # noinspection PyProtectedMember
                 updates = await self._service._zw_invoke_action(
                     method,
                     args,
                     kwargs,
-                    call_id=id,
+                    call_id=call_id,
                     task_id=task_id,
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    InvalidateMessage(type="invalidate", id=id, updates=updates)
+                    InvalidateMessage(
+                        type="invalidate", call_id=call_id, updates=updates
+                    )
                 )
 
             case QueryMessage(
-                id=id, task_id=task_id, method=method, args=args, kwargs=kwargs
+                call_id=call_id,
+                task_id=task_id,
+                method=method,
+                args=args,
+                kwargs=kwargs,
             ):
                 # noinspection PyProtectedMember
                 result = await self._service._zw_invoke_query(
                     method,
                     args,
                     kwargs,
-                    call_id=id,
+                    call_id=call_id,
                     task_id=task_id,
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    QueryResultMessage(type="query_result", id=id, value=result)
+                    QueryResultMessage(
+                        type="query_result", call_id=call_id, value=result
+                    )
                 )
             case _:
                 raise AssertionError(f"unknown message type {msg.type!r}")
@@ -165,7 +179,7 @@ class WebSocketTransport(Transport):
                     error_mag = f"WebSocket message decoding failed: {e}"
                     LOG.exception(error_mag)
                     await self.send(
-                        ErrorMessage(type="error", id="unknown", message=error_mag)
+                        ErrorMessage(type="error", call_id="unknown", message=error_mag)
                     )
                 if msg is not None:
                     await handler(msg)

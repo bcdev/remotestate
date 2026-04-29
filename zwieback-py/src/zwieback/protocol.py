@@ -13,7 +13,7 @@ class GetMessage(BaseModel):
     type: Literal["get"] = "get"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal get-ID."""
 
     path: str
@@ -30,7 +30,7 @@ class ActionMessage(BaseModel):
     type: Literal["action"] = "action"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action-ID."""
 
     task_id: str | None = None
@@ -56,7 +56,7 @@ class QueryMessage(BaseModel):
     type: Literal["query"] = "query"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal query-ID."""
 
     task_id: str | None = None
@@ -83,7 +83,7 @@ class GetResultMessage(BaseModel):
     type: Literal["get_result"] = "get_result"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal get-ID."""
 
     path: str
@@ -99,7 +99,7 @@ class QueryResultMessage(BaseModel):
     type: Literal["query_result"] = "query_result"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal query-ID."""
 
     value: Any
@@ -115,7 +115,7 @@ class TaskUpdateMessage(BaseModel):
     type: Literal["task_update"] = "task_update"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action- or query-ID."""
 
     task_id: str
@@ -146,7 +146,7 @@ class InvalidateMessage(BaseModel):
     type: Literal["invalidate"] = "invalidate"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action- or query-ID."""
 
     updates: dict[str, Any]
@@ -159,7 +159,7 @@ class ErrorMessage(BaseModel):
     type: Literal["error"] = "error"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action- or query-ID."""
 
     message: str

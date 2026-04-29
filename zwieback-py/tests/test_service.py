@@ -254,7 +254,7 @@ async def test_progress_calls_sender_from_action(store):
     sender_impl.assert_awaited_once_with(
         TaskUpdateMessage(
             method="set_with_progress",
-            id="test-call-id",
+            call_id="test-call-id",
             task_id="test-task-id",
             status="running",
             name="Preparing",
@@ -274,7 +274,7 @@ async def test_progress_calls_sender_from_query(store):
     sender_impl.assert_awaited_once_with(
         TaskUpdateMessage(
             method="compute_with_progress",
-            id="test-call-id",
+            call_id="test-call-id",
             task_id="test-task-id",
             status="running",
             name="Working",
