@@ -45,7 +45,7 @@ def serve(
     Args:
         service: The PythonService instance to serve.
         dist_dir: Path of a directory which provides
-            the HTML UI to be serverd.
+            the HTML UI to be served.
             Typically, it contains a file "index.html".
             If given, will be served from root, i.e., "/".
         host: Host to bind the server to.
