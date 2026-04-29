@@ -33,7 +33,7 @@ export interface TaskState {
  * Read-only task store API consumed by React hooks and external observers.
  */
 export interface TaskStore {
-  getSnapshot(tid: string): TaskState | undefined;
+  getSnapshot(taskId: string): TaskState | undefined;
   getAllSnapshot(): readonly TaskState[];
   subscribe(listener: () => void): () => void;
 }
@@ -46,7 +46,7 @@ export interface TaskStore {
  */
 export interface WritableTaskStore extends TaskStore {
   setTask(task: TaskState): void;
-  deleteTask(tid: string): void;
+  deleteTask(taskId: string): void;
   clearTasks(): void;
   dispose?: () => void;
 }
