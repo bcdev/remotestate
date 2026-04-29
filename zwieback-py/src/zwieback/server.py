@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import pathlib
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -24,10 +23,14 @@ from zwieback.protocol import (
 from zwieback.service import Service
 from zwieback.transport import Transport
 
-_incoming_adapter = TypeAdapter(IncomingMessage)
+LOG = logging.getLogger("zwieback")
+
+_IncomingAdapter = TypeAdapter(IncomingMessage)
 
 
 class Server:
+    """Zwieback server that uses a WebSockets transport."""
+
     def __init__(
         self,
         service: Service,
@@ -72,14 +75,15 @@ class Server:
         try:
             await self.__dispatch(msg)
         except Exception as e:
-            logging.getLogger("uvicorn").error(
-                "unknown message received", exc_info=True
+            LOG.error(
+                f"error while dispatching message of type {type!r}", exc_info=True
             )
             await self._transport.send(
                 ErrorMessage(type="error", id=msg.id, message=str(e))
             )
 
     async def __dispatch(self, msg: IncomingMessage) -> None:
+        # noinspection PyShadowingBuiltins
         match msg:
             case GetMessage(id=id, path=path):
                 value = self._store.get(path)
@@ -88,6 +92,7 @@ class Server:
                 )
 
             case ActionMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+                # noinspection PyProtectedMember
                 updates = await self._service._zw_invoke_action(
                     method,
                     args,
@@ -101,6 +106,7 @@ class Server:
                 )
 
             case QueryMessage(id=id, tid=tid, method=method, args=args, kwargs=kwargs):
+                # noinspection PyProtectedMember
                 result = await self._service._zw_invoke_query(
                     method,
                     args,
@@ -113,24 +119,12 @@ class Server:
                     QueryResultMessage(type="query_result", id=id, value=result)
                 )
             case _:
-                logging.getLogger("uvicorn").error("received unknown ws message")
-
-
-def _write_error(e: Exception, msg_text: str) -> None:
-    import traceback
-    import uuid
-
-    content = "".join(
-        [
-            *traceback.format_exception(e),
-            "\n\nFor message:\n\n",
-            msg_text + "\n",
-        ]
-    )
-    pathlib.Path(f"zwieback-error-{uuid.uuid4()}.txt").write_text(content)
+                raise AssertionError(f"unknown message type {msg.type!r}")
 
 
 class WebSocketTransport(Transport):
+    """Transport implementation for WebSockets."""
+
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
 
@@ -155,22 +149,19 @@ class WebSocketTransport(Transport):
         websocket: WebSocket,
         handler: Callable[[IncomingMessage], Awaitable[None]],
     ) -> None:
-        logging.getLogger("uvicorn.error").warning("HELLO FROM _handle_ws")
         await websocket.accept()
         self._connections.add(websocket)
         try:
             while True:
                 msg_text = await websocket.receive_text()
                 try:
-                    msg = _incoming_adapter.validate_json(msg_text, by_alias=True)
+                    msg = _IncomingAdapter.validate_json(msg_text, by_alias=True)
                 except Exception as e:
-                    _write_error(e, msg_text)
                     msg = None
-                    logging.getLogger("uvicorn").error(
-                        "invalid message received", exc_info=True
-                    )
+                    error_mag = f"WebSocket message decoding failed: {e}"
+                    LOG.exception(error_mag)
                     await self.send(
-                        ErrorMessage(type="error", id="unknown", message=str(e))
+                        ErrorMessage(type="error", id="unknown", message=error_mag)
                     )
                 if msg is not None:
                     await handler(msg)
