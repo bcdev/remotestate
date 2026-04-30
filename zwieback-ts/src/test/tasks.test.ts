@@ -6,8 +6,8 @@ describe("TaskStoreImpl", () => {
   it("returns undefined for unknown tasks", () => {
     const store = new TaskStoreImpl();
 
-    expect(store.getSnapshot("missing")).toBeUndefined();
-    expect(store.getAllSnapshot()).toEqual([]);
+    expect(store.getTask("missing")).toBeUndefined();
+    expect(store.getAllTasks()).toEqual([]);
   });
 
   it("stores tasks and notifies listeners", () => {
@@ -16,15 +16,15 @@ describe("TaskStoreImpl", () => {
     store.subscribe(listener);
 
     store.setTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
       status: "running",
       startedAt: 1,
       updatedAt: 1,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       method: "export_report",
       status: "running",
     });
@@ -39,33 +39,33 @@ describe("TaskController", () => {
     const controller = new TaskController(store, asTransport(transport));
 
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
-      id: "call-1",
-      tid: "export",
+    expect(store.getTask("export")).toMatchObject({
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
       status: "running",
     });
   });
 
-  it("applies task_update messages", () => {
+  it("applies update_task messages", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
 
-    transport._trigger({
-      type: "task_update",
-      id: "call-1",
-      tid: "export",
+    transport._triggerMessage({
+      type: "update_task",
+      call_id: "call-1",
+      task_id: "export",
       method: "export_report",
       status: "running",
       name: "Rendering",
@@ -73,7 +73,7 @@ describe("TaskController", () => {
       progress: 40,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       name: "Rendering",
       detail: "Page 2",
       progress: 40,
@@ -81,40 +81,40 @@ describe("TaskController", () => {
     });
   });
 
-  it("ignores task_update messages for untracked calls", () => {
+  it("ignores update_task messages for untracked calls", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     new TaskController(store, asTransport(transport));
 
-    transport._trigger({
-      type: "task_update",
-      id: "call-1",
-      tid: "export",
+    transport._triggerMessage({
+      type: "update_task",
+      call_id: "call-1",
+      task_id: "export",
       method: "export_report",
       status: "running",
       progress: 40,
     });
 
-    expect(store.getAllSnapshot()).toEqual([]);
+    expect(store.getAllTasks()).toEqual([]);
   });
 
-  it("marks actions done on invalidate", () => {
+  it("marks actions done on action_result", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
 
-    transport._trigger({
-      type: "invalidate",
-      id: "call-1",
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "call-1",
       updates: { result: "ok" },
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "done",
       progress: 100,
     });
@@ -125,18 +125,18 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "compute",
+      callId: "call-1",
+      taskId: "compute",
       method: "compute",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "query_result",
-      id: "call-1",
+      call_id: "call-1",
       value: 42,
     });
 
-    expect(store.getSnapshot("compute")).toMatchObject({
+    expect(store.getTask("compute")).toMatchObject({
       status: "done",
       progress: 100,
     });
@@ -147,18 +147,18 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "error",
-      id: "call-1",
+      call_id: "call-1",
       message: "boom",
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "error",
       error: "boom",
     });
@@ -169,24 +169,24 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
     controller.startTask({
-      id: "call-2",
-      tid: "export",
+      callId: "call-2",
+      taskId: "export",
       method: "export_report",
     });
 
-    transport._trigger({
-      type: "invalidate",
-      id: "call-1",
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "call-1",
       updates: {},
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
-      id: "call-2",
+    expect(store.getTask("export")).toMatchObject({
+      callId: "call-2",
       status: "running",
     });
   });
@@ -196,26 +196,26 @@ describe("TaskController", () => {
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
     controller.startTask({
-      id: "call-1",
-      tid: "export",
+      callId: "call-1",
+      taskId: "export",
       method: "export_report",
     });
 
-    transport._trigger({
-      type: "invalidate",
-      id: "call-1",
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "call-1",
       updates: {},
     });
-    transport._trigger({
-      type: "task_update",
-      id: "call-1",
-      tid: "export",
+    transport._triggerMessage({
+      type: "update_task",
+      call_id: "call-1",
+      taskId: "export",
       method: "export_report",
       status: "running",
       progress: 20,
     });
 
-    expect(store.getSnapshot("export")).toMatchObject({
+    expect(store.getTask("export")).toMatchObject({
       status: "done",
       progress: 100,
     });

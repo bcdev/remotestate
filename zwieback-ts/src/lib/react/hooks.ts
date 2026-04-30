@@ -47,7 +47,7 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   // Trigger fetch if not cached — runs after render, not during,
   // so getSnapshot remains pure and side effect free.
   useEffect(() => {
-    store._fetchIfNeeded(path);
+    store.provide(path);
   }, [store, path]);
 
   const subscribe = useCallback(
@@ -56,7 +56,7 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   );
 
   const getSnapshot = useCallback(
-    () => store.getSnapshot(path) as T | undefined,
+    () => store.get(path) as T | undefined,
     [store, path],
   );
 
@@ -128,9 +128,12 @@ export function useState<T = unknown>(
 }
 
 /**
- * Observe one tracked task by its user-supplied task ID.
+ * Observe one tracked task by its user-supplied task-ID.
+ *
+ * @param taskId The task-ID passed as option to `client.action()`
+ *   or `client.query()`.
  */
-export function useTask(tid: string): TaskState | undefined {
+export function useTask(taskId: string): TaskState | undefined {
   const taskStore = useTaskStore();
 
   const subscribe = useCallback(
@@ -139,15 +142,15 @@ export function useTask(tid: string): TaskState | undefined {
   );
 
   const getSnapshot = useCallback(
-    () => taskStore.getSnapshot(tid),
-    [taskStore, tid],
+    () => taskStore.getTask(taskId),
+    [taskStore, taskId],
   );
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
 /**
- * Observe all tracked tasks, newest first.
+ * Observe all tracked tasks. The list is not sorted.
  */
 export function useTasks(): readonly TaskState[] {
   const taskStore = useTaskStore();
@@ -157,10 +160,7 @@ export function useTasks(): readonly TaskState[] {
     [taskStore],
   );
 
-  const getSnapshot = useCallback(
-    () => taskStore.getAllSnapshot(),
-    [taskStore],
-  );
+  const getSnapshot = useCallback(() => taskStore.getAllTasks(), [taskStore]);
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }

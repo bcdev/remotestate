@@ -1,4 +1,4 @@
-import type { InvalidateMessage, GetResultMessage } from "./protocol";
+import type { ActionResultMessage, GetResultMessage } from "./protocol";
 import type { Store, Transport } from "./types";
 
 type StoreListener = () => void;
@@ -13,14 +13,26 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport = transport.subscribe((msg) => {
       if (msg.type === "get_result") {
         this._onGetResult(msg);
-      } else if (msg.type === "invalidate") {
-        this._onInvalidate(msg);
+      } else if (msg.type === "action_result") {
+        this._onActionResult(msg);
       }
     });
   }
 
-  getSnapshot(path: string): unknown {
+  get(path: string): unknown {
     return this.cache.get(path);
+  }
+
+  provide(path: string): void {
+    if (this.cache.has(path) || this.pendingFetches.has(path)) {
+      return;
+    }
+    this.pendingFetches.add(path);
+    this.transport.send({
+      type: "get",
+      call_id: crypto.randomUUID(),
+      path,
+    });
   }
 
   subscribe(listener: StoreListener): () => void {
@@ -36,25 +48,13 @@ export class StoreImpl implements Store {
     this.cache.clear();
   }
 
-  _fetchIfNeeded(path: string): void {
-    if (this.cache.has(path) || this.pendingFetches.has(path)) {
-      return;
-    }
-    this.pendingFetches.add(path);
-    this.transport.send({
-      type: "get",
-      id: crypto.randomUUID(),
-      path,
-    });
-  }
-
   private _onGetResult(msg: GetResultMessage): void {
     this.cache.set(msg.path, msg.value);
     this.pendingFetches.delete(msg.path);
     this._notify();
   }
 
-  private _onInvalidate(msg: InvalidateMessage): void {
+  private _onActionResult(msg: ActionResultMessage): void {
     for (const [path, value] of Object.entries(msg.updates)) {
       this.cache.set(path, value);
     }

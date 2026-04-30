@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { Transport, Store } from "../lib/types";
+import type { Transport } from "../lib/types";
 
 export interface MockTransport {
   send: ReturnType<typeof vi.fn>;
@@ -8,22 +8,11 @@ export interface MockTransport {
 }
 
 export interface MockTransportWithTrigger extends MockTransport {
-  _trigger: (msg: unknown) => void;
-}
-
-export interface MockStore {
-  getSnapshot: ReturnType<typeof vi.fn>;
-  subscribe: ReturnType<typeof vi.fn>;
-  _fetchIfNeeded: ReturnType<typeof vi.fn>;
-  dispose: ReturnType<typeof vi.fn>;
+  _triggerMessage: (msg: unknown) => void;
 }
 
 export function asTransport(mock: MockTransport): Transport {
   return mock as unknown as Transport;
-}
-
-export function asStore(mock: MockStore): Store {
-  return mock as unknown as Store;
 }
 
 export function mockTransport(): MockTransport {
@@ -45,19 +34,10 @@ export function mockTransportWithHandler(): MockTransportWithTrigger {
     }),
     send: vi.fn(),
     close: vi.fn(),
-    _trigger: (msg) => {
+    _triggerMessage: (msg) => {
       for (const handler of handlers) {
         handler(msg);
       }
     },
-  };
-}
-
-export function mockStore(): MockStore {
-  return {
-    getSnapshot: vi.fn(() => undefined),
-    subscribe: vi.fn(() => vi.fn()),
-    _fetchIfNeeded: vi.fn(),
-    dispose: vi.fn(),
   };
 }

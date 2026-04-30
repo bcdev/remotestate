@@ -5,35 +5,35 @@ import { mockTransport, mockTransportWithHandler, asTransport } from "./mocks";
 describe("StoreImpl", () => {
   it("returns undefined for uncached path", () => {
     const store = new StoreImpl(asTransport(mockTransport()));
-    expect(store.getSnapshot("count")).toBeUndefined();
+    expect(store.get("count")).toBeUndefined();
   });
 
   it("caches value from GetResultMessage", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 42,
     });
 
-    expect(store.getSnapshot("count")).toBe(42);
+    expect(store.get("count")).toBe(42);
   });
 
-  it("updates cache from InvalidateMessage", () => {
+  it("updates cache from ActionResultMessage", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
-      type: "invalidate",
-      id: "abc",
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
       updates: { count: 99, "user.name": "Norman" },
     });
 
-    expect(store.getSnapshot("count")).toBe(99);
-    expect(store.getSnapshot("user.name")).toBe("Norman");
+    expect(store.get("count")).toBe(99);
+    expect(store.get("user.name")).toBe("Norman");
   });
 
   it("notifies listeners on value update", () => {
@@ -42,9 +42,9 @@ describe("StoreImpl", () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
@@ -59,9 +59,9 @@ describe("StoreImpl", () => {
     const unsubscribe = store.subscribe(listener);
     unsubscribe();
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
@@ -73,7 +73,7 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "get", path: "count" }),
@@ -84,15 +84,15 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 42,
     });
     transport.send.mockClear();
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).not.toHaveBeenCalled();
   });
@@ -101,8 +101,8 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
-    store._fetchIfNeeded("count");
+    store.provide("count");
+    store.provide("count");
 
     expect(transport.send).toHaveBeenCalledOnce();
   });
@@ -111,16 +111,16 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
-    transport._trigger({
+    store.provide("count");
+    transport._triggerMessage({
       type: "get_result",
-      id: "1",
+      call_id: "1",
       path: "count",
       value: 1,
     });
     transport.send.mockClear();
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).not.toHaveBeenCalled();
   });

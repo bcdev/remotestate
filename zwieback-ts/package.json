@@ -11,12 +11,9 @@
     }
   },
   "scripts": {
-    "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "checks": "tsc --noEmit && eslint src",
-    "eslint:fix": "eslint src --fix",
     "tests": "vitest run",
+    "checks": "tsc --noEmit && eslint src",
     "format": "prettier -w ."
   },
   "peerDependencies": {

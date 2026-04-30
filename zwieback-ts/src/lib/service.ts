@@ -10,7 +10,7 @@ type Kwargs = Record<string, unknown>;
  */
 export interface ActionOptions {
   /**
-   * If true, waits for the InvalidateMessage before resolving.
+   * If true, waits for the ActionResultMessage before resolving.
    */
   awaitInvalidate?: boolean;
   /**
@@ -50,29 +50,39 @@ export class ServiceImpl implements Service {
     options: ActionOptions = {},
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      const id = crypto.randomUUID();
+      const callId = crypto.randomUUID();
       if (options.taskId !== undefined) {
-        this.taskController?.startTask({ id, tid: options.taskId, method });
+        this.taskController?.startTask({
+          callId: callId,
+          taskId: options.taskId,
+          method,
+        });
       }
 
       if (options.awaitInvalidate) {
         const unsubscribe = this.transport.subscribe((msg) => {
-          if (msg.type === "error" && msg.id === id) {
+          if (msg.type === "error" && msg.call_id === callId) {
             unsubscribe();
             reject(new Error(msg.message));
             return;
           }
-          if (msg.type === "invalidate" && msg.id === id) {
+          if (msg.type === "action_result" && msg.call_id === callId) {
             unsubscribe();
             resolve();
           }
         });
       }
 
-      const message: ActionMessage =
-        options.taskId === undefined
-          ? { type: "action", id, method, args, kwargs }
-          : { type: "action", id, tid: options.taskId, method, args, kwargs };
+      const message: ActionMessage = {
+        type: "action",
+        call_id: callId,
+        method,
+        args,
+        kwargs,
+      };
+      if (options.taskId) {
+        message.task_id = options.taskId;
+      }
       this.transport.send(message);
 
       if (!options.awaitInvalidate) {
@@ -88,13 +98,17 @@ export class ServiceImpl implements Service {
     options: QueryOptions = {},
   ): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      const id = crypto.randomUUID();
+      const callId = crypto.randomUUID();
       if (options.taskId !== undefined) {
-        this.taskController?.startTask({ id, tid: options.taskId, method });
+        this.taskController?.startTask({
+          callId: callId,
+          taskId: options.taskId,
+          method,
+        });
       }
 
       const unsubscribe = this.transport.subscribe((msg) => {
-        if (!("id" in msg) || msg.id !== id) {
+        if (!("call_id" in msg) || msg.call_id !== callId) {
           return;
         }
         unsubscribe();
@@ -107,8 +121,15 @@ export class ServiceImpl implements Service {
 
       const message: QueryMessage =
         options.taskId === undefined
-          ? { type: "query", id, method, args, kwargs }
-          : { type: "query", id, tid: options.taskId, method, args, kwargs };
+          ? { type: "query", call_id: callId, method, args, kwargs }
+          : {
+              type: "query",
+              call_id: callId,
+              task_id: options.taskId,
+              method,
+              args,
+              kwargs,
+            };
       this.transport.send(message);
     });
   }

@@ -13,9 +13,31 @@ export interface Transport {
  * Read-only view of the reactive value cache used by hooks.
  */
 export interface Store {
-  getSnapshot(path: string): unknown;
+  /**
+   * Get the current value snapshot for the given path.
+   * @param path the path into the state
+   */
+  get(path: string): unknown;
+
+  /**
+   * Provides the given path.
+   * If the path's value is not provided yet (e.g., already cached),
+   * fetch its current value (and cache it) so ``get()`` can return its
+   * latest value.
+   */
+  provide(path: string): void;
+
+  /**
+   * Subscribes to this store by registering a listener.
+   *
+   * @param listener a listener that is informed about state changes
+   * @returns a function that will unregister the listener
+   */
   subscribe(listener: () => void): () => void;
-  _fetchIfNeeded(path: string): void;
+
+  /**
+   * Disposes this store.
+   */
   dispose(): void;
 }
 

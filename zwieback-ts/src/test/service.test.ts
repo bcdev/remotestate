@@ -16,29 +16,29 @@ describe("ServiceImpl", () => {
       );
     });
 
-    it("omits action tid when taskId is not provided", () => {
+    it("omits action task_id when taskId option is not provided", () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
       void service.action("increment");
 
       expect(transport.send).toHaveBeenCalledWith(
-        expect.not.objectContaining({ tid: expect.any(String) }),
+        expect.not.objectContaining({ task_id: expect.any(String) }),
       );
     });
 
-    it("uses provided taskId as action tid", () => {
+    it("uses provided taskId option as action task_id", () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
       void service.action("increment", [], {}, { taskId: "counter-task" });
 
       expect(transport.send).toHaveBeenCalledWith(
-        expect.objectContaining({ tid: "counter-task" }),
+        expect.objectContaining({ task_id: "counter-task" }),
       );
     });
 
-    it("does not track action tasks without taskId", () => {
+    it("does not track action tasks without task_id", () => {
       const transport = mockTransportWithHandler();
       const taskStore = new TaskStoreImpl();
       const taskController = new TaskController(
@@ -49,7 +49,7 @@ describe("ServiceImpl", () => {
 
       void service.action("increment");
 
-      expect(taskStore.getAllSnapshot()).toEqual([]);
+      expect(taskStore.getAllTasks()).toEqual([]);
     });
 
     it("resolves immediately without awaitInvalidate", async () => {
@@ -59,7 +59,7 @@ describe("ServiceImpl", () => {
       await expect(service.action("increment")).resolves.toBeUndefined();
     });
 
-    it("waits for invalidate when awaitInvalidate is true", async () => {
+    it("waits for action_result when awaitInvalidate is true", async () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
@@ -69,11 +69,11 @@ describe("ServiceImpl", () => {
         {},
         { awaitInvalidate: true },
       );
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
-        type: "invalidate",
-        id: sentMsg.id,
+      transport._triggerMessage({
+        type: "action_result",
+        call_id: sentMsg.call_id,
         updates: { count: 1 },
       });
 
@@ -90,11 +90,11 @@ describe("ServiceImpl", () => {
         {},
         { awaitInvalidate: true },
       );
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "error",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         message: "oops",
       });
 
@@ -114,29 +114,29 @@ describe("ServiceImpl", () => {
       );
     });
 
-    it("omits query tid when taskId is not provided", () => {
+    it("omits query taskId when taskId option is not provided", () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
       void service.query("compute", [5.0]);
 
       expect(transport.send).toHaveBeenCalledWith(
-        expect.not.objectContaining({ tid: expect.any(String) }),
+        expect.not.objectContaining({ task_id: expect.any(String) }),
       );
     });
 
-    it("uses provided taskId as query tid", () => {
+    it("uses provided taskId option as query taskId", () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
       void service.query("compute", [5.0], {}, { taskId: "compute-task" });
 
       expect(transport.send).toHaveBeenCalledWith(
-        expect.objectContaining({ tid: "compute-task" }),
+        expect.objectContaining({ task_id: "compute-task" }),
       );
     });
 
-    it("does not track query tasks without taskId", () => {
+    it("does not track query tasks without taskId option", () => {
       const transport = mockTransportWithHandler();
       const taskStore = new TaskStoreImpl();
       const taskController = new TaskController(
@@ -147,7 +147,7 @@ describe("ServiceImpl", () => {
 
       void service.query("compute", [5.0]);
 
-      expect(taskStore.getAllSnapshot()).toEqual([]);
+      expect(taskStore.getAllTasks()).toEqual([]);
     });
 
     it("resolves with query_result value", async () => {
@@ -155,11 +155,11 @@ describe("ServiceImpl", () => {
       const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "query_result",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         value: 15.0,
       });
 
@@ -171,33 +171,33 @@ describe("ServiceImpl", () => {
       const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "error",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         message: "oops",
       });
 
       await expect(promise).rejects.toThrow("oops");
     });
 
-    it("ignores messages with different id", async () => {
+    it("ignores messages with different call_id", async () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
 
       const promise = service.query("compute", [5.0]);
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "query_result",
-        id: "wrong-id",
+        call_id: "i_am_not_ok",
         value: 999,
       });
 
-      const sentMsg = transport.send.mock.calls[0][0] as { id: string };
-      transport._trigger({
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
+      transport._triggerMessage({
         type: "query_result",
-        id: sentMsg.id,
+        call_id: sentMsg.call_id,
         value: 15.0,
       });
 
