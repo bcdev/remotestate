@@ -16,7 +16,8 @@
 - [x] Rename protocol `tid` to `task_id`
 - [x] Rename `InvalidateMessage` to `ActionResultMessage`
 - [x] Rename `"invalidate"` message to `"action_result"`  
-- [ ] Rename `Service.process` to something better
+- [x] Rename `Service.process` to `Service.update_task` 
+- [ ] Rename `"invalidate"` to `"update_task"` 
 
 ## Improve error handling 
 

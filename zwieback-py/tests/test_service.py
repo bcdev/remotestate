@@ -40,7 +40,7 @@ def make_service(store: Store) -> Service:
 
         @action
         async def set_with_progress(self):
-            self.progress(name="Preparing", progress=16)
+            self.update_task(name="Preparing", progress=16)
             self.store.set("count", 1)
 
         @query
@@ -53,7 +53,7 @@ def make_service(store: Store) -> Service:
 
         @query
         async def compute_with_progress(self, x: float) -> float:
-            self.progress(name="Working", progress=53)
+            self.update_task(name="Working", progress=53)
             return x * self.store.get("factor")
 
         @action
@@ -241,11 +241,11 @@ async def test_call_context_reset_after_error(store):
     assert _call_context.get() is None
 
 
-# --- progress ---
+# --- update_task ---
 
 
 @pytest.mark.asyncio
-async def test_progress_calls_sender_from_action(store):
+async def test_update_task_calls_sender_from_action(store):
     service = make_service(store)
     coro, sender_impl = invoke_action(service, "set_with_progress")
     await coro
@@ -264,7 +264,7 @@ async def test_progress_calls_sender_from_action(store):
 
 
 @pytest.mark.asyncio
-async def test_progress_calls_sender_from_query(store):
+async def test_update_task_calls_sender_from_query(store):
     service = make_service(store)
     coro, sender_impl = invoke_query(service, "compute_with_progress", args=[3])
     await coro
@@ -284,14 +284,14 @@ async def test_progress_calls_sender_from_query(store):
 
 
 @pytest.mark.asyncio
-async def test_progress_no_effect_outside_dispatch(store):
+async def test_update_task_no_effect_outside_dispatch(store):
     service = make_service(store)
     # Should not raise — just silently does nothing
-    service.progress(name="test", progress=50)
+    service.update_task(name="test", progress=50)
 
 
 @pytest.mark.asyncio
-async def test_progress_no_effect_without_task_id(store):
+async def test_update_task_no_effect_without_task_id(store):
     service = make_service(store)
     coro, sender_impl = invoke_action_without_task_id(service, "set_with_progress")
     await coro
@@ -300,11 +300,11 @@ async def test_progress_no_effect_without_task_id(store):
 
 
 @pytest.mark.asyncio
-async def test_progress_available_in_query(store):
+async def test_update_task_available_in_query(store):
     class ProgressQuery(Service):
         @query
         async def slow_query(self) -> int:
-            self.progress(name="Computing", progress=50)
+            self.update_task(name="Computing", progress=50)
             return 42
 
     svc = ProgressQuery(store)

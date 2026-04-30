@@ -93,6 +93,11 @@ class Service:
     def __init__(self, store: Store) -> None:
         self.store = store
 
+    @query
+    def get_state(self, path: str) -> Any:
+        """Get a store value by path."""
+        return self.store.get(path)
+
     @action
     def set_state(self, path: str, value: Any) -> None:
         """Set a store value by path.
@@ -103,7 +108,8 @@ class Service:
         """
         self.store.set(path, value)
 
-    def progress(
+    # noinspection PyMethodMayBeStatic
+    def update_task(
         self,
         *,
         name: str | None = None,
@@ -114,7 +120,7 @@ class Service:
 
         Fire-and-forget — does not block the caller. Safe to call from
         both @action and @query methods. Has no effect if called outside
-        of a dispatched action or query (e.g. during testing).
+        a dispatched action or query (e.g. during testing).
         """
         ctx = _call_context.get()
         if ctx is None or ctx.task_id is None:
@@ -131,7 +137,7 @@ class Service:
             progress=progress,
         )
         message_coro = ctx.sender(message)
-        # create_task is safe here — progress() is always called from within
+        # create_task() is safe here — update_task() is always called from within
         # a running async handler, so the event loop is guaranteed to exist.
         # noinspection PyTypeChecker
         asyncio.create_task(message_coro)
@@ -175,6 +181,7 @@ class Service:
         try:
             with _batch_pending_updates() as pending:
                 await fn(self, *args, **kwargs)
+            # noinspection PyProtectedMember
             self.store._flush(pending)
             return pending
         finally:
