@@ -1,5 +1,15 @@
 # zwieback-py To-Dos
 
+## Features
+
+- [ ] Allow calling user `Service` methods also from Python preserving their reactive behavior.
+      For this to work, `@action` and `@query` decorators must return wrapped
+      versions of the function that invoke them like if the `action` or `query`
+      came from the frontend. 
+      (Nice, even `task_id` would work with a little effort!)
+      Care: If an action calls actions or queries or a query calls queries the 
+      original method must be called, not the wrapped, reactive version.
+
 ## Refactorings
 
 - [ ] Rename protocol `id` to `call_id`
@@ -44,9 +54,15 @@
 ## CI
 
 - [ ] Enhance quality checks, e.g., use mypy or similar
-- [ ] Configure GitHub actions
+- [ ] Create and configure GitHub actions
 
 # zwieback-py Ideas
+
+## Add-on project: TS interface generation
+
+- [ ] A CLI tool to generate a typescript interface and service factory 
+      from a given Python `Service` implementation. The service factory creates
+      a 1:1 TS version of the Python service.
 
 ## Add-on project: UI generation
 
