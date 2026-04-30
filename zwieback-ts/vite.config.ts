@@ -22,12 +22,7 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: ["react", "react-dom"],
-      output: {
-        globals: {
-          react: "React",
-        },
-      },
+      external: ["react", "react-dom", "react/jsx-runtime"],
     },
   },
 });

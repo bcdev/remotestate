@@ -70,7 +70,7 @@ def serve(
 
     mounts_ = dict(mounts) if mounts else {}
     if dist_dir is not None:
-        mounts_["/app"] = StaticFiles(directory=dist_dir, html=True)
+        mounts_["/"] = StaticFiles(directory=dist_dir, html=True)
 
     zw_server = Server(service=service, mounts=mounts_)
 
@@ -91,7 +91,7 @@ def serve(
         time.sleep(0.05)
 
     # noinspection HttpUrlsUsage
-    url = f"http://{host}:{port}/app"
+    url = f"http://{host}:{port}"
 
     # print("serving from " + url)
 
