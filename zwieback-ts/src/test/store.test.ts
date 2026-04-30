@@ -12,7 +12,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
       call_id: "1",
       path: "count",
@@ -26,7 +26,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
       updates: { count: 99, "user.name": "Norman" },
@@ -42,7 +42,7 @@ describe("StoreImpl", () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
       call_id: "1",
       path: "count",
@@ -59,7 +59,7 @@ describe("StoreImpl", () => {
     const unsubscribe = store.subscribe(listener);
     unsubscribe();
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
       call_id: "1",
       path: "count",
@@ -84,7 +84,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
       call_id: "1",
       path: "count",
@@ -112,7 +112,7 @@ describe("StoreImpl", () => {
     const store = new StoreImpl(asTransport(transport));
 
     store._fetchIfNeeded("count");
-    transport._trigger({
+    transport._triggerMessage({
       type: "get_result",
       call_id: "1",
       path: "count",

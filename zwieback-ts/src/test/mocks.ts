@@ -8,7 +8,7 @@ export interface MockTransport {
 }
 
 export interface MockTransportWithTrigger extends MockTransport {
-  _trigger: (msg: unknown) => void;
+  _triggerMessage: (msg: unknown) => void;
 }
 
 export function asTransport(mock: MockTransport): Transport {
@@ -34,7 +34,7 @@ export function mockTransportWithHandler(): MockTransportWithTrigger {
     }),
     send: vi.fn(),
     close: vi.fn(),
-    _trigger: (msg) => {
+    _triggerMessage: (msg) => {
       for (const handler of handlers) {
         handler(msg);
       }

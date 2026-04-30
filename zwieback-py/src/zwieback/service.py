@@ -127,7 +127,7 @@ class Service:
             return
 
         message = TaskUpdateMessage(
-            type="task_update",
+            type="update_task",
             call_id=ctx.call_id,
             task_id=ctx.task_id,
             method=ctx.method,

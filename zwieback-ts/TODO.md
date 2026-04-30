@@ -8,6 +8,7 @@
 - [x] Rename `tid` to `taskId` (`tasK_id` in protocol)
 - [x] Rename `InvalidateMessage` to `ActionResultMessage`
 - [x] Rename `"invalidate"` message to `"action_result"`
+- [x] Rename `"task_update"` message to `"update_task"`
 - [ ] Rename and/or move `Store._fetchIfNeeded`, 
       it should not appear in interface
 - [ ] Remove `ìndex.html` and `src/dev`, create new vite/react 

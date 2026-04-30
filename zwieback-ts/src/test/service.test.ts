@@ -71,7 +71,7 @@ describe("ServiceImpl", () => {
       );
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "action_result",
         call_id: sentMsg.call_id,
         updates: { count: 1 },
@@ -92,7 +92,7 @@ describe("ServiceImpl", () => {
       );
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "error",
         call_id: sentMsg.call_id,
         message: "oops",
@@ -157,7 +157,7 @@ describe("ServiceImpl", () => {
       const promise = service.query("compute", [5.0]);
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "query_result",
         call_id: sentMsg.call_id,
         value: 15.0,
@@ -173,7 +173,7 @@ describe("ServiceImpl", () => {
       const promise = service.query("compute", [5.0]);
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "error",
         call_id: sentMsg.call_id,
         message: "oops",
@@ -188,14 +188,14 @@ describe("ServiceImpl", () => {
 
       const promise = service.query("compute", [5.0]);
 
-      transport._trigger({
+      transport._triggerMessage({
         type: "query_result",
         call_id: "i_am_not_ok",
         value: 999,
       });
 
       const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
-      transport._trigger({
+      transport._triggerMessage({
         type: "query_result",
         call_id: sentMsg.call_id,
         value: 15.0,

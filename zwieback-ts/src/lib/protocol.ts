@@ -71,7 +71,7 @@ export interface QueryResultMessage {
  * Report progress for a tracked action or query.
  */
 export interface TaskUpdateMessage {
-  type: "task_update";
+  type: "update_task";
   call_id: string;
   task_id: string;
   method: string;

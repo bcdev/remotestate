@@ -125,7 +125,7 @@ class TaskUpdateMessage(BaseModel):
     These messages are only emitted when the caller supplied a task ID.
     """
 
-    type: Literal["task_update"] = "task_update"
+    type: Literal["update_task"] = "update_task"
     """Message type."""
 
     call_id: str

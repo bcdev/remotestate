@@ -52,7 +52,7 @@ describe("TaskController", () => {
     });
   });
 
-  it("applies task_update messages", () => {
+  it("applies update_task messages", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     const controller = new TaskController(store, asTransport(transport));
@@ -62,8 +62,8 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    transport._trigger({
-      type: "task_update",
+    transport._triggerMessage({
+      type: "update_task",
       call_id: "call-1",
       task_id: "export",
       method: "export_report",
@@ -81,13 +81,13 @@ describe("TaskController", () => {
     });
   });
 
-  it("ignores task_update messages for untracked calls", () => {
+  it("ignores update_task messages for untracked calls", () => {
     const transport = mockTransportWithHandler();
     const store = new TaskStoreImpl();
     new TaskController(store, asTransport(transport));
 
-    transport._trigger({
-      type: "task_update",
+    transport._triggerMessage({
+      type: "update_task",
       call_id: "call-1",
       task_id: "export",
       method: "export_report",
@@ -108,7 +108,7 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
       updates: { result: "ok" },
@@ -130,7 +130,7 @@ describe("TaskController", () => {
       method: "compute",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "query_result",
       call_id: "call-1",
       value: 42,
@@ -152,7 +152,7 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "error",
       call_id: "call-1",
       message: "boom",
@@ -179,7 +179,7 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
       updates: {},
@@ -201,13 +201,13 @@ describe("TaskController", () => {
       method: "export_report",
     });
 
-    transport._trigger({
+    transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
       updates: {},
     });
-    transport._trigger({
-      type: "task_update",
+    transport._triggerMessage({
+      type: "update_task",
       call_id: "call-1",
       taskId: "export",
       method: "export_report",
