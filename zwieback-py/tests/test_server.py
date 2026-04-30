@@ -7,7 +7,7 @@ from zwieback.protocol import (
     ErrorMessage,
     GetMessage,
     GetResultMessage,
-    InvalidateMessage,
+    ActionResultMessage,
     QueryMessage,
     QueryResultMessage,
 )
@@ -56,7 +56,7 @@ async def test_transport_broadcast_to_all_connections():
     ws2 = AsyncMock()
     transport._connections = {ws1, ws2}
 
-    msg = GetResultMessage(id="1", path="count", value=0)
+    msg = GetResultMessage(call_id="1", path="count", value=0)
     await transport.send(msg)
 
     ws1.send_text.assert_called_once_with(msg.model_dump_json())
@@ -72,7 +72,7 @@ async def test_transport_removes_dead_connections():
     live_ws = AsyncMock()
     transport._connections = {dead_ws, live_ws}
 
-    msg = GetResultMessage(id="1", path="count", value=0)
+    msg = GetResultMessage(call_id="1", path="count", value=0)
     await transport.send(msg)
 
     assert dead_ws not in transport._connections
@@ -115,11 +115,11 @@ async def test_dispatch_get(server):
     sent = []
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
-    await server._dispatch(GetMessage(id="abc", path="count"))
+    await server._dispatch(GetMessage(call_id="abc", path="count"))
 
     assert len(sent) == 1
     assert isinstance(sent[0], GetResultMessage)
-    assert sent[0].id == "abc"
+    assert sent[0].call_id == "abc"
     assert sent[0].value == 0
 
 
@@ -129,12 +129,14 @@ async def test_dispatch_call_action(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        ActionMessage(id="abc", tid="abc", method="increment", args=[], kwargs={})
+        ActionMessage(
+            call_id="abc", task_id="abc", method="increment", args=[], kwargs={}
+        )
     )
 
     assert server._store.get("count") == 1
-    assert isinstance(sent[0], InvalidateMessage)
-    assert sent[0].id == "abc"
+    assert isinstance(sent[0], ActionResultMessage)
+    assert sent[0].call_id == "abc"
     assert "count" in sent[0].updates
 
 
@@ -145,8 +147,8 @@ async def test_dispatch_builtin_set_state_action(server):
 
     await server._dispatch(
         ActionMessage(
-            id="abc",
-            tid="abc",
+            call_id="abc",
+            task_id="abc",
             method="set_state",
             args=["count", 7],
             kwargs={},
@@ -154,7 +156,7 @@ async def test_dispatch_builtin_set_state_action(server):
     )
 
     assert server._store.get("count") == 7
-    assert isinstance(sent[0], InvalidateMessage)
+    assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].updates["count"] == 7
 
 
@@ -164,11 +166,13 @@ async def test_dispatch_call_unknown_action(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        ActionMessage(id="abc", tid="abc", method="nonexistent", args=[], kwargs={})
+        ActionMessage(
+            call_id="abc", task_id="abc", method="nonexistent", args=[], kwargs={}
+        )
     )
 
     assert isinstance(sent[0], ErrorMessage)
-    assert sent[0].id == "abc"
+    assert sent[0].call_id == "abc"
 
 
 @pytest.mark.asyncio
@@ -177,11 +181,13 @@ async def test_dispatch_invoke_query(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        QueryMessage(id="xyz", tid="xyz", method="get_count", args=[], kwargs={})
+        QueryMessage(
+            call_id="xyz", task_id="xyz", method="get_count", args=[], kwargs={}
+        )
     )
 
     assert isinstance(sent[0], QueryResultMessage)
-    assert sent[0].id == "xyz"
+    assert sent[0].call_id == "xyz"
     assert sent[0].value == 0
 
 
@@ -191,8 +197,10 @@ async def test_dispatch_invoke_unknown_query(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
     await server._dispatch(
-        QueryMessage(id="xyz", tid="xyz", method="nonexistent", args=[], kwargs={})
+        QueryMessage(
+            call_id="xyz", task_id="xyz", method="nonexistent", args=[], kwargs={}
+        )
     )
 
     assert isinstance(sent[0], ErrorMessage)
-    assert sent[0].id == "xyz"
+    assert sent[0].call_id == "xyz"

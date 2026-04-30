@@ -254,8 +254,8 @@ async def test_progress_calls_sender_from_action(store):
     sender_impl.assert_awaited_once_with(
         TaskUpdateMessage(
             method="set_with_progress",
-            id="test-call-id",
-            tid="test-task-id",
+            call_id="test-call-id",
+            task_id="test-task-id",
             status="running",
             name="Preparing",
             progress=16.0,
@@ -274,8 +274,8 @@ async def test_progress_calls_sender_from_query(store):
     sender_impl.assert_awaited_once_with(
         TaskUpdateMessage(
             method="compute_with_progress",
-            id="test-call-id",
-            tid="test-task-id",
+            call_id="test-call-id",
+            task_id="test-task-id",
             status="running",
             name="Working",
             progress=53.0,
@@ -324,7 +324,7 @@ async def test_progress_available_in_query(store):
     msg: TaskUpdateMessage = sender_impl.call_args[0][0]
     assert isinstance(msg, TaskUpdateMessage)
     assert msg.method == "slow_query"
-    assert msg.tid == "y"
+    assert msg.task_id == "y"
     assert msg.status == "running"
     assert msg.name == "Computing"
     assert msg.progress == 50.0

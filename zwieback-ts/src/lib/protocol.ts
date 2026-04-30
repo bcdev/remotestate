@@ -7,7 +7,7 @@
  */
 export interface GetMessage {
   type: "get";
-  id: string;
+  call_id: string;
   path: string;
 }
 
@@ -16,8 +16,8 @@ export interface GetMessage {
  */
 export interface ActionMessage {
   type: "action";
-  id: string;
-  tid?: string;
+  call_id: string;
+  task_id?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;
@@ -28,8 +28,8 @@ export interface ActionMessage {
  */
 export interface QueryMessage {
   type: "query";
-  id: string;
-  tid?: string;
+  call_id: string;
+  task_id?: string;
   method: string;
   args: unknown[];
   kwargs: Record<string, unknown>;
@@ -44,9 +44,18 @@ export interface QueryMessage {
  */
 export interface GetResultMessage {
   type: "get_result";
-  id: string;
+  call_id: string;
   path: string;
   value: unknown;
+}
+
+/**
+ * Return the batched store updates produced by an action.
+ */
+export interface ActionResultMessage {
+  type: "action_result";
+  call_id: string;
+  updates: Record<string, unknown>; // path --> value mapping
 }
 
 /**
@@ -54,17 +63,8 @@ export interface GetResultMessage {
  */
 export interface QueryResultMessage {
   type: "query_result";
-  id: string;
+  call_id: string;
   value: unknown;
-}
-
-/**
- * Deliver the batched store updates produced by an action.
- */
-export interface InvalidateMessage {
-  type: "invalidate";
-  id: string;
-  updates: Record<string, unknown>; // path --> value mapping
 }
 
 /**
@@ -72,8 +72,8 @@ export interface InvalidateMessage {
  */
 export interface TaskUpdateMessage {
   type: "task_update";
-  id: string;
-  tid: string;
+  call_id: string;
+  task_id: string;
   method: string;
   status: "running" | "done" | "error";
   name?: string;
@@ -87,7 +87,7 @@ export interface TaskUpdateMessage {
  */
 export interface ErrorMessage {
   type: "error";
-  id: string;
+  call_id: string;
   message: string;
 }
 
@@ -105,7 +105,7 @@ export type IncomingMessage = GetMessage | ActionMessage | QueryMessage;
  */
 export type OutgoingMessage =
   | GetResultMessage
-  | InvalidateMessage
+  | ActionResultMessage
   | QueryResultMessage
   | TaskUpdateMessage
   | ErrorMessage;

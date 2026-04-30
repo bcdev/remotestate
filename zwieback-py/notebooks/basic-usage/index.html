@@ -38,8 +38,8 @@
           console.log("handleIncrementClick! ws:", ws)
           ws.send(JSON.stringify({
             type: "action",
-            id: crypto.randomUUID(),
-            tid: "my-tid",
+            call_id: crypto.randomUUID(),
+            task_id: "my-action-call",
             method: "increment",
             args: [],
             kwargs: {},

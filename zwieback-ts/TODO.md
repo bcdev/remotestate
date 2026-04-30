@@ -3,10 +3,15 @@
 ## Refactorings
 
 - [x] Drop _snapshot_ in method names. Document snapshot behavior.
-- [ ] Rename `id` to `callId` (`call_id` in protocol)
-- [ ] Rename `tid` to `taskId` (`tasK_id` in protocol)
+- [x] Remove `TaskStoreImpl.allSnapshot` as sorting should be done by hook clients.
+- [x] Rename `id` to `callId` (`call_id` in protocol)
+- [x] Rename `tid` to `taskId` (`tasK_id` in protocol)
+- [x] Rename `InvalidateMessage` to `ActionResultMessage`
+- [x] Rename `"invalidate"` message to `"action_result"`
 - [ ] Rename and/or move `Store._fetchIfNeeded`, 
       it should not appear in interface
+- [ ] Remove `ìndex.html` and `src/dev`, create new vite/react 
+      project `zwieback-demo` instead
 
 ## Potential problems
 

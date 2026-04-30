@@ -128,9 +128,12 @@ export function useState<T = unknown>(
 }
 
 /**
- * Observe one tracked task by its user-supplied task ID.
+ * Observe one tracked task by its user-supplied task-ID.
+ *
+ * @param taskId The task-ID passed as option to `client.action()`
+ *   or `client.query()`.
  */
-export function useTask(tid: string): TaskState | undefined {
+export function useTask(taskId: string): TaskState | undefined {
   const taskStore = useTaskStore();
 
   const subscribe = useCallback(
@@ -139,8 +142,8 @@ export function useTask(tid: string): TaskState | undefined {
   );
 
   const getSnapshot = useCallback(
-    () => taskStore.getTask(tid),
-    [taskStore, tid],
+    () => taskStore.getTask(taskId),
+    [taskStore, taskId],
   );
 
   return useSyncExternalStore(subscribe, getSnapshot);
@@ -157,10 +160,7 @@ export function useTasks(): readonly TaskState[] {
     [taskStore],
   );
 
-  const getSnapshot = useCallback(
-    () => taskStore.getAllTasks(),
-    [taskStore],
-  );
+  const getSnapshot = useCallback(() => taskStore.getAllTasks(), [taskStore]);
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }

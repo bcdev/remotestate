@@ -13,7 +13,7 @@ class GetMessage(BaseModel):
     type: Literal["get"] = "get"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal get-ID."""
 
     path: str
@@ -30,11 +30,11 @@ class ActionMessage(BaseModel):
     type: Literal["action"] = "action"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action-ID."""
 
-    tid: str | None = None
-    """User-supplied task identifier for progress tracking."""
+    task_id: str | None = None
+    """User-supplied task identifier for status and progress tracking."""
 
     method: str
     """The action method's name."""
@@ -56,11 +56,11 @@ class QueryMessage(BaseModel):
     type: Literal["query"] = "query"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal query-ID."""
 
-    tid: str | None = None
-    """User-supplied task identifier for progress tracking."""
+    task_id: str | None = None
+    """User-supplied task identifier for status and progress tracking."""
 
     method: str
     """The query method's name."""
@@ -83,7 +83,7 @@ class GetResultMessage(BaseModel):
     type: Literal["get_result"] = "get_result"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal get-ID."""
 
     path: str
@@ -93,13 +93,26 @@ class GetResultMessage(BaseModel):
     """The JSON value of the state value."""
 
 
+class ActionResultMessage(BaseModel):
+    """Return the batched store updates produced by a previous ``ActionMessage``."""
+
+    type: Literal["action_result"] = "action_result"
+    """Message type."""
+
+    call_id: str
+    """An internal action- or query-ID."""
+
+    updates: dict[str, Any]
+    """Mapping from state paths to changed state values. May be empty."""
+
+
 class QueryResultMessage(BaseModel):
     """Return the computed result for a previous ``QueryMessage``."""
 
     type: Literal["query_result"] = "query_result"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal query-ID."""
 
     value: Any
@@ -115,33 +128,29 @@ class TaskUpdateMessage(BaseModel):
     type: Literal["task_update"] = "task_update"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action- or query-ID."""
 
-    tid: str
+    task_id: str
     """User-supplied task identifier."""
 
     method: str
     """The method name."""
 
     status: Literal["running", "done", "error"]
+    """Task status."""
+
     name: str | None = None
+    """Task name."""
+
     detail: str | None = None
-    progress: float | None = None  # 0-100
+    """Task detail text."""
+
+    progress: float | None = Field(None, ge=0, le=100)
+    """Task progress, a number between 0 and 100."""
+
     error: str | None = None
-
-
-class InvalidateMessage(BaseModel):
-    """Return the batched store updates produced by an action."""
-
-    type: Literal["invalidate"] = "invalidate"
-    """Message type."""
-
-    id: str
-    """An internal action- or query-ID."""
-
-    updates: dict[str, Any]
-    """Mapping from state paths to changed state values."""
+    """Error message. Valid only if status is `"error"`."""
 
 
 class ErrorMessage(BaseModel):
@@ -150,7 +159,7 @@ class ErrorMessage(BaseModel):
     type: Literal["error"] = "error"
     """Message type."""
 
-    id: str
+    call_id: str
     """An internal action- or query-ID."""
 
     message: str
@@ -171,7 +180,7 @@ OutgoingMessage = Annotated[
     GetResultMessage
     | QueryResultMessage
     | TaskUpdateMessage
-    | InvalidateMessage
+    | ActionResultMessage
     | ErrorMessage,
     Field(discriminator="type"),
 ]
