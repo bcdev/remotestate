@@ -10,7 +10,7 @@
 - [x] Rename `"invalidate"` message to `"action_result"`
 - [x] Rename `"task_update"` message to `"update_task"`
 - [x] Rename `Store._fetchIfNeeded` to `Store._provide` 
-- [ ] Remove `ìndex.html` and `src/dev`, create new vite/react 
+- [x] Remove `ìndex.html` and `src/dev`, create new vite/react 
       project `zwieback-demo` instead
 
 ## Potential problems
