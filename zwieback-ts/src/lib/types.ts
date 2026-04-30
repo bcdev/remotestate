@@ -20,6 +20,14 @@ export interface Store {
   get(path: string): unknown;
 
   /**
+   * Provides the given path.
+   * If the path's value is not provided yet (e.g., already cached),
+   * fetch its current value (and cache it) so ``get()`` can return its
+   * latest value.
+   */
+  provide(path: string): void;
+
+  /**
    * Subscribes to this store by registering a listener.
    *
    * @param listener a listener that is informed about state changes
@@ -31,8 +39,6 @@ export interface Store {
    * Disposes this store.
    */
   dispose(): void;
-
-  _fetchIfNeeded(path: string): void;
 }
 
 /**

@@ -47,7 +47,7 @@ export function useStateValue<T = unknown>(path: string): T | undefined {
   // Trigger fetch if not cached — runs after render, not during,
   // so getSnapshot remains pure and side effect free.
   useEffect(() => {
-    store._fetchIfNeeded(path);
+    store.provide(path);
   }, [store, path]);
 
   const subscribe = useCallback(

@@ -23,6 +23,18 @@ export class StoreImpl implements Store {
     return this.cache.get(path);
   }
 
+  provide(path: string): void {
+    if (this.cache.has(path) || this.pendingFetches.has(path)) {
+      return;
+    }
+    this.pendingFetches.add(path);
+    this.transport.send({
+      type: "get",
+      call_id: crypto.randomUUID(),
+      path,
+    });
+  }
+
   subscribe(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => {
@@ -34,18 +46,6 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport();
     this.listeners.clear();
     this.cache.clear();
-  }
-
-  _fetchIfNeeded(path: string): void {
-    if (this.cache.has(path) || this.pendingFetches.has(path)) {
-      return;
-    }
-    this.pendingFetches.add(path);
-    this.transport.send({
-      type: "get",
-      call_id: crypto.randomUUID(),
-      path,
-    });
   }
 
   private _onGetResult(msg: GetResultMessage): void {

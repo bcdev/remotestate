@@ -73,7 +73,7 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "get", path: "count" }),
@@ -92,7 +92,7 @@ describe("StoreImpl", () => {
     });
     transport.send.mockClear();
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).not.toHaveBeenCalled();
   });
@@ -101,8 +101,8 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
-    store._fetchIfNeeded("count");
+    store.provide("count");
+    store.provide("count");
 
     expect(transport.send).toHaveBeenCalledOnce();
   });
@@ -111,7 +111,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
@@ -120,7 +120,7 @@ describe("StoreImpl", () => {
     });
     transport.send.mockClear();
 
-    store._fetchIfNeeded("count");
+    store.provide("count");
 
     expect(transport.send).not.toHaveBeenCalled();
   });

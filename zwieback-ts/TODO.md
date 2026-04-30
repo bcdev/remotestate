@@ -9,8 +9,7 @@
 - [x] Rename `InvalidateMessage` to `ActionResultMessage`
 - [x] Rename `"invalidate"` message to `"action_result"`
 - [x] Rename `"task_update"` message to `"update_task"`
-- [ ] Rename and/or move `Store._fetchIfNeeded`, 
-      it should not appear in interface
+- [x] Rename `Store._fetchIfNeeded` to `Store._provide` 
 - [ ] Remove `ìndex.html` and `src/dev`, create new vite/react 
       project `zwieback-demo` instead
 
