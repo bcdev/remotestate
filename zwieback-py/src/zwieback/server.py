@@ -65,6 +65,10 @@ class Server:
     def app(self) -> FastAPI:
         return self._app
 
+    @property
+    def service(self) -> Service:
+        return self._service
+
     def _make_sender(self) -> Callable[[TaskUpdateMessage], Awaitable[None]]:
         async def sender(msg: TaskUpdateMessage) -> None:
             await self._transport.send(msg)

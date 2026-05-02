@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import FastAPI
 
 from zwieback.protocol import (
     ActionMessage,
@@ -26,6 +27,11 @@ def store():
 @pytest.fixture
 def service(store):
     class MyService(Service):
+        the_app: FastAPI
+
+        def configure_app(self, app: FastAPI):
+            self.the_app = app
+
         @action
         async def increment(self):
             self.store.set("count", self.store.get("count") + 1)
@@ -40,6 +46,15 @@ def service(store):
 @pytest.fixture
 def server(service):
     return Server(service)
+
+
+# --- App configuration ---
+
+
+def test_configure_app_called(server):
+    service = server.service
+    assert hasattr(service, "the_app")
+    assert isinstance(service.the_app, FastAPI)
 
 
 # --- WebSocketTransport ---
@@ -90,16 +105,6 @@ async def test_transport_close_clears_connections():
     ws1.close.assert_called_once()
     ws2.close.assert_called_once()
     assert len(transport._connections) == 0
-
-
-# --- Queue ---
-
-# The store callback (_on_store_update) is synchronous and may run in any
-# thread — e.g. the Jupyter kernel thread. It must never touch the event loop.
-# It simply puts a message into a thread-safe queue.SimpleQueue.
-#
-# The broadcaster coroutine runs inside the uvicorn event loop. It calls
-# queue.get() via run_in_executor so the blocking call does not freeze the loop.
 
 
 # --- Dispatch ---
