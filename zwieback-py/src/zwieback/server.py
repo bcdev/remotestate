@@ -36,15 +36,27 @@ class Server:
         service: Service,
         *,
         mounts: dict[str, PathLike | StaticFiles] | None = None,
+        app: FastAPI | None = None,
     ) -> None:
         self._store = service.store
         self._service = service
         self._transport = WebSocketTransport()
-        self._app = self._build_app(mounts)
-        self._service.configure_app(self._app)
+        self._app = app if app is not None else FastAPI()
+        self._init_app(mounts)
+        if app is None:
+            self._service.init_app(self._app)
 
-    def _build_app(self, mounts: dict[str, PathLike | StaticFiles] | None) -> FastAPI:
-        app = FastAPI()
+    @property
+    def app(self) -> FastAPI:
+        return self._app
+
+    @property
+    def service(self) -> Service:
+        return self._service
+
+    def _init_app(self, mounts: dict[str, PathLike | StaticFiles] | None) -> None:
+        app = self._app
+        assert isinstance(app, FastAPI)
 
         @app.websocket("/ws")
         async def ws_endpoint(websocket: WebSocket) -> None:
@@ -59,16 +71,6 @@ class Server:
                     files = StaticFiles(directory=v)
                 app.mount(k, files)
 
-        return app
-
-    @property
-    def app(self) -> FastAPI:
-        return self._app
-
-    @property
-    def service(self) -> Service:
-        return self._service
-
     def _make_sender(self) -> Callable[[TaskUpdateMessage], Awaitable[None]]:
         async def sender(msg: TaskUpdateMessage) -> None:
             await self._transport.send(msg)
@@ -80,11 +82,10 @@ class Server:
         try:
             await self.__dispatch(msg)
         except Exception as e:
-            LOG.error(
-                f"error while dispatching message of type {type!r}", exc_info=True
-            )
+            error_message = f"Error while dispatching message of type {type!r}: {e}"
+            LOG.error(error_message, exc_info=True)
             await self._transport.send(
-                ErrorMessage(call_id=msg.call_id, message=str(e))
+                ErrorMessage(call_id=msg.call_id, message=error_message)
             )
 
     async def __dispatch(self, msg: IncomingMessage) -> None:
@@ -136,7 +137,8 @@ class Server:
                     QueryResultMessage(call_id=call_id, value=result)
                 )
             case _:
-                raise AssertionError(f"unknown message type {msg.type!r}")
+                # We should really not arrive here
+                raise AssertionError(f"Unknown message type {msg.type!r}")
 
 
 class WebSocketTransport(Transport):

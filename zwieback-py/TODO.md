@@ -3,9 +3,10 @@
 ## Features
 
 - [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
-  adding an extra REST API. Two options:
-  1. Override `Service.init_app(self, app: FastAPI)`. Default is no-op.
-  2. ~Optional `init_app(app: FastAPI, service: Service)` callable passed to `serve()`.~
+  adding an extra REST API. 
+
+- [ ] Allow serving the UI app from the known URL when running the HTTP dev server
+  serving the Reaact/Typescript dev app.
 
 - [ ] Allow calling user `Service` methods on the created `Service` instance.
   but including their reactive behavior.

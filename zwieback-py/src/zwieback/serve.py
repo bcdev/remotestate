@@ -4,8 +4,10 @@ import socket
 import threading
 import time
 import webbrowser
+from typing import Any
 
 import uvicorn
+from fastapi import FastAPI
 
 from fastapi.staticfiles import StaticFiles
 from starlette.staticfiles import PathLike
@@ -34,12 +36,15 @@ def serve(
     *,
     dist_dir: PathLike | None = None,
     mounts: dict[str, str | StaticFiles] | None = None,
-    host: str = DEFAULT_HOST,
-    port: int = DEFAULT_PORT,
+    app: FastAPI | None = None,
     open_browser: bool | None = None,
     open_iframe: bool | None = None,
     iframe_height: int = DEFAULT_IFRAME_HEIGHT,
-) -> None:
+    # --- Uvicorn
+    host: str = DEFAULT_HOST,
+    port: int = DEFAULT_PORT,
+    **uvicorn_settings: Any,
+) -> Any:
     """Start the zwieback server and display the UI.
 
     Args:
@@ -50,13 +55,19 @@ def serve(
             If given, will be served from root, i.e., "/".
         mounts: Mapping of an endpoint path to either a
             `fastapi.staticfiles.StaticFiles` object or a directory path.
-        host: Host to bind the server to.
-        port: Port to bind the server to.
+        app: A FastAPI instance to use. If not provided,
+            a new instance is created and passed to `Service.init_app(app)`
+            so that it can by initialized by the user.
         open_browser: Open the UI in the default browser after starting.
             Defaults to True when not running in Jupyter.
         open_iframe: Render the UI as an IFrame in the Jupyter notebook.
             Defaults to True when running in Jupyter.
         iframe_height: Height of the IFrame in pixels.
+        host: Host to bind the server to.
+        port: Port to bind the server to.
+        uvicorn_settings: Additional [uvicorn settings]((https://uvicorn.dev/settings/)
+            to pass to the underlying
+            [uvicorn server](https://uvicorn.dev/#config-and-server-instances).
     """
     in_jupyter = _in_jupyter()
     should_open_browser = open_browser if open_browser is not None else not in_jupyter
@@ -72,22 +83,18 @@ def serve(
     if dist_dir is not None:
         mounts_["/"] = StaticFiles(directory=dist_dir, html=True)
 
-    zw_server = Server(service=service, mounts=mounts_)
+    zwieback_server = Server(service=service, mounts=mounts_, app=app)
 
-    uv_config = uvicorn.Config(
-        zw_server.app,
-        host=host,
-        port=port,
-        log_level="info",
-    )
-    uv_server = uvicorn.Server(uv_config)
-    _servers[registry_key] = uv_server
+    uvicorn_settings.update(host=host, port=port)
+    uvicorn_config = uvicorn.Config(zwieback_server.app, **uvicorn_settings)
+    uvicorn_server = uvicorn.Server(uvicorn_config)
+    _servers[registry_key] = uvicorn_server
 
-    thread = threading.Thread(target=uv_server.run, daemon=True)
+    thread = threading.Thread(target=uvicorn_server.run, daemon=True)
     thread.start()
 
     # wait until we are ready to serve
-    while not uv_server.started:
+    while not uvicorn_server.started:
         time.sleep(0.05)
 
     # noinspection HttpUrlsUsage

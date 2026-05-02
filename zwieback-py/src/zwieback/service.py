@@ -98,10 +98,13 @@ class Service:
     def __init__(self, store: Store) -> None:
         self.store = store
 
-    def configure_app(self, app: FastAPI):
+    def init_app(self, app: FastAPI):
         """
-        Configure the provided FastAPI instance,
-        for example, adding a REST API.
+        Initialize the new FastAPI instance used by the service,
+        for example, in order to add routes for a REST API.
+
+        Only called, if the FastAPI instance was newly created by the zwieback server.
+        Not called, if the user provided an app instance to the zwieback server.
 
         The default implementation does nothing.
         """
