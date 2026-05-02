@@ -7,6 +7,8 @@ import inspect
 from collections.abc import Callable
 from typing import Any, Awaitable
 
+from fastapi import FastAPI
+
 from zwieback.context import _call_context, _CallContext
 from zwieback.protocol import TaskUpdateMessage
 from zwieback.store import PendingUpdates, Store, _batch_pending_updates
@@ -71,6 +73,9 @@ class Service:
     Subclasses define ``@action`` and ``@query`` methods. Dispatch helpers take
     care of call scoping, read-only enforcement for queries, and batched store
     invalidation after actions complete.
+
+    Attributes:
+        store: The reactive store.
     """
 
     store: Store
@@ -92,6 +97,14 @@ class Service:
 
     def __init__(self, store: Store) -> None:
         self.store = store
+
+    def configure_app(self, app: FastAPI):
+        """
+        Configure the provided FastAPI instance,
+        for example, adding a REST API.
+
+        The default implementation does nothing.
+        """
 
     @query
     def get_state(self, path: str) -> Any:

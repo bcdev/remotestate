@@ -2,13 +2,19 @@
 
 ## Features
 
-- [ ] Allow calling user `Service` methods also from Python preserving their reactive behavior.
-      For this to work, `@action` and `@query` decorators must return wrapped
-      versions of the function that invoke them like if the `action` or `query`
-      came from the frontend. 
-      (Nice, even `task_id` would work with a little effort!)
-      Care: If an action calls actions or queries or a query calls queries the 
-      original method must be called, not the wrapped, reactive version.
+- [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
+  adding an extra REST API. Two options:
+  1. Override `Service.init_app(self, app: FastAPI)`. Default is no-op.
+  2. ~Optional `init_app(app: FastAPI, service: Service)` callable passed to `serve()`.~
+
+- [ ] Allow calling user `Service` methods on the created `Service` instance.
+  but including their reactive behavior.
+  For this to work, `@action` and `@query` decorators must return wrapped
+  versions of the function that invoke them like if the `action` or `query`
+  came from the frontend. 
+  (Nice, even `task_id` would work with a little effort!)
+  Care: If an action calls actions or queries or a query calls queries the 
+  original method must be called, not the wrapped, reactive version.
 
 ## Refactorings
 

@@ -41,6 +41,7 @@ class Server:
         self._service = service
         self._transport = WebSocketTransport()
         self._app = self._build_app(mounts)
+        self._service.configure_app(self._app)
 
     def _build_app(self, mounts: dict[str, PathLike | StaticFiles] | None) -> FastAPI:
         app = FastAPI()

@@ -48,10 +48,10 @@ def serve(
             the HTML UI to be served.
             Typically, it contains a file "index.html".
             If given, will be served from root, i.e., "/".
-        host: Host to bind the server to.
-        port: Port to bind the server to.
         mounts: Mapping of an endpoint path to either a
             `fastapi.staticfiles.StaticFiles` object or a directory path.
+        host: Host to bind the server to.
+        port: Port to bind the server to.
         open_browser: Open the UI in the default browser after starting.
             Defaults to True when not running in Jupyter.
         open_iframe: Render the UI as an IFrame in the Jupyter notebook.
