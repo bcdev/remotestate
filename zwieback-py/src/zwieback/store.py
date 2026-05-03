@@ -5,8 +5,8 @@ from collections.abc import Callable
 from contextvars import ContextVar
 from typing import Any
 
-from zwieback.context import _call_context
-from zwieback.path import (
+from .context import _call_context
+from .path import (
     Index,
     Path,
     PathSegment,

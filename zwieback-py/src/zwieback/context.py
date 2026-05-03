@@ -3,7 +3,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Awaitable
 
-from zwieback.protocol import TaskUpdateMessage
+from .protocol import TaskUpdateMessage
 
 
 @dataclass

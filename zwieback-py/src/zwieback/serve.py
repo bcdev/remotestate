@@ -12,8 +12,9 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.staticfiles import PathLike
 
-from zwieback.server import Server
-from zwieback.service import Service
+from .server import Server
+from .service import Service
+from .log import LOG
 
 
 # Imported at module level so tests can patch zwieback.show._get_ipython.
@@ -34,8 +35,8 @@ _servers: dict[str, uvicorn.Server] = {}
 def serve(
     service: Service,
     *,
-    dist_dir: PathLike | None = None,
-    mounts: dict[str, str | StaticFiles] | None = None,
+    ui_dist: PathLike | StaticFiles | None = None,
+    mounts: dict[str, PathLike | StaticFiles] | None = None,
     app: FastAPI | None = None,
     open_browser: bool | None = None,
     open_iframe: bool | None = None,
@@ -49,7 +50,7 @@ def serve(
 
     Args:
         service: The PythonService instance to serve.
-        dist_dir: Path of a directory which provides
+        ui_dist: Path of a directory which provides
             the HTML UI to be served.
             Typically, it contains a file "index.html".
             If given, will be served from root, i.e., "/".
@@ -79,9 +80,17 @@ def serve(
         _stop_server(_servers[registry_key])
         _wait_for_port_free(host, port)
 
+    # noinspection HttpUrlsUsage
+    ui_dist_url_default = f"http://{host}:{port}"
+    ui_dist_url: str | None = None
     mounts_ = dict(mounts) if mounts else {}
-    if dist_dir is not None:
-        mounts_["/"] = StaticFiles(directory=dist_dir, html=True)
+    if isinstance(ui_dist, StaticFiles):
+        mounts_["/"] = ui_dist
+    elif isinstance(ui_dist, str):
+        if ui_dist.startswith("http://") or ui_dist.startswith("https://"):
+            ui_dist_url = ui_dist
+        else:
+            mounts_["/"] = StaticFiles(directory=ui_dist, html=True)
 
     zwieback_server = Server(service=service, mounts=mounts_, app=app)
 
@@ -97,19 +106,21 @@ def serve(
     while not uvicorn_server.started:
         time.sleep(0.05)
 
-    # noinspection HttpUrlsUsage
-    url = f"http://{host}:{port}"
+    if ui_dist_url is None:
+        ui_dist_url = ui_dist_url_default
+        LOG.info(f"Serving UI from {ui_dist_url}")
+    else:
+        LOG.info(f"UI is coming from {ui_dist_url}")
+    assert ui_dist_url is not None
 
-    # print("serving from " + url)
+    ui_dist_url += f"?t={int(time.time())}&ws=ws://{host}:{port}/ws"
 
     if should_open_iframe:
         from IPython.display import IFrame, display
 
-        display(
-            IFrame(src=url + f"?{int(time.time())}", width="100%", height=iframe_height)
-        )
+        display(IFrame(src=ui_dist_url, width="100%", height=iframe_height))
     elif should_open_browser:
-        webbrowser.open(url)
+        webbrowser.open(ui_dist_url)
 
 
 def _get_cell_id() -> str | None:

@@ -18,12 +18,14 @@ export class TransportImpl implements Transport {
   }
 
   private connect(): void {
+    console.debug(`Connecting to ${this.url}...`);
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
       if (!this.ws) {
         return;
       }
+      console.debug(`Connection to ${this.url} opened`);
       this.reconnectDelay = RECONNECT_DELAY_MS;
       // flush pending requests
       for (const msg of this.pendingRequests) {
@@ -45,6 +47,7 @@ export class TransportImpl implements Transport {
       if (this.closed) {
         return;
       }
+      console.debug(`Connection to ${this.url} closed. Reconnecting in ${this.reconnectDelay.toString()} ms`);
       setTimeout(() => {
         this.connect();
       }, this.reconnectDelay);
@@ -55,8 +58,11 @@ export class TransportImpl implements Transport {
     };
 
     this.ws.onerror = () => {
-      // onclose fires automatically after onerror — reconnect runs there.
-      this.ws?.close();
+      if (this.ws) {
+        console.debug(`Connection to ${this.url} failed.`);
+        // onclose fires automatically after onerror — reconnect runs there.
+        this.ws.close();
+      }
     };
   }
 

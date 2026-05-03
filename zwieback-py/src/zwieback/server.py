@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.staticfiles import PathLike
 from pydantic import TypeAdapter
 
-from zwieback.protocol import (
+from .protocol import (
     ActionMessage,
     ErrorMessage,
     GetMessage,
@@ -20,10 +20,10 @@ from zwieback.protocol import (
     QueryResultMessage,
     TaskUpdateMessage,
 )
-from zwieback.service import Service
-from zwieback.transport import Transport
+from .service import Service
+from .transport import Transport
+from .log import LOG
 
-LOG = logging.getLogger("zwieback")
 
 _IncomingAdapter = TypeAdapter(IncomingMessage)
 

@@ -73,12 +73,16 @@ export interface ClientOptions {
 
 /**
  * Create a zwieback client bound to one websocket endpoint.
+ *
+ * @param url The websocket endpoint URL. If not provided,
+ *     it may be passed as query parameter `ts`. Otherwise,
+ *     defaults to `ws://{location}/ws`.
  */
 export function createClient<TService = unknown>(
-  url: string,
+  url: string | null | undefined,
   options: ClientOptions = {},
 ): Client<TService> {
-  const transport = new TransportImpl(url);
+  const transport = new TransportImpl(coerceUrl(url));
   const store = new StoreImpl(transport);
   const taskStore = options.taskStore ?? createTaskStore();
   const ownsTaskStore = options.taskStore === undefined;
@@ -111,4 +115,17 @@ export function createClient<TService = unknown>(
       transport.close();
     },
   };
+}
+
+function coerceUrl(url: string | null | undefined): string {
+  if (url) {
+    return url;
+  }
+  const params = new URLSearchParams(location.search);
+  url  = params.get('ws');
+  if (url) {
+    return url;
+  }
+  const base = (location.host + location.pathname).replace(/\/$/, "");
+  return `ws://${base}/ws`;
 }

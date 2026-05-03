@@ -10,8 +10,8 @@
   arguments and return values should be handled by default. Allow for custom
   serielizer/deserializers later (per-service and per-method).
 
-- [ ] Allow serving the UI app from the known URL when running the HTTP dev server
-  serving the Reaact/Typescript dev app.
+- [x] Allow serving the UI app from the known URL when running the HTTP dev server
+  serving the Reaact/Typescript dev app. Pass WebSocket URL as query parameter `ws`.
 
 - [ ] Allow calling user `Service` methods on the created `Service` instance.
   but including their reactive behavior.

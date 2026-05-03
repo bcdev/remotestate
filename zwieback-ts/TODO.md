@@ -2,6 +2,7 @@
 
 ## New Features
 
+- [x] Accept WebSocket URL from query parameter `ws`.
 - [ ] Retry connecting to `WebSocket`, if connection could not be 
   established yet, or it was lost. Show a connection component
   "Connecting. Retrying in X seconds..."".   

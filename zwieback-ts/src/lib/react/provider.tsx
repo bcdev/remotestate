@@ -5,13 +5,22 @@ import type { WritableTaskStore } from "../tasks";
 
 /**
  * React provider that creates and exposes one client instance to child hooks.
+ *
+ * Properties:
+ *
+ * `url`: The websocket endpoint URL. If not provided,
+ *     it may be passed as query parameter `ts`. Otherwise,
+ *     defaults to `ws://{location}/ws`.
+ *
+ * `taskStore`: Optional data store thea receives and maintains
+ *     task state information received from the backend.
  */
 export function ClientProvider({
   url,
   taskStore,
   children,
 }: {
-  url: string;
+  url?: string | null;
   taskStore?: WritableTaskStore;
   children: ReactNode;
 }) {

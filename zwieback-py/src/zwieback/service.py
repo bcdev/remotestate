@@ -9,9 +9,9 @@ from typing import Any, Awaitable
 
 from fastapi import FastAPI
 
-from zwieback.context import _call_context, _CallContext
-from zwieback.protocol import TaskUpdateMessage
-from zwieback.store import PendingUpdates, Store, _batch_pending_updates
+from .context import _call_context, _CallContext
+from .protocol import TaskUpdateMessage
+from .store import PendingUpdates, Store, _batch_pending_updates
 
 
 class _ActionMarker:

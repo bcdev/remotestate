@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from zwieback.protocol import OutgoingMessage
+from .protocol import OutgoingMessage
 
 
 class Transport(ABC):
