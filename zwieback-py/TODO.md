@@ -2,6 +2,11 @@
 
 ## New Features
 
+- [x] Allow serving the UI app from the known URL when running the HTTP dev server
+  serving the Reaact/TypeScript dev app. 
+    - `ui_dist` passed to `serve()` can be a URL.
+    - Include WebSocket URL as query parameter `ws` in opened IFRAME / browser tab.
+
 - [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
   adding an extra REST API. 
 
@@ -9,9 +14,6 @@
   accept and return JSON data only. Since we use Pydantic, `pydantic.BaseClass`
   arguments and return values should be handled by default. Allow for custom
   serielizer/deserializers later (per-service and per-method).
-
-- [x] Allow serving the UI app from the known URL when running the HTTP dev server
-  serving the Reaact/Typescript dev app. Pass WebSocket URL as query parameter `ws`.
 
 - [ ] Allow calling user `Service` methods on the created `Service` instance.
   but including their reactive behavior.
@@ -21,6 +23,11 @@
   (Nice, even `task_id` would work with a little effort!)
   Care: If an action calls actions or queries or a query calls queries the 
   original method must be called, not the wrapped, reactive version.
+
+## Bugs
+
+- [ ] If `ui_dist` passed to `serve()` is a URL the UI wont work although the 
+  correct WebSocket URL is as query parameter `ws` in opened IFRAME.
 
 ## Refactorings
 
