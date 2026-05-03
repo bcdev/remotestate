@@ -1,9 +1,14 @@
 # zwieback-py To-Dos
 
-## Features
+## New Features
 
 - [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
   adding an extra REST API. 
+
+- [ ] We currently require a user's `Service` query and action methods to 
+  accept and return JSON data only. Since we use Pydantic, `pydantic.BaseClass`
+  arguments and return values should be handled by default. Allow for custom
+  serielizer/deserializers later (per-service and per-method).
 
 - [ ] Allow serving the UI app from the known URL when running the HTTP dev server
   serving the Reaact/Typescript dev app.

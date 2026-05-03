@@ -1,8 +1,14 @@
 # zwieback-ts To-Dos
 
+## New Features
+
+- [ ] Retry connecting to `WebSocket`, if connection could not be 
+  established yet, or it was lost. Show a connection component
+  "Connecting. Retrying in X seconds..."".   
+
 ## Refactorings
 
-- [x] Drop _snapshot_ in method names. Document snapshot behavior.
+- [x] Drop _snapshot_ in method names. Document snapshot behavior instead.
 - [x] Remove `TaskStoreImpl.allSnapshot` as sorting should be done by hook clients.
 - [x] Rename `id` to `callId` (`call_id` in protocol)
 - [x] Rename `tid` to `taskId` (`tasK_id` in protocol)
