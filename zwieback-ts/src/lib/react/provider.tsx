@@ -9,10 +9,10 @@ import type { WritableTaskStore } from "../tasks";
  * Properties:
  *
  * `url`: The websocket endpoint URL. If not provided,
- *     it may be passed as query parameter `ts`. Otherwise,
- *     defaults to `ws://{location}/ws`.
+ *     it may be passed as query parameter `ws`. Otherwise,
+ *     defaults to `ws(s)://{location.host}/ws`.
  *
- * `taskStore`: Optional data store thea receives and maintains
+ * `taskStore`: Optional data store that receives and maintains
  *     task state information received from the backend.
  */
 export function ClientProvider({

@@ -5,6 +5,7 @@ import threading
 import time
 import webbrowser
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import uvicorn
 from fastapi import FastAPI
@@ -113,7 +114,7 @@ def serve(
         LOG.info(f"UI is coming from {ui_dist_url}")
     assert ui_dist_url is not None
 
-    ui_dist_url += f"?t={int(time.time())}&ws=ws://{host}:{port}/ws"
+    ui_dist_url = _add_ui_url_params(ui_dist_url, host=host, port=port)
 
     if should_open_iframe:
         from IPython.display import IFrame, display
@@ -141,6 +142,23 @@ def _in_jupyter() -> bool:
         return _get_ipython() is not None
     except Exception:
         return False
+
+
+def _add_ui_url_params(ui_dist_url: str, *, host: str, port: int) -> str:
+    """Add zwieback runtime parameters without breaking query or fragment parts."""
+    url_parts = urlsplit(ui_dist_url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(url_parts.query, keep_blank_values=True)
+        if key not in {"t", "ws"}
+    ]
+    query.extend(
+        [
+            ("t", str(int(time.time()))),
+            ("ws", f"ws://{host}:{port}/ws"),
+        ]
+    )
+    return urlunsplit(url_parts._replace(query=urlencode(query)))
 
 
 def _stop_server(server: uvicorn.Server) -> None:

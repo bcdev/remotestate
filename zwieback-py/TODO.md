@@ -26,7 +26,7 @@
 
 ## Bugs
 
-- [ ] If `ui_dist` passed to `serve()` is a URL the UI wont work although the 
+- [x] If `ui_dist` passed to `serve()` is a URL the UI wont work although the 
   correct WebSocket URL is as query parameter `ws` in opened IFRAME.
 
 ## Refactorings

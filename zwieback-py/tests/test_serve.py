@@ -2,11 +2,17 @@
 import socket
 import threading
 import time
+from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from zwieback.serve import _get_cell_id, _in_jupyter, _wait_for_port_free
+from zwieback.serve import (
+    _add_ui_url_params,
+    _get_cell_id,
+    _in_jupyter,
+    _wait_for_port_free,
+)
 
 # --- _in_jupyter ---
 
@@ -54,6 +60,42 @@ def test_get_cell_id_returns_none_on_exception():
     mock_ip.get_parent.side_effect = RuntimeError("oops")
     with patch("zwieback.serve._get_ipython", return_value=mock_ip):
         assert _get_cell_id() is None
+
+
+# --- _add_ui_url_params ---
+
+
+def test_add_ui_url_params_preserves_existing_query_and_fragment():
+    with patch("zwieback.serve.time.time", return_value=123.9):
+        url = _add_ui_url_params(
+            "http://localhost:5173/app?mode=dev#view",
+            host="localhost",
+            port=9753,
+        )
+
+    url_parts = urlsplit(url)
+    assert url_parts.fragment == "view"
+    assert parse_qs(url_parts.query) == {
+        "mode": ["dev"],
+        "t": ["123"],
+        "ws": ["ws://localhost:9753/ws"],
+    }
+    assert url.index("?") < url.index("#")
+
+
+def test_add_ui_url_params_replaces_existing_runtime_params():
+    with patch("zwieback.serve.time.time", return_value=456.1):
+        url = _add_ui_url_params(
+            "http://localhost:5173/?t=old&ws=old&mode=dev",
+            host="127.0.0.1",
+            port=9754,
+        )
+
+    assert parse_qs(urlsplit(url).query) == {
+        "mode": ["dev"],
+        "t": ["456"],
+        "ws": ["ws://127.0.0.1:9754/ws"],
+    }
 
 
 # --- _wait_for_port_free ---

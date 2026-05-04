@@ -3,9 +3,9 @@
 ## New Features
 
 - [x] Accept WebSocket URL from query parameter `ws`.
-- [ ] Retry connecting to `WebSocket`, if connection could not be 
-  established yet, or it was lost. Show a connection component
-  "Connecting. Retrying in X seconds..."".   
+- [x] Retry connecting to `WebSocket`, if connection could not be 
+  established yet, or it was lost.
+- [ ] Show a connection component "Connecting. Retrying in X seconds...".
 
 ## Refactorings
 
@@ -29,8 +29,5 @@
 
 ## Improve client configuration
 
-- [ ] `url` passed to `createClient` must have format 
-       `ws://${server_base_url_without_scheme}/ws`, 
-       Better if the WS-URL could be derived: e.g.,
-       Let user pass server base HTTP-URL 
-       and let `createClient` create WE-URL.
+- [x] `url` passed to `createClient` may be a WebSocket endpoint or server
+       base HTTP-URL. `createClient` derives the WebSocket URL when needed.

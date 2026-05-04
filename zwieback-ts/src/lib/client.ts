@@ -75,11 +75,11 @@ export interface ClientOptions {
  * Create a zwieback client bound to one websocket endpoint.
  *
  * @param url The websocket endpoint URL. If not provided,
- *     it may be passed as query parameter `ts`. Otherwise,
- *     defaults to `ws://{location}/ws`.
+ *     it may be passed as query parameter `ws`. Otherwise,
+ *     defaults to `ws(s)://{location.host}/ws`.
  */
 export function createClient<TService = unknown>(
-  url: string | null | undefined,
+  url?: string | null,
   options: ClientOptions = {},
 ): Client<TService> {
   const transport = new TransportImpl(coerceUrl(url));
@@ -118,14 +118,30 @@ export function createClient<TService = unknown>(
 }
 
 function coerceUrl(url: string | null | undefined): string {
-  if (url) {
-    return url;
+  const explicitUrl = url?.trim();
+  if (explicitUrl) {
+    return normalizeWebSocketUrl(explicitUrl);
   }
+
   const params = new URLSearchParams(location.search);
-  url  = params.get('ws');
-  if (url) {
-    return url;
+  const queryUrl = params.get("ws")?.trim();
+  if (queryUrl) {
+    return queryUrl;
   }
-  const base = (location.host + location.pathname).replace(/\/$/, "");
-  return `ws://${base}/ws`;
+
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  return `${protocol}://${location.host}/ws`;
+}
+
+function normalizeWebSocketUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    const parsedUrl = new URL(url);
+    parsedUrl.protocol = parsedUrl.protocol === "https:" ? "wss:" : "ws:";
+    parsedUrl.pathname = "/ws";
+    parsedUrl.search = "";
+    parsedUrl.hash = "";
+    return parsedUrl.toString();
+  }
+
+  return url;
 }
