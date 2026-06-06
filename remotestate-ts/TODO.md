@@ -3,8 +3,8 @@
 ## New Features
 
 - [x] Accept WebSocket URL from query parameter `ws`.
-- [x] Retry connecting to `WebSocket`, if connection could not be 
-  established yet, or it was lost.
+- [x] Retry connecting to `WebSocket`, if connection could not be
+      established yet, or it was lost.
 - [ ] Show a connection component "Connecting. Retrying in X seconds...".
 
 ## Refactorings
@@ -16,8 +16,8 @@
 - [x] Rename `InvalidateMessage` to `ActionResultMessage`
 - [x] Rename `"invalidate"` message to `"action_result"`
 - [x] Rename `"task_update"` message to `"update_task"`
-- [x] Rename `Store._fetchIfNeeded` to `Store._provide` 
-- [x] Remove `ìndex.html` and `src/dev`, create new vite/react 
+- [x] Rename `Store._fetchIfNeeded` to `Store._provide`
+- [x] Remove `ìndex.html` and `src/dev`, create new vite/react
       project `remotestate-demo` instead
 
 ## Potential problems
@@ -30,5 +30,4 @@
 ## Improve client configuration
 
 - [x] `url` passed to `createClient` may be a WebSocket endpoint or server
-       base HTTP-URL. `createClient` derives the WebSocket URL when needed.
-
+      base HTTP-URL. `createClient` derives the WebSocket URL when needed.

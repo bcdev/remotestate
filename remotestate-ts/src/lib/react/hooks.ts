@@ -166,5 +166,3 @@ export function useTasks(): readonly TaskState[] {
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }
-
-

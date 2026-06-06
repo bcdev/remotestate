@@ -47,7 +47,9 @@ export class TransportImpl implements Transport {
       if (this.closed) {
         return;
       }
-      console.debug(`Connection to ${this.url} closed. Reconnecting in ${this.reconnectDelay.toString()} ms`);
+      console.debug(
+        `Connection to ${this.url} closed. Reconnecting in ${this.reconnectDelay.toString()} ms`,
+      );
       setTimeout(() => {
         this.connect();
       }, this.reconnectDelay);

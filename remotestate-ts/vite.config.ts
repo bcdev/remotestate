@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import dts from 'vite-plugin-dts'
+import dts from "vite-plugin-dts";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 
@@ -9,10 +9,10 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      include: ['src/lib/**/*'],
+      include: ["src/lib/**/*"],
       bundleTypes: true,
     }),
-    react()
+    react(),
   ],
   build: {
     lib: {
@@ -26,5 +26,3 @@ export default defineConfig({
     },
   },
 });
-
-
