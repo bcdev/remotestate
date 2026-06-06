@@ -29,5 +29,5 @@
 
 ## Improve client configuration
 
-- [x] `url` passed to `createClient` may be a WebSocket endpoint or server
-      base HTTP-URL. `createClient` derives the WebSocket URL when needed.
+- [x] `url` passed to `createRemoteState` may be a WebSocket endpoint or server
+      base HTTP-URL. `createRemoteState` derives the WebSocket URL when needed.

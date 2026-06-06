@@ -34,7 +34,7 @@ export function useRemoteStore(): Store {
 /**
  * Get the nearest task store from the current Remote State bridge.
  */
-export function useTaskStore(): TaskStore {
+export function useRemoteTaskStore(): TaskStore {
   const remoteState = useRemoteStateClient();
   return remoteState.tasks;
 }
@@ -66,21 +66,22 @@ export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
 }
 
 /**
- * Functional-update shape accepted by `useState`.
+ * Functional-update shape accepted by `useRemoteState`.
  */
 export type SetStateValue<T> = T | ((prev: T | undefined) => T);
 
 /**
  * Bind a store path to a React-friendly getter/setter pair.
+ * Works similar to React's `useState` hook.
  */
-export function useState<T = unknown>(
+export function useRemoteState<T = unknown>(
   path: string,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
-export function useState<T = unknown>(
+export function useRemoteState<T = unknown>(
   path: string,
   initialValue: T,
 ): [T, (next: SetStateValue<T>) => Promise<void>];
-export function useState<T = unknown>(
+export function useRemoteState<T = unknown>(
   path: string,
   initialValue?: T,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
@@ -135,8 +136,8 @@ export function useState<T = unknown>(
  * @param taskId The task-ID passed as option to `remoteState.action()`
  *   or `remoteState.query()`.
  */
-export function useTask(taskId: string): TaskState | undefined {
-  const taskStore = useTaskStore();
+export function useRemoteTask(taskId: string): TaskState | undefined {
+  const taskStore = useRemoteTaskStore();
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => taskStore.subscribe(onStoreChange),
@@ -154,8 +155,8 @@ export function useTask(taskId: string): TaskState | undefined {
 /**
  * Observe all tracked tasks. The list is not sorted.
  */
-export function useTasks(): readonly TaskState[] {
-  const taskStore = useTaskStore();
+export function useRemoteTasks(): readonly TaskState[] {
+  const taskStore = useRemoteTaskStore();
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => taskStore.subscribe(onStoreChange),

@@ -3,7 +3,7 @@ import { ServiceImpl, type ActionOptions, type QueryOptions } from "./service";
 import { TransportImpl } from "./transport";
 import { Store } from "./types";
 import {
-  createTaskStore,
+  createRemoteTaskStore,
   TaskController,
   type WritableTaskStore,
 } from "./tasks";
@@ -84,7 +84,7 @@ export function createRemoteState<TService = unknown>(
 ): RemoteState<TService> {
   const transport = new TransportImpl(coerceUrl(url));
   const store = new StoreImpl(transport);
-  const taskStore = options.taskStore ?? createTaskStore();
+  const taskStore = options.taskStore ?? createRemoteTaskStore();
   const ownsTaskStore = options.taskStore === undefined;
   const taskController = new TaskController(taskStore, transport);
   const service = new ServiceImpl(transport, taskController);

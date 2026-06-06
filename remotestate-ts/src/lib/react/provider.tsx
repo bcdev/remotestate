@@ -4,7 +4,8 @@ import { RemoteStateContext } from "./context";
 import type { WritableTaskStore } from "../tasks";
 
 /**
- * React provider that creates and exposes one Remote State bridge to child hooks.
+ * React provider that creates and exposes one Remote State bridge
+ * to child hooks.
  *
  * Properties:
  *

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { TaskController, TaskStoreImpl, createTaskStore } from "../lib/tasks";
+import { TaskController, TaskStoreImpl, createRemoteTaskStore } from "../lib/tasks";
 import { asTransport, mockTransportWithHandler } from "./mocks";
 
 describe("TaskStoreImpl", () => {
@@ -11,7 +11,7 @@ describe("TaskStoreImpl", () => {
   });
 
   it("stores tasks and notifies listeners", () => {
-    const store = createTaskStore();
+    const store = createRemoteTaskStore();
     const listener = vi.fn();
     store.subscribe(listener);
 
