@@ -167,8 +167,4 @@ export function useTasks(): readonly TaskState[] {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
 
-export const useClient = useRemoteStateClient;
-export const useStore = useRemoteStore;
-export const useStateValue = useRemoteStateValue;
-
 

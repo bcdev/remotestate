@@ -41,5 +41,3 @@ export function RemoteStateProvider({
     </RemoteStateContext.Provider>
   );
 }
-
-export const ClientProvider = RemoteStateProvider;

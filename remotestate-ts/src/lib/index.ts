@@ -1,10 +1,8 @@
-export { createRemoteState, createClient } from "./client";
+export { createRemoteState } from "./client";
 export { createTaskStore, TaskStoreImpl } from "./tasks";
 export type {
   RemoteState,
-  Client,
   RemoteStateOptions,
-  ClientOptions,
 } from "./client";
 export type {
   IncomingMessage,
@@ -25,14 +23,11 @@ export {
   useRemoteStateClient,
   useRemoteStore,
   useRemoteStateValue,
-  useClient,
-  useStore,
   useState,
-  useStateValue,
   useTask,
   useTaskStore,
   useTasks,
 } from "./react/hooks";
-export { RemoteStateProvider, ClientProvider } from "./react/provider";
+export { RemoteStateProvider } from "./react/provider";
 
 

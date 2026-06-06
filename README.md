@@ -289,8 +289,6 @@ re-renders on invalidation.
 - `useState()` remains the ergonomic path-bound state hook for components.
 - We use `useRemoteStateClient()` instead of `useRemoteState()` to keep it
   clearly distinct from `useState()` and `useRemoteStore()`.
-- The old names `createClient`, `ClientProvider`, `useClient`, `useStore`, and
-  `useStateValue` remain available as aliases for compatibility.
 
 ---
 

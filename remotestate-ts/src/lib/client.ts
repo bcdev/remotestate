@@ -117,10 +117,6 @@ export function createRemoteState<TService = unknown>(
   };
 }
 
-export type Client<TService = unknown> = RemoteState<TService>;
-export type ClientOptions = RemoteStateOptions;
-export const createClient = createRemoteState;
-
 function coerceUrl(url: string | null | undefined): string {
   const explicitUrl = url?.trim();
   if (explicitUrl) {
