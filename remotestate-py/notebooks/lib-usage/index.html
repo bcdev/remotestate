@@ -1,0 +1,48 @@
+<html>
+  <body>
+    <div id="root"></div>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19",
+        "react-dom/client": "https://esm.sh/react-dom@19/client"
+      }
+    }
+    </script>      
+    <script type="module">
+      import React from "react";
+      import { createRoot } from "react-dom/client";
+      import { ClientProvider, useClient, useState } from "/dist/remotestate.js";
+
+      const RE = React.createElement;
+
+      function App() {
+        const client = useClient();
+        const [count, setCount] = useState("count", 0);
+
+        function handleIncrementClick() {
+          client.action("increment");
+        }
+          
+        function handleAddTwoClick() {
+          setCount(count + 2);
+        }
+
+        return RE("div", null,
+          RE("p", null, `Count: ${count}`),
+          RE("button", { onClick: handleIncrementClick }, "Increment"),
+          RE("button", { onClick: handleAddTwoClick }, "Add 2"),
+        );
+      }
+        
+      function Main() {
+        return RE(ClientProvider, { url: "ws://localhost:9755/ws" }, RE(App));
+      }
+
+      console.log("App rendering")
+
+      const rootElem = document.getElementById("root");
+      createRoot(rootElem).render(RE(Main));
+    </script>
+  </body>
+</html>
