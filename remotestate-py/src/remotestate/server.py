@@ -28,7 +28,7 @@ _IncomingAdapter = TypeAdapter(IncomingMessage)
 
 
 class Server:
-    """remotestate server that uses a WebSockets transport."""
+    """``remotestate`` server that uses a WebSockets transport."""
 
     def __init__(
         self,

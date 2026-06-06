@@ -47,7 +47,7 @@ def serve(
     port: int = DEFAULT_PORT,
     **uvicorn_settings: Any,
 ) -> Any:
-    """Start the remotestate server and display the UI.
+    """Start the ``remotestate`` web server and display the UI.
 
     Args:
         service: The PythonService instance to serve.

@@ -1,4 +1,3 @@
-# remotestate/service.py
 from __future__ import annotations
 
 import asyncio
@@ -74,11 +73,11 @@ class Service:
     care of call scoping, read-only enforcement for queries, and batched store
     invalidation after actions complete.
 
-    Attributes:
-        store: The reactive store.
+    Argument:
+        store: The reactive state container.
     """
 
-    store: Store
+    _store: Store
     _actions: dict[str, Callable]
     _queries: dict[str, Callable]
 
@@ -96,7 +95,7 @@ class Service:
                 setattr(cls, name, value.fn)
 
     def __init__(self, store: Store) -> None:
-        self.store = store
+        self._store = store
 
     def init_app(self, app: FastAPI):
         """
@@ -109,6 +108,11 @@ class Service:
         The default implementation does nothing.
         """
 
+    @property
+    def store(self) -> Store:
+        """The reactive state container."""
+        return self._store
+
     @query
     def get_state(self, path: str) -> Any:
         """Get a store value by path."""
@@ -119,7 +123,7 @@ class Service:
         """Set a store value by path.
 
         This built-in action enables simple UI patterns such as a
-        remotestate-side `useState(path, initial)` helper without requiring a
+        remotestate-side ``useRemoteState(path, initial)`` helper without requiring a
         custom action on every user service.
         """
         self.store.set(path, value)

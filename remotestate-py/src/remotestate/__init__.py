@@ -1,4 +1,4 @@
-"""Public package exports for building and serving remotestate apps."""
+"""Public package exports for building and serving ``remotestate`` apps."""
 
 from .service import Service, action, query
 from .serve import serve

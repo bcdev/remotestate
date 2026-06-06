@@ -96,7 +96,7 @@ _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
 
 
 class Store:
-    """Reactive Python-side state container addressed by remotestate paths.
+    """Reactive Python-side state container addressed by ``remotestate`` paths.
 
     Values live here as the single source of truth. Actions and queries read
     from it, while actions may also mutate it to trigger UI invalidation.
