@@ -1,4 +1,4 @@
-# 🥨 Remote State
+# Remote State
 
 > **Python state, React UI.** One runtime for notebook apps and addon backends.
 
