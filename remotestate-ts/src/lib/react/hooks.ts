@@ -5,44 +5,46 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { Client } from "../client";
-import { ClientContext } from "./context";
+import { type RemoteState } from "../client";
+import { RemoteStateContext } from "./context";
 import { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
 /**
- * Get the nearest remotestate client from React context.
+ * Get the nearest Remote State bridge from React context.
  */
-export function useClient<TService>(): Client<TService> {
-  const client = useContext(ClientContext);
-  if (!client) {
-    throw new Error("useClient must be used inside <ClientProvider>");
+export function useRemoteStateClient<TService>(): RemoteState<TService> {
+  const remoteState = useContext(RemoteStateContext);
+  if (!remoteState) {
+    throw new Error(
+      "useRemoteStateClient must be used inside <RemoteStateProvider>",
+    );
   }
-  return client as Client<TService>;
+  return remoteState as RemoteState<TService>;
 }
 
 /**
- * Get the nearest reactive store from the current client.
+ * Get the nearest reactive store from the current Remote State bridge.
  */
-export function useStore(): Store {
-  const client = useClient();
-  return client.store;
+export function useRemoteStore(): Store {
+  const remoteState = useRemoteStateClient();
+  return remoteState.store;
 }
 
 /**
- * Get the nearest task store from the current client.
+ * Get the nearest task store from the current Remote State bridge.
  */
 export function useTaskStore(): TaskStore {
-  const client = useClient();
-  return client.tasks;
+  const remoteState = useRemoteStateClient();
+  return remoteState.tasks;
 }
 
 /**
  * Subscribe to one store path and return its current cached value.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-export function useStateValue<T = unknown>(path: string): T | undefined {
-  const store = useStore();
+export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
+  const store = useRemoteStore();
 
   // Trigger fetch if not cached — runs after render, not during,
   // so getSnapshot remains pure and side effect free.
@@ -82,8 +84,8 @@ export function useState<T = unknown>(
   path: string,
   initialValue?: T,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
-  const client = useClient();
-  const value = useStateValue<T>(path);
+  const remoteState = useRemoteStateClient();
+  const value = useRemoteStateValue<T>(path);
   const hasInitialized = useRef(false);
   const valueRef = useRef<T | undefined>(value);
 
@@ -100,13 +102,13 @@ export function useState<T = unknown>(
       return;
     }
     hasInitialized.current = true;
-    void client.action(
+    void remoteState.action(
       "set_state",
       [path, initialValue],
       {},
       { awaitInvalidate: true },
     );
-  }, [client, path, value, initialValue]);
+  }, [remoteState, path, value, initialValue]);
 
   const setValue = useCallback(
     async (next: SetStateValue<T>) => {
@@ -114,14 +116,14 @@ export function useState<T = unknown>(
         typeof next === "function"
           ? (next as (prev: T | undefined) => T)(valueRef.current)
           : next;
-      await client.action(
+      await remoteState.action(
         "set_state",
         [path, nextValue],
         {},
         { awaitInvalidate: true },
       );
     },
-    [client, path],
+    [remoteState, path],
   );
 
   return [value, setValue];
@@ -130,8 +132,8 @@ export function useState<T = unknown>(
 /**
  * Observe one tracked task by its user-supplied task-ID.
  *
- * @param taskId The task-ID passed as option to `client.action()`
- *   or `client.query()`.
+ * @param taskId The task-ID passed as option to `remoteState.action()`
+ *   or `remoteState.query()`.
  */
 export function useTask(taskId: string): TaskState | undefined {
   const taskStore = useTaskStore();
@@ -164,5 +166,9 @@ export function useTasks(): readonly TaskState[] {
 
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+
+export const useClient = useRemoteStateClient;
+export const useStore = useRemoteStore;
+export const useStateValue = useRemoteStateValue;
 
 

@@ -157,7 +157,7 @@ export class TaskStoreImpl implements WritableTaskStore {
 }
 
 /**
- * Create the default in-memory task store used by `createClient`.
+ * Create the default in-memory task store used by `createRemoteState`.
  */
 export function createTaskStore(): WritableTaskStore {
   return new TaskStoreImpl();

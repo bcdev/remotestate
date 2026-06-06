@@ -14,7 +14,7 @@ export interface ActionOptions {
    */
   awaitInvalidate?: boolean;
   /**
-   * Client-supplied task ID for progress tracking via useTask().
+   * Bridge-supplied task ID for progress tracking via useTask().
    * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;
@@ -25,7 +25,7 @@ export interface ActionOptions {
  */
 export interface QueryOptions {
   /**
-   * Client-supplied task ID for progress tracking via useTask().
+   * Bridge-supplied task ID for progress tracking via useTask().
    * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;

@@ -1,7 +1,7 @@
 import type { IncomingMessage, OutgoingMessage } from "./protocol";
 
 /**
- * Low-level transport used by the client, store, and service layers.
+ * Low-level transport used by the Remote State bridge, store, and service layers.
  */
 export interface Transport {
   send(msg: IncomingMessage): void;
@@ -42,7 +42,7 @@ export interface Store {
 }
 
 /**
- * Public API for invoking Python actions and queries.
+ * Public API for invoking Python actions and queries through the Remote State bridge.
  */
 export interface Service {
   action(

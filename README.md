@@ -12,7 +12,7 @@ The library is designed around two primary use cases:
 2. **Addon and plugin backends for frontend apps** - where a frontend addon can ship a TS/React UI and, optionally, a Python backend that provides server-side state, actions, and queries.
 
 In both cases, Python is the source of truth for business state and behavior.
-React handles presentation, interaction, and reactivity on the client.
+React handles presentation, interaction, and reactivity on the browser side.
 
 ---
 
@@ -20,11 +20,11 @@ React handles presentation, interaction, and reactivity on the client.
 
 - **Python-owned application state** - store nested state in a `Store` and mutate it through actions.
 - **Read and write separation** - use `@action` for mutations and `@query` for read-only calls.
-- **Reactive client caching** - the frontend fetches values lazily and re-renders when state changes.
+- **Reactive bridge caching** - the frontend fetches values lazily and re-renders when state changes.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript client** - consume the backend from React with `createClient`, `ClientProvider`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteState`, `RemoteStateProvider`, and hooks.
 
 ---
 
@@ -33,7 +33,7 @@ React handles presentation, interaction, and reactivity on the client.
 Remote State splits responsibilities cleanly:
 
 - **Python** owns state, domain logic, actions, queries, and progress reporting.
-- **TypeScript/React** owns rendering, local interaction, and typed client access.
+- **TypeScript/React** owns rendering, local interaction, and typed bridge access.
 - **WebSocket transport** connects both sides and carries state reads, invalidations, and task updates.
 
 That makes the package useful both as a notebook UI runtime and as a backend layer for a frontend addon system.
@@ -80,11 +80,11 @@ export interface MyService {
 ```
 
 ```tsx
-import { ClientProvider, useClient, useState } from "remotestate";
+import { RemoteStateProvider, useRemoteStateClient, useState } from "remotestate";
 import type { MyService } from "./MyService";
 
 function AppInner() {
-  const client = useClient<MyService>();
+  const remoteState = useRemoteStateClient<MyService>();
   const [count, setCount] = useState<number>("count", 0);
   const [name] = useState<string>("user.name");
 
@@ -94,7 +94,7 @@ function AppInner() {
       <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>+1</button>
       <button
         onClick={async () => {
-          const result = await client.query("compute", [5.0]);
+          const result = await remoteState.query("compute", [5.0]);
           console.log(result);
         }}
       >
@@ -106,9 +106,9 @@ function AppInner() {
 
 export default function App() {
   return (
-    <ClientProvider url="ws://localhost:9753/ws">
+    <RemoteStateProvider url="ws://localhost:9753/ws">
       <AppInner />
-    </ClientProvider>
+    </RemoteStateProvider>
   );
 }
 ```
@@ -228,25 +228,25 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createClient<TService>(url)`
+### `createRemoteState<TService>(url)`
 
-Creates a typed Remote State client.
+Creates a typed Remote State bridge.
 
 ```typescript
-const client = createClient<MyService>("ws://localhost:9753/ws");
+const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
 ```
 
-### `ClientProvider` and `useClient<TService>()`
+### `RemoteStateProvider` and `useRemoteStateClient<TService>()`
 
-React context wrapper for a client bound to a WebSocket URL, plus a hook to
-access it.
+React context wrapper for a Remote State bridge bound to a WebSocket URL, plus
+a hook to access it.
 
 ```tsx
-<ClientProvider url="ws://localhost:9753/ws">
+<RemoteStateProvider url="ws://localhost:9753/ws">
   <App />
-</ClientProvider>
+</RemoteStateProvider>
 
-const client = useClient<MyService>();
+const remoteState = useRemoteStateClient<MyService>();
 ```
 
 ### `useState<T>(path, initialValue?)`
@@ -258,28 +258,39 @@ const [count, setCount] = useState<number>("count", 0);
 await setCount((prev) => (prev ?? 0) + 1);
 ```
 
-### `client.action(method, args?, kwargs?, options?)`
+### `remoteState.action(method, args?, kwargs?, options?)`
 
 Calls a Python `@action`. Fire-and-forget by default.
 
 ```typescript
-await client.action("increment");
-await client.action("set_name", ["Norman"]);
-await client.action("save", [], {}, { awaitInvalidate: true });
+await remoteState.action("increment");
+await remoteState.action("set_name", ["Norman"]);
+await remoteState.action("save", [], {}, { awaitInvalidate: true });
 ```
 
-### `client.query(method, args?, kwargs?, options?)`
+### `remoteState.query(method, args?, kwargs?, options?)`
 
 Calls a Python `@query` and returns the result.
 
 ```typescript
-const result = await client.query("compute", [5.0]);
+const result = await remoteState.query("compute", [5.0]);
 ```
 
-### `useStateValue<T>(path)`
+### `useRemoteStateValue<T>(path)`
 
 Low-level read hook for store values. Returns `undefined` while loading and
 re-renders on invalidation.
+
+### Naming notes
+
+- `RemoteState` is the bridge object that used to be called `Client`.
+- `useRemoteStateClient()` returns that bridge object.
+- `useRemoteStore()` returns the cached store view used by the hooks.
+- `useState()` remains the ergonomic path-bound state hook for components.
+- We use `useRemoteStateClient()` instead of `useRemoteState()` to keep it
+  clearly distinct from `useState()` and `useRemoteStore()`.
+- The old names `createClient`, `ClientProvider`, `useClient`, `useStore`, and
+  `useStateValue` remain available as aliases for compatibility.
 
 ---
 
@@ -340,8 +351,8 @@ Store                          StoreImpl (cache)
   progress events               ──►    task updates
 
 Service
-  @action -> mutate state       ──►  client.action()
-  @query  -> read state/result  ──►  client.query()
+  @action -> mutate state       ──►  remoteState.action()
+  @query  -> read state/result  ──►  remoteState.query()
 
 WebSocket transport
   ws://localhost:9753/ws

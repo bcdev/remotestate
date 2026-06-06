@@ -1,10 +1,10 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { createClient } from "../client";
-import { ClientContext } from "./context";
+import { createRemoteState } from "../client";
+import { RemoteStateContext } from "./context";
 import type { WritableTaskStore } from "../tasks";
 
 /**
- * React provider that creates and exposes one client instance to child hooks.
+ * React provider that creates and exposes one Remote State bridge to child hooks.
  *
  * Properties:
  *
@@ -15,7 +15,7 @@ import type { WritableTaskStore } from "../tasks";
  * `taskStore`: Optional data store that receives and maintains
  *     task state information received from the backend.
  */
-export function ClientProvider({
+export function RemoteStateProvider({
   url,
   taskStore,
   children,
@@ -24,18 +24,22 @@ export function ClientProvider({
   taskStore?: WritableTaskStore;
   children: ReactNode;
 }) {
-  const client = useMemo(
-    () => createClient(url, taskStore ? { taskStore } : {}),
+  const remoteState = useMemo(
+    () => createRemoteState(url, taskStore ? { taskStore } : {}),
     [url, taskStore],
   );
 
   useEffect(() => {
     return () => {
-      client.dispose();
+      remoteState.dispose();
     };
-  }, [client]);
+  }, [remoteState]);
 
   return (
-    <ClientContext.Provider value={client}>{children}</ClientContext.Provider>
+    <RemoteStateContext.Provider value={remoteState}>
+      {children}
+    </RemoteStateContext.Provider>
   );
 }
+
+export const ClientProvider = RemoteStateProvider;

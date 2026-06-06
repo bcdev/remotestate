@@ -96,12 +96,12 @@ export interface ErrorMessage {
 // -------------------------------------------
 
 /**
- * Any message the client can send to Python.
+ * Any message the Remote State bridge can send to Python.
  */
 export type IncomingMessage = GetMessage | ActionMessage | QueryMessage;
 
 /**
- * Any message Python can send back to the client.
+ * Any message Python can send back to the Remote State bridge.
  */
 export type OutgoingMessage =
   | GetResultMessage

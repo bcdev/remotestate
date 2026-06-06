@@ -38,9 +38,9 @@ type MethodArgs<TService, K> = K extends keyof TService
   : unknown[];
 
 /**
- * Typed client facade used by applications and React hooks.
+ * Typed Remote State bridge used by applications and React hooks.
  */
-export interface Client<TService = unknown> {
+export interface RemoteState<TService = unknown> {
   store: Store;
   tasks: WritableTaskStore;
 
@@ -62,26 +62,26 @@ export interface Client<TService = unknown> {
 }
 
 /**
- * Optional client integrations.
+ * Optional Remote State integrations.
  *
  * Supplying `taskStore` lets applications keep task state in a custom store
  * instead of the built-in in-memory implementation.
  */
-export interface ClientOptions {
+export interface RemoteStateOptions {
   taskStore?: WritableTaskStore;
 }
 
 /**
- * Create a remotestate client bound to one websocket endpoint.
+ * Create a Remote State bridge bound to one websocket endpoint.
  *
  * @param url The websocket endpoint URL. If not provided,
  *     it may be passed as query parameter `ws`. Otherwise,
  *     defaults to `ws(s)://{location.host}/ws`.
  */
-export function createClient<TService = unknown>(
+export function createRemoteState<TService = unknown>(
   url?: string | null,
-  options: ClientOptions = {},
-): Client<TService> {
+  options: RemoteStateOptions = {},
+): RemoteState<TService> {
   const transport = new TransportImpl(coerceUrl(url));
   const store = new StoreImpl(transport);
   const taskStore = options.taskStore ?? createTaskStore();
@@ -116,6 +116,10 @@ export function createClient<TService = unknown>(
     },
   };
 }
+
+export type Client<TService = unknown> = RemoteState<TService>;
+export type ClientOptions = RemoteStateOptions;
+export const createClient = createRemoteState;
 
 function coerceUrl(url: string | null | undefined): string {
   const explicitUrl = url?.trim();
