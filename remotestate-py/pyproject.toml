@@ -1,0 +1,53 @@
+[project]
+authors = [{name = "Norman Fomferra", email = "norman.fomferra@brockmann-consult.de"}]
+dependencies = [
+  "fastapi>=0.136,<0.137",
+  "pydantic>=2,<3",
+  "uvicorn>=0.46,<0.47"
+]
+name = "remotestate"
+requires-python = ">= 3.12"
+version = "0.1.0"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/remotestate"]
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.ruff]
+src = ["src/remotestate"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64", "osx-arm64"]
+
+[tool.pixi.dependencies]
+# library dependencies
+fastapi = ">=0.136.1,<0.137"
+pydantic = ">=2.13.3,<3"
+uvicorn = ">=0.46.0,<0.47"
+# development dependencies
+httpx = ">=0.28.1,<0.29"
+isort = ">=8.0.1,<9"
+jupyter = ">=1.1.1,<2"
+mypy = ">=1.20.2,<2"
+pixi-pycharm = ">=0.0.11,<0.0.12"
+pytest = ">=9.0.3,<10"
+pytest-asyncio = ">=1.3.0,<2"
+pytest-cov = ">=7.1.0,<8"
+ruff = ">=0.15.11,<0.16"
+
+[tool.pixi.pypi-dependencies]
+remotestate = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+format = "ruff format src"
+checks = "ruff check src"
+tests = "pytest tests"
+isort = "isort src"
