@@ -12,13 +12,13 @@
     <script type="module">
       import React from "react";
       import { createRoot } from "react-dom/client";
-      import { ClientProvider, useClient, useState } from "/dist/remotestate.js";
+      import { RemoteStateProvider, useRemoteStateClient, useRemoteState } from "/dist/remotestate.js";
 
       const RE = React.createElement;
 
       function App() {
-        const client = useClient();
-        const [count, setCount] = useState("count", 0);
+        const client = useRemoteStateClient();
+        const [count, setCount] = useRemoteState("count", 0);
 
         function handleIncrementClick() {
           client.action("increment");
@@ -36,7 +36,7 @@
       }
         
       function Main() {
-        return RE(ClientProvider, { url: "ws://localhost:9755/ws" }, RE(App));
+        return RE(RemoteStateProvider, { url: "ws://localhost:9755/ws" }, RE(App));
       }
 
       console.log("App rendering")
