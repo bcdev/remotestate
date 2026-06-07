@@ -1,0 +1,41 @@
+import { useRemoteStateClient, useRemoteState } from "remotestate";
+import "./App.css";
+
+function App() {
+  const client = useRemoteStateClient();
+  const [count, setCount] = useRemoteState("count", 0);
+
+  return (
+    <>
+      <section id="center">
+        <div>
+          <h1>remotestate Demo</h1>
+        </div>
+
+        <div>
+          <p>{`Count is ${count}`}</p>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            className="counter"
+            onClick={() => client.action("increment")}
+          >
+            Increment
+          </button>
+
+          <button
+            type="button"
+            className="counter"
+            onClick={() => setCount(count + 2)}
+          >
+            Add 2
+          </button>
+        </div>
+      </section>
+    </>
+  );
+}
+
+export default App;
