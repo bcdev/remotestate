@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import inspect
-from collections.abc import Callable
-from typing import Any, Awaitable
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 from fastapi import FastAPI
 
@@ -169,7 +169,7 @@ class Service:
         kwargs: dict[str, Any],
         call_id: str,
         task_id: str | None,
-        sender: Callable[[TaskUpdateMessage], Awaitable[None]],
+        sender: Callable[[TaskUpdateMessage], Coroutine[Any, Any, None]],
     ) -> PendingUpdates:
         """Invoke one registered action inside a tracked call scope.
 
@@ -214,7 +214,7 @@ class Service:
         kwargs: dict[str, Any],
         call_id: str,
         task_id: str | None,
-        sender: Callable[[TaskUpdateMessage], Awaitable[None]],
+        sender: Callable[[TaskUpdateMessage], Coroutine[Any, Any, None]],
     ) -> Any:
         """Invoke one registered query inside a read-only call scope.
 

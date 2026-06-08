@@ -52,7 +52,7 @@ def prefixes(path: Path) -> list[Path]:
 
 
 def path_to_str(path: Path) -> str:
-    parts = []
+    parts: list[str] = []
     for seg in path:
         match seg:
             case Property(key):

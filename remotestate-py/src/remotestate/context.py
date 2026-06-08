@@ -1,7 +1,7 @@
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Awaitable
+from typing import Any
 
 from .protocol import TaskUpdateMessage
 
@@ -21,7 +21,7 @@ class _CallContext:
     call_id: str
     task_id: str | None
     method: str
-    sender: Callable[[TaskUpdateMessage], Awaitable[None]]
+    sender: Callable[[TaskUpdateMessage], Coroutine[Any, Any, None]]
     readonly: bool = False
 
 

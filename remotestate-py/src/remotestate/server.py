@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -24,7 +24,7 @@ from .transport import Transport
 from .log import LOG
 
 
-_IncomingAdapter = TypeAdapter(IncomingMessage)
+_IncomingAdapter: TypeAdapter[IncomingMessage] = TypeAdapter(IncomingMessage)
 
 
 class Server:
@@ -70,7 +70,7 @@ class Server:
                     files = StaticFiles(directory=v)
                 app.mount(k, files)
 
-    def _make_sender(self) -> Callable[[TaskUpdateMessage], Awaitable[None]]:
+    def _make_sender(self) -> Callable[[TaskUpdateMessage], Coroutine[Any, Any, None]]:
         async def sender(msg: TaskUpdateMessage) -> None:
             await self._transport.send(msg)
 
