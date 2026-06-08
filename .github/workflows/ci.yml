@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: remotestate-py
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: prefix-dev/setup-pixi@v0.9.3
         with:
@@ -35,9 +35,9 @@ jobs:
       run:
         working-directory: remotestate-ts
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
@@ -62,9 +62,9 @@ jobs:
       run:
         working-directory: remotestate-demo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: npm
