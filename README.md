@@ -57,7 +57,7 @@ import remotestate as rs
 store = rs.Store(
     {
         "count": 0,
-        "user": {"name": "Norman"},
+        "user": {"name": "forman"},
     }
 )
 
@@ -92,8 +92,8 @@ import type { MyService } from "./MyService";
 
 function AppInner() {
   const remoteState = useRemoteStateClient<MyService>();
-  const [count, setCount] = useState<number>("count", 0);
-  const [name] = useState<string>("user.name");
+  const [count, setCount] = useRemoteState<number>("count", 0);
+  const [name] = useRemoteState<string>("user.name");
 
   return (
     <div>
@@ -261,7 +261,7 @@ const remoteState = useRemoteStateClient<MyService>();
 React-like state hook backed by the Python store. It returns `[value, setValue]`.
 
 ```typescript
-const [count, setCount] = useState<number>("count", 0);
+const [count, setCount] = useRemoteState<number>("count", 0);
 await setCount((prev) => (prev ?? 0) + 1);
 ```
 
