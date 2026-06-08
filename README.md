@@ -1,5 +1,12 @@
 # Remote State
 
+[![CI](https://github.com/forman/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/forman/remotestate/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![Ruff](https://img.shields.io/badge/Ruff-2C2F3A?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **Python state, React UI.** One runtime for notebook apps and addon backends.
 
 Remote State is a Python-first framework for building stateful React frontends.
