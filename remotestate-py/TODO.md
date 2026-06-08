@@ -72,8 +72,8 @@
 
 ## CI
 
-- [ ] Enhance quality checks, e.g., use mypy or similar
-- [ ] Create and configure GitHub actions
+- [x] Enhance quality checks, e.g., use mypy or similar
+- [x] Create and configure GitHub actions
 
 # remotestate-py Ideas
 
