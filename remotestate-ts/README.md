@@ -1,6 +1,6 @@
-# Remote State
+# RemoteState - TypeScript/React
 
-TypeScript and React bridge for the Remote State project.
+`remotestate` is the TypeScript and React bridge of the _RemoteState_ library.
 
 This package provides the frontend client, provider, and hooks that pair with
 the Python backend from the main repository.

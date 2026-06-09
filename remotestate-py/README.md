@@ -1,6 +1,6 @@
-# Remote State Python
+# RemoteState - Python
 
-`remotestate` is the Python runtime for Remote State.
+`remotestate` is the Python runtime for the _RemoteState_ library.
 
 It gives you:
 

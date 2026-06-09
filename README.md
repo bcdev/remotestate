@@ -1,4 +1,4 @@
-# Remote State
+# RemoteState
 
 [![CI](https://github.com/bcdev/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/bcdev/remotestate/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -9,7 +9,7 @@
 
 > **Python state, React UI.** One runtime for notebook apps and addon backends.
 
-Remote State is a Python-first framework for building stateful React frontends.
+_RemoteState_ is a Python-first framework for building stateful React frontends.
 It lets you define application state, actions, and queries in Python, then
 render the UI in React/TypeScript over a WebSocket bridge.
 
@@ -27,7 +27,7 @@ React handles presentation, interaction, and reactivity on the browser side.
 
 ---
 
-## What Remote State Provides
+## What RemoteState Provides
 
 - **Python-owned application state** - store nested state in a `Store` and mutate it through actions.
 - **Read and write separation** - use `@action` for mutations and `@query` for read-only calls.
@@ -241,7 +241,7 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ### `createRemoteState<TService>(url)`
 
-Creates a typed Remote State bridge.
+Creates a typed RemoteState bridge.
 
 ```typescript
 const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
@@ -249,7 +249,7 @@ const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
 
 ### `RemoteStateProvider` and `useRemoteStateClient<TService>()`
 
-React context wrapper for a Remote State bridge bound to a WebSocket URL, plus
+React context wrapper for a RemoteState bridge bound to a WebSocket URL, plus
 a hook to access it.
 
 ```tsx
@@ -314,7 +314,7 @@ re-renders on invalidation.
 ### Setup
 
 ```bash
-git clone https://github.com/your-username/remotestate
+git clone https://github.com/bcdev/remotestate
 cd remotestate
 
 # Python
@@ -352,12 +352,12 @@ remotestate generate my_service.py --out ui/src/MyService.ts
 ## Architecture
 
 ```text
-Python (source of truth)           TypeScript / React (renderer)
-──────────────────────────────     ──────────────────────────────
-Store                          StoreImpl (cache)
-  state                             lazy fetch per path
-  actions + queries            ──►    invalidate -> re-render
-  progress events               ──►    task updates
+Python (source of truth)             TypeScript / React (renderer)
+──────────────────────────────       ──────────────────────────────
+Store                                StoreImpl (cache)
+  state                              lazy fetch per path
+  actions + queries             ──►  invalidate -> re-render
+  progress events               ──►  task updates
 
 Service
   @action -> mutate state       ──►  remoteState.action()
@@ -403,4 +403,4 @@ and TypeScript strict mode on the JavaScript side.
 
 ## License
 
-MIT © Norman Fomferra
+MIT © [@forman](https://github.com/forman)
