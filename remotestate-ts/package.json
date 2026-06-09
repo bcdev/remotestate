@@ -1,14 +1,41 @@
 {
   "name": "remotestate",
   "version": "0.1.0",
+  "description": "Python state, React UI.",
   "type": "module",
   "main": "./dist/remotestate.js",
   "types": "./dist/remotestate.d.ts",
+  "license": "MIT",
+  "author": "forman",
+  "homepage": "https://github.com/bcdev/remotestate#readme",
+  "bugs": {
+    "url": "https://github.com/bcdev/remotestate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bcdev/remotestate.git",
+    "directory": "remotestate-ts"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "state",
+    "websocket",
+    "hooks"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "exports": {
     ".": {
       "import": "./dist/remotestate.js",
       "types": "./dist/remotestate.d.ts"
     }
+  },
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsc && vite build",
