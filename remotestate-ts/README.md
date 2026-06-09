@@ -14,7 +14,7 @@ npm install remotestate
 ## Use
 
 ```ts
-import { RemoteStateProvider, useRemoteStateClient } from "remotestate";
+import { RemoteStateProvider, useRemoteState } from "remotestate";
 ```
 
 For full project documentation, see the repository root README:

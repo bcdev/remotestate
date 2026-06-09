@@ -184,16 +184,16 @@ npm install remotestate
 
 ## Python API
 
-### `Store(initial: dict)`
+### `Store(initial: dict[str, Any])`
 
 Holds application state. Supports nested dicts, lists, Pydantic models, and dataclasses.
 
 ```python
-store = rs.Store({"items": [], "user": UserModel(name="Norman")})
-store.get("user.name")          # "Norman"
+store = rs.Store({"items": [], "user": UserModel(name="forman")})
+store.get("user.name")          # "forman"
 store.set("items[0].label", "foo")
 ```
-
+^^
 Paths use a JSONPath-inspired syntax such as `user.name` or `items[3].label`.
 
 ### `@action`
@@ -219,19 +219,22 @@ async def process(self, path: str) -> dict:
     return result
 ```
 
-### `rs.serve(service, *, dist_dir, host, port, open_browser, open_iframe, iframe_height)`
+### `rs.serve(service, *, ui_dist, app, open_browser, open_iframe, iframe_height, host, port, **uvicorn_settings)`
 
 Starts the Remote State server and connects it to a frontend bundle.
 
-| Parameter | Default | Description |
-|---|---|---|
-| `service` | required | A `Service` instance |
-| `dist_dir` | `None` | Path to the React build output (`dist/`) |
-| `host` | `"localhost"` | Server host |
-| `port` | `9753` | Server port |
-| `open_browser` | auto | Open in browser, default outside Jupyter |
-| `open_iframe` | auto | Render as IFrame, default in Jupyter |
-| `iframe_height` | `600` | IFrame height in pixels |
+| Parameter          | Default       | Description                                                     |
+|--------------------|---------------|-----------------------------------------------------------------|
+| `service`          | required      | A `Service` instance                                            |
+| `ui_dist`          | `None`        | Path to the React build output (`dist/`) or URL                 |
+| `mounts`           | `None`        | Mapping of an endpoint paths to local directories               |
+| `app`              | `None`        | [FastAPI](https://fastapi.tiangolo.com/) instance               |
+| `open_browser`     | auto          | Open in browser, default outside Jupyter                        |
+| `open_iframe`      | auto          | Render as IFrame, default in Jupyter                            |
+| `iframe_height`    | `400`         | IFrame height in pixels                                         |
+| `host`             | `"localhost"` | Server host                                                     |
+| `port`             | `9753`        | Server port                                                     |
+| `uvicorn_settings` | -             | Additional [uvicorn settings]((https://uvicorn.dev/settings/)   |
 
 Re-running the same Jupyter cell restarts the server automatically.
 
@@ -239,7 +242,7 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createRemoteState<TService>(url)`
+### `createRemoteState<S>(url)`
 
 Creates a typed RemoteState bridge.
 
@@ -247,7 +250,7 @@ Creates a typed RemoteState bridge.
 const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
 ```
 
-### `RemoteStateProvider` and `useRemoteStateClient<TService>()`
+### `RemoteStateProvider` and `useRemoteStateClient<S>()`
 
 React context wrapper for a RemoteState bridge bound to a WebSocket URL, plus
 a hook to access it.
@@ -260,7 +263,7 @@ a hook to access it.
 const remoteState = useRemoteStateClient<MyService>();
 ```
 
-### `useState<T>(path, initialValue?)`
+### `useRemoteState<T>(path, initialValue?)`
 
 React-like state hook backed by the Python store. It returns `[value, setValue]`.
 
@@ -275,7 +278,7 @@ Calls a Python `@action`. Fire-and-forget by default.
 
 ```typescript
 await remoteState.action("increment");
-await remoteState.action("set_name", ["Norman"]);
+await remoteState.action("set_name", ["forman"]);
 await remoteState.action("save", [], {}, { awaitInvalidate: true });
 ```
 
@@ -284,7 +287,7 @@ await remoteState.action("save", [], {}, { awaitInvalidate: true });
 Calls a Python `@query` and returns the result.
 
 ```typescript
-const result = await remoteState.query("compute", [5.0]);
+const result = await remoteState.query("compute", [2.5]);
 ```
 
 ### `useRemoteStateValue<T>(path)`
@@ -297,9 +300,7 @@ re-renders on invalidation.
 - `RemoteState` is the bridge object that used to be called `Client`.
 - `useRemoteStateClient()` returns that bridge object.
 - `useRemoteStore()` returns the cached store view used by the hooks.
-- `useState()` remains the ergonomic path-bound state hook for components.
-- We use `useRemoteStateClient()` instead of `useRemoteState()` to keep it
-  clearly distinct from `useState()` and `useRemoteStore()`.
+- `useRemoteState()` remains the ergonomic path-bound state hook for components.
 
 ---
 
