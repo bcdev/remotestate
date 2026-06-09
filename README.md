@@ -1,6 +1,6 @@
 # Remote State
 
-[![CI](https://github.com/forman/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/forman/remotestate/actions/workflows/ci.yml)
+[![CI](https://github.com/bcdev/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/bcdev/remotestate/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![Ruff](https://img.shields.io/badge/Ruff-2C2F3A?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
@@ -12,6 +12,10 @@
 Remote State is a Python-first framework for building stateful React frontends.
 It lets you define application state, actions, and queries in Python, then
 render the UI in React/TypeScript over a WebSocket bridge.
+
+Package-specific docs:
+- [Python package README](./remotestate-py/README.md)
+- [TypeScript package README](./remotestate-ts/README.md)
 
 The library is designed around two primary use cases:
 
