@@ -114,6 +114,104 @@ def test_set_pydantic_nested(pydantic_store):
     assert pydantic_store.get("user.address.city") == "Berlin"
 
 
+def test_set_missing_parent_without_default_factory_raises(simple_store):
+    with pytest.raises(KeyError):
+        simple_store.set("profile.name", "Norman")
+
+
+def test_set_creates_missing_dict_parents_with_default_value_factory():
+    store = Store({}, default_value_factory=lambda _path: {})
+
+    store.set("user.address.city", "Hamburg")
+
+    assert store.get("user") == {"address": {"city": "Hamburg"}}
+
+
+def test_set_default_value_factory_receives_missing_prefix_paths():
+    calls = []
+
+    def factory(path):
+        calls.append(path)
+        return {}
+
+    store = Store({}, default_value_factory=factory)
+
+    store.set("user.address.city", "Hamburg")
+
+    assert calls == ["user", "user.address"]
+
+
+def test_set_default_value_factory_can_create_pydantic_objects():
+    def factory(path):
+        if path == "user":
+            return User(
+                name="",
+                age=0,
+                address=Address(city="", street=""),
+            )
+        return {}
+
+    store = Store({}, default_value_factory=factory)
+
+    store.set("user.address.city", "Berlin")
+
+    assert isinstance(store.get("user"), User)
+    assert store.get("user.address.city") == "Berlin"
+
+
+def test_set_default_value_factory_can_create_list_items():
+    def factory(path):
+        if path == "items":
+            return []
+        return {}
+
+    store = Store({}, default_value_factory=factory)
+
+    store.set("items[0].label", "foo")
+
+    assert store.get("items") == [{"label": "foo"}]
+
+
+def test_set_list_leaf_still_raises_without_default_value_factory():
+    store = Store({"items": []})
+
+    with pytest.raises(IndexError):
+        store.set("items[0]", {"label": "foo"})
+
+
+def test_set_list_leaf_can_append_with_default_value_factory():
+    store = Store({"items": []}, default_value_factory=lambda _path: {})
+
+    store.set("items[0]", {"label": "foo"})
+
+    assert store.get("items") == [{"label": "foo"}]
+
+
+def test_set_sparse_list_index_raises_with_default_value_factory():
+    calls = []
+
+    def factory(path):
+        calls.append(path)
+        if path == "items":
+            return []
+        return {}
+
+    store = Store({}, default_value_factory=factory)
+
+    with pytest.raises(IndexError):
+        store.set("items[1].label", "foo")
+
+    assert calls == ["items"]
+
+
+def test_get_never_calls_default_value_factory():
+    factory = MagicMock(return_value={})
+    store = Store({}, default_value_factory=factory)
+
+    assert store.get("user.name") is None
+    factory.assert_not_called()
+
+
 # --- subscribe / notify ---
 
 

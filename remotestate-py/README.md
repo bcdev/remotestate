@@ -45,3 +45,42 @@ rs.serve(MyService(store), dist_dir="my-ui/dist")
 
 For the full project overview, see the repository root README:
 [Remote State](https://github.com/bcdev/remotestate)
+
+## Store Defaults
+
+`Store` can optionally create missing path prefixes while setting nested
+values. Without a default value factory, missing parents keep the original
+behavior and raise `KeyError`, `IndexError`, or `AttributeError`.
+
+```python
+def defaults(path: str):
+    if path == "items":
+        return []
+    return {}
+
+
+store = rs.Store({}, default_value_factory=defaults)
+store.set("user.address.city", "Hamburg")
+store.set("items[0].label", "foo")
+
+assert store.get("user") == {"address": {"city": "Hamburg"}}
+assert store.get("items") == [{"label": "foo"}]
+```
+
+The factory receives the missing prefix path, so it can return typed values for
+specific parts of the state tree:
+
+```python
+def defaults(path: str):
+    if path == "user":
+        return User(name="", address=Address(city="", street=""))
+    return {}
+
+
+store = rs.Store({}, default_value_factory=defaults)
+store.set("user.address.city", "Berlin")
+```
+
+`get()` does not use the factory; reads remain side-effect free. For list
+paths, `set()` can append at exactly the next index when a factory is
+configured; sparse indexes still raise `IndexError`.
