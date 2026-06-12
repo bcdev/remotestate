@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# noinspection PyProtectedMember
 from remotestate.serve import (
     _add_ui_url_params,
     _get_cell_id,

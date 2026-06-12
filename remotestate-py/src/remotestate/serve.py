@@ -28,6 +28,7 @@ except ImportError:
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 9753
+DEFAULT_IFRAME_WIDTH = "100%"
 DEFAULT_IFRAME_HEIGHT = 400
 
 _servers: dict[str, uvicorn.Server] = {}
@@ -41,7 +42,8 @@ def serve(
     app: FastAPI | None = None,
     open_browser: bool | None = None,
     open_iframe: bool | None = None,
-    iframe_height: int = DEFAULT_IFRAME_HEIGHT,
+    width: int | str = DEFAULT_IFRAME_WIDTH,
+    height: int | str = DEFAULT_IFRAME_HEIGHT,
     # --- Uvicorn
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
@@ -59,12 +61,13 @@ def serve(
             `fastapi.staticfiles.StaticFiles` object or a directory path.
         app: A FastAPI instance to use. If not provided,
             a new instance is created and passed to `Service.init_app(app)`
-            so that it can by initialized by the user.
+            so that it can be initialized by the user.
         open_browser: Open the UI in the default browser after starting.
             Defaults to True when not running in Jupyter.
         open_iframe: Render the UI as an IFrame in the Jupyter notebook.
             Defaults to True when running in Jupyter.
-        iframe_height: Height of the IFrame in pixels.
+        width: Width of the IFrame.
+        height: Height of the IFrame.
         host: Host to bind the server to.
         port: Port to bind the server to.
         uvicorn_settings: Additional [uvicorn settings]((https://uvicorn.dev/settings/)
@@ -93,10 +96,14 @@ def serve(
         else:
             mounts_["/"] = StaticFiles(directory=ui_dist, html=True)
 
-    remotestate_server = Server(service=service, mounts=mounts_, app=app)
+    rs_server = Server(service=service, mounts=mounts_, app=app)
 
     uvicorn_settings.update(host=host, port=port)
-    uvicorn_config = uvicorn.Config(remotestate_server.app, **uvicorn_settings)
+    if "log_config" not in uvicorn_settings:
+        # disable uvicorn's default logging setup
+        uvicorn_settings.update(log_config=_get_log_config())
+
+    uvicorn_config = uvicorn.Config(rs_server.app, **uvicorn_settings)
     uvicorn_server = uvicorn.Server(uvicorn_config)
     _servers[registry_key] = uvicorn_server
 
@@ -119,7 +126,7 @@ def serve(
     if should_open_iframe:
         from IPython.display import IFrame, display
 
-        display(IFrame(src=ui_dist_url, width="100%", height=iframe_height))
+        display(IFrame(src=ui_dist_url, width=width, height=height))
     elif should_open_browser:
         webbrowser.open(ui_dist_url)
 
@@ -158,6 +165,7 @@ def _add_ui_url_params(ui_dist_url: str, *, host: str, port: int) -> str:
             ("ws", f"ws://{host}:{port}/ws"),
         ]
     )
+    # noinspection PyTypeChecker
     return urlunsplit(url_parts._replace(query=urlencode(query)))
 
 
@@ -179,3 +187,35 @@ def _wait_for_port_free(host: str, port: int, timeout: float = 5.0) -> None:
                 pass  # port still in use
         time.sleep(0.05)
     raise TimeoutError(f"Port {port} did not become free within {timeout}s")
+
+
+def _get_log_config(log_file: str | PathLike = "server.log") -> dict[str, Any]:
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "file": {
+                "class": "logging.FileHandler",
+                "filename": str(log_file),
+                "formatter": "default",
+            }
+        },
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
+            }
+        },
+        "loggers": {
+            "uvicorn": {"handlers": ["file"], "level": "INFO", "propagate": False},
+            "uvicorn.error": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "uvicorn.access": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": False,
+            },
+        },
+    }
