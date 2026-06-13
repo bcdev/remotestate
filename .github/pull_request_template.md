@@ -16,19 +16,21 @@ Describe the change in a few sentences.
 
 ### Python package
 
-- [ ] `pixi run ruff check src`
-- [ ] `pixi run mypy src`
-- [ ] `pixi run pytest tests`
+- [ ] `pixi run format`
+- [ ] `pixi run lint`
+- [ ] `pixi run mypy`
+- [ ] `pixi run tests`
 
 ### TypeScript library
 
+- [ ] `npm run format`
 - [ ] `npm run checks`
 - [ ] `npm run tests`
 - [ ] `npm run build`
 
 ### Demo app
 
-- [ ] `npm run lint`
+- [ ] `npm run checks`
 - [ ] `npm run build`
 
 ## Notes

@@ -17,6 +17,120 @@ from .path import (
 )
 
 type PendingUpdates = dict[str, Any]
+type DefaultValueFactory = Callable[[str], Any]
+
+
+class Store:
+    """Reactive Python-side state container addressed by ``remotestate`` paths.
+
+    Values live here as the single source of truth. Actions and queries read
+    from it, while actions may also mutate it to trigger UI invalidation.
+    """
+
+    def __init__(
+        self,
+        initial: dict[str, Any],
+        *,
+        default_value_factory: DefaultValueFactory | None = None,
+    ) -> None:
+        """Create a store.
+
+        Args:
+            initial: Initial application state.
+            default_value_factory: Optional callable used by ``set()`` to
+                create missing intermediate path values. It receives the
+                missing prefix path, such as ``"user.address"`` or
+                ``"items[0]"``. If omitted, missing parents raise the same
+                ``KeyError``, ``IndexError``, or ``AttributeError`` as before.
+        """
+        self._state = initial
+        self._default_value_factory = default_value_factory
+        self._subscribers: list[Callable[[PendingUpdates], None]] = []
+
+    def get(self, path: str, *, require: bool = False) -> Any:
+        """Return the value at ``path``.
+
+        Missing values return ``None`` by default. Pass ``require=True`` to
+        surface the underlying missing-path exception instead. ``get()`` never
+        calls the default value factory.
+        """
+        parsed = parse_path(path)
+        return _get_at(self._state, parsed, require)
+
+    def set(self, path: str, value: Any) -> None:
+        """Set ``value`` at ``path`` and notify subscribers.
+
+        If this store has a default value factory, missing intermediate path
+        values are created before assigning the final value. List indexes may
+        append exactly one new item at the end; sparse indexes still raise
+        ``IndexError``.
+        """
+        # Queries are read-only — enforce via call context.
+        ctx = _call_context.get()
+        if ctx is not None and ctx.readonly:
+            raise PermissionError("query methods cannot mutate store")
+
+        parsed = parse_path(path)
+        _set_at(
+            self._state,
+            parsed,
+            value,
+            default_value_factory=self._default_value_factory,
+        )
+
+        pending = _batch_context.get()
+        if pending is not None:
+            for prefix in prefixes(parsed):
+                prefix_str = path_to_str(prefix)
+                pending[prefix_str] = _serialize(
+                    _get_at(self._state, prefix, require=False)
+                )
+        else:
+            updates = {
+                path_to_str(prefix): _serialize(
+                    _get_at(self._state, prefix, require=False)
+                )
+                for prefix in prefixes(parsed)
+            }
+            self._notify(updates)
+
+    def subscribe(
+        self, callback: Callable[[PendingUpdates], None]
+    ) -> Callable[[], None]:
+        """Subscribe to batched store updates.
+
+        The callback receives a mapping from changed prefix paths to serialized
+        values whenever ``set()`` flushes updates. Returns an unsubscribe
+        function that removes the callback.
+        """
+        self._subscribers.append(callback)
+
+        def unsubscribe() -> None:
+            self._subscribers.remove(callback)
+
+        return unsubscribe
+
+    def _notify(self, updates: PendingUpdates) -> None:
+        for cb in self._subscribers:
+            cb(updates)
+
+    def _flush(self, pending: PendingUpdates) -> None:
+        if pending:
+            self._notify(pending)
+
+
+def _set_or_append_segment(
+    obj: Any, segment: PathSegment, value: Any, *, require_appendable: bool
+) -> None:
+    if isinstance(segment, Index) and isinstance(obj, list) and segment.i == len(obj):
+        obj.append(value)
+        return
+    if require_appendable:
+        if isinstance(segment, Index):
+            raise IndexError(segment.i)
+        else:
+            raise KeyError(segment.key)
+    _set_segment(obj, segment, value)
 
 
 def _get_segment(obj: Any, segment: PathSegment, require: bool) -> Any:
@@ -59,11 +173,40 @@ def _get_at(root: Any, path: Path, require: bool) -> Any:
     return obj
 
 
-def _set_at(root: Any, path: Path, value: Any) -> None:
+def _set_at(
+    root: Any,
+    path: Path,
+    value: Any,
+    default_value_factory: DefaultValueFactory | None = None,
+) -> None:
     obj = root
-    for segment in path[:-1]:
-        obj = _get_segment(obj, segment, require=True)
-    _set_segment(obj, path[-1], value)
+    for i, segment in enumerate(path[:-1], start=1):
+        try:
+            obj = _get_segment(obj, segment, require=True)
+        except (AttributeError, IndexError, KeyError):
+            if default_value_factory is None:
+                raise
+            if (
+                isinstance(segment, Index)
+                and isinstance(obj, list)
+                and segment.i > len(obj)
+            ):
+                raise
+            default_value = default_value_factory(path_to_str(path[:i]))
+            _set_or_append_segment(
+                obj,
+                segment,
+                default_value,
+                require_appendable=isinstance(segment, Index),
+            )
+            obj = default_value
+
+    try:
+        _set_segment(obj, path[-1], value)
+    except IndexError:
+        if default_value_factory is None:
+            raise
+        _set_or_append_segment(obj, path[-1], value, require_appendable=True)
 
 
 def _serialize(value: Any) -> Any:
@@ -93,62 +236,3 @@ class _batch_pending_updates:
 _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
     "_batch_context", default=None
 )
-
-
-class Store:
-    """Reactive Python-side state container addressed by ``remotestate`` paths.
-
-    Values live here as the single source of truth. Actions and queries read
-    from it, while actions may also mutate it to trigger UI invalidation.
-    """
-
-    def __init__(self, initial: dict[str, Any]) -> None:
-        self._state = initial
-        self._subscribers: list[Callable[[PendingUpdates], None]] = []
-
-    def get(self, path: str, *, require: bool = False) -> Any:
-        parsed = parse_path(path)
-        return _get_at(self._state, parsed, require)
-
-    def set(self, path: str, value: Any) -> None:
-        # Queries are read-only — enforce via call context.
-        ctx = _call_context.get()
-        if ctx is not None and ctx.readonly:
-            raise PermissionError("query methods cannot mutate store")
-
-        parsed = parse_path(path)
-        _set_at(self._state, parsed, value)
-
-        pending = _batch_context.get()
-        if pending is not None:
-            for prefix in prefixes(parsed):
-                prefix_str = path_to_str(prefix)
-                pending[prefix_str] = _serialize(
-                    _get_at(self._state, prefix, require=False)
-                )
-        else:
-            updates = {
-                path_to_str(prefix): _serialize(
-                    _get_at(self._state, prefix, require=False)
-                )
-                for prefix in prefixes(parsed)
-            }
-            self._notify(updates)
-
-    def subscribe(
-        self, callback: Callable[[PendingUpdates], None]
-    ) -> Callable[[], None]:
-        self._subscribers.append(callback)
-
-        def unsubscribe() -> None:
-            self._subscribers.remove(callback)
-
-        return unsubscribe
-
-    def _notify(self, updates: PendingUpdates) -> None:
-        for cb in self._subscribers:
-            cb(updates)
-
-    def _flush(self, pending: PendingUpdates) -> None:
-        if pending:
-            self._notify(pending)

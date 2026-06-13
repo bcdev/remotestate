@@ -66,6 +66,7 @@ remotestate = { path = ".", editable = true }
 [tool.pixi.tasks]
 build = "python -m build"
 format = "ruff format src"
-checks = "ruff check src"
-tests = "pytest tests"
 isort = "isort src"
+lint = "ruff check src"
+mypy = "mypy src"
+tests = "pytest tests"

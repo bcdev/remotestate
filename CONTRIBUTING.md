@@ -24,16 +24,16 @@ you touch.
 ```bash
 cd remotestate-py
 pixi install
-pixi run ruff check src
-pixi run mypy src
-pixi run pytest tests
+pixi run lint
+pixi run mypy
+pixi run tests
 ```
 
 Useful additional commands:
 
 ```bash
-pixi run ruff format src
-pixi run isort src
+pixi run format
+pixi run isort
 ```
 
 ### TypeScript library
@@ -57,7 +57,7 @@ npm run format
 ```bash
 cd remotestate-demo
 npm ci
-npm run lint
+npm run checks
 npm run build
 ```
 

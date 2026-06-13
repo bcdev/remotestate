@@ -192,17 +192,57 @@ npm install remotestate
 
 ## Python API
 
-### `Store(initial: dict[str, Any])`
+### `Store(initial: dict[str, Any], *, default_value_factory=None)`
 
 Holds application state. Supports nested dicts, lists, Pydantic models, and dataclasses.
 
 ```python
-store = rs.Store({"items": [], "user": UserModel(name="forman")})
+store = rs.Store({"items": [{"label": ""}], "user": UserModel(name="forman")})
 store.get("user.name")          # "forman"
 store.set("items[0].label", "foo")
 ```
-^^
+
 Paths use a JSONPath-inspired syntax such as `user.name` or `items[3].label`.
+By default, setting a path with a missing parent still raises the underlying
+`KeyError`, `IndexError`, or `AttributeError`.
+
+Pass `default_value_factory` to materialize missing path prefixes during
+`set()`. The factory receives the missing prefix path and returns the value to
+insert there:
+
+```python
+def defaults(path: str):
+    if path == "items":
+        return []
+    return {}
+
+
+store = rs.Store({}, default_value_factory=defaults)
+store.set("user.address.city", "Hamburg")
+store.set("items[0].label", "foo")
+
+store.get("user")   # {"address": {"city": "Hamburg"}}
+store.get("items")  # [{"label": "foo"}]
+```
+
+Factories may return typed objects, too. RemoteState inserts the object and
+then uses normal attribute assignment for the remaining path:
+
+```python
+def defaults(path: str):
+    if path == "user":
+        return UserModel(name="", address=AddressModel(city="", street=""))
+    return {}
+
+
+store = rs.Store({}, default_value_factory=defaults)
+store.set("user.address.city", "Berlin")
+```
+
+`get()` never calls the factory. It remains side-effect free and returns
+`None` for missing values unless called with `require=True`. For list paths,
+`set()` can append at exactly the next index when a factory is configured;
+sparse indexes still raise `IndexError`.
 
 ### `@action`
 
