@@ -1,4 +1,4 @@
 import { createContext } from "react";
-import { type RemoteState } from "../client";
+import { type RemoteStateClient } from "../client";
 
-export const RemoteStateContext = createContext<RemoteState | null>(null);
+export const RemoteStateContext = createContext<RemoteStateClient | null>(null);

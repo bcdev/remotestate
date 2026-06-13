@@ -9,6 +9,8 @@
 
 ## Refactorings
 
+- [x] Where applicable rename `RemoteState` to `RemoteStateClient`,
+      in interface and function names.
 - [x] Drop _snapshot_ in method names. Document snapshot behavior instead.
 - [x] Remove `TaskStoreImpl.allSnapshot` as sorting should be done by hook clients.
 - [x] Rename `id` to `callId` (`call_id` in protocol)
@@ -29,5 +31,5 @@
 
 ## Improve client configuration
 
-- [x] `url` passed to `createRemoteState` may be a WebSocket endpoint or server
-      base HTTP-URL. `createRemoteState` derives the WebSocket URL when needed.
+- [x] `url` passed to `createRemoteStateClient` may be a WebSocket endpoint or server
+      base HTTP-URL. `createRemoteStateClient` derives the WebSocket URL when needed.

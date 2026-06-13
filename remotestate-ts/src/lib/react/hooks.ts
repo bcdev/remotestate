@@ -5,22 +5,24 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { type RemoteState } from "../client";
+import { type RemoteStateClient } from "../client";
 import { RemoteStateContext } from "./context";
 import { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
 /**
- * Get the nearest Remote State bridge from React context.
+ * Get the nearest Remote State client from React context.
+ *
+ * @typeParam S The type that defines the available service methods.
  */
-export function useRemoteStateClient<TService>(): RemoteState<TService> {
-  const remoteState = useContext(RemoteStateContext);
-  if (!remoteState) {
+export function useRemoteStateClient<S = unknown>(): RemoteStateClient<S> {
+  const client = useContext(RemoteStateContext);
+  if (!client) {
     throw new Error(
       "useRemoteStateClient must be used inside <RemoteStateProvider>",
     );
   }
-  return remoteState as RemoteState<TService>;
+  return client as RemoteStateClient<S>;
 }
 
 /**

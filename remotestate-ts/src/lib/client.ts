@@ -12,76 +12,74 @@ type ReturnType<T> = T extends (...args: never[]) => Promise<infer R>
   ? R
   : never;
 
-type ActionKeys<TService> = {
-  [K in keyof TService]: ReturnType<TService[K]> extends undefined ? K : never;
-}[keyof TService];
+type ActionKeys<S> = {
+  [K in keyof S]: ReturnType<S[K]> extends undefined ? K : never;
+}[keyof S];
 
-type QueryKeys<TService> = {
-  [K in keyof TService]: ReturnType<TService[K]> extends undefined ? never : K;
-}[keyof TService];
+type QueryKeys<S> = {
+  [K in keyof S]: ReturnType<S[K]> extends undefined ? never : K;
+}[keyof S];
 
-type ActionMethod<TService> = unknown extends TService
-  ? string
-  : ActionKeys<TService>;
+type ActionMethod<S> = unknown extends S ? string : ActionKeys<S>;
 
-type QueryMethod<TService> = unknown extends TService
-  ? string
-  : QueryKeys<TService>;
-type QueryResult<TService, M> = M extends keyof TService
-  ? ReturnType<TService[M]>
-  : unknown;
+type QueryMethod<S> = unknown extends S ? string : QueryKeys<S>;
+type QueryResult<S, M> = M extends keyof S ? ReturnType<S[M]> : unknown;
 
-type MethodArgs<TService, K> = K extends keyof TService
-  ? TService[K] extends (...args: infer A) => unknown
+type MethodArgs<S, K> = K extends keyof S
+  ? S[K] extends (...args: infer A) => unknown
     ? A
     : never
   : unknown[];
 
 /**
- * Typed Remote State bridge used by applications and React hooks.
+ * Typed Remote State client used by applications and React hooks.
+ *
+ * @typeParam S The type that defines the available service methods.
  */
-export interface RemoteState<TService = unknown> {
+export interface RemoteStateClient<S = unknown> {
   store: Store;
   tasks: WritableTaskStore;
 
-  action: <M extends ActionMethod<TService>>(
+  action: <M extends ActionMethod<S>>(
     method: M,
-    args?: MethodArgs<TService, M>,
+    args?: MethodArgs<S, M>,
     kwargs?: Record<string, unknown>,
     options?: ActionOptions,
   ) => Promise<void>;
 
-  query: <M extends QueryMethod<TService>>(
+  query: <M extends QueryMethod<S>>(
     method: M,
-    args?: MethodArgs<TService, M>,
+    args?: MethodArgs<S, M>,
     kwargs?: Record<string, unknown>,
     options?: QueryOptions,
-  ) => Promise<QueryResult<TService, M>>;
+  ) => Promise<QueryResult<S, M>>;
 
   dispose: () => void;
 }
 
 /**
- * Optional Remote State integrations.
+ * Optional Remote State client integrations.
  *
  * Supplying `taskStore` lets applications keep task state in a custom store
  * instead of the built-in in-memory implementation.
  */
-export interface RemoteStateOptions {
+export interface RemoteStateClientOptions {
   taskStore?: WritableTaskStore;
 }
 
 /**
- * Create a Remote State bridge bound to one websocket endpoint.
+ * Create a Remote State client bound to one websocket endpoint.
  *
+ * @typeParam S The type that defines the available service methods.
  * @param url The websocket endpoint URL. If not provided,
  *     it may be passed as query parameter `ws`. Otherwise,
  *     defaults to `ws(s)://{location.host}/ws`.
+ * @param options Client options.
  */
-export function createRemoteState<TService = unknown>(
+export function createRemoteStateClient<S = unknown>(
   url?: string | null,
-  options: RemoteStateOptions = {},
-): RemoteState<TService> {
+  options: RemoteStateClientOptions = {},
+): RemoteStateClient<S> {
   const transport = new TransportImpl(coerceUrl(url));
   const store = new StoreImpl(transport);
   const taskStore = options.taskStore ?? createRemoteTaskStore();
@@ -96,14 +94,14 @@ export function createRemoteState<TService = unknown>(
     action: (method, args = [] as never, kwargs = {}, options = {}) =>
       service.action(method as string, args, kwargs, options),
 
-    query: <M extends QueryMethod<TService>>(
+    query: <M extends QueryMethod<S>>(
       method: M,
-      args: MethodArgs<TService, M> = [] as never,
+      args: MethodArgs<S, M> = [] as never,
       kwargs: Record<string, unknown> = {},
       options: QueryOptions = {},
     ) =>
       service.query(method as string, args, kwargs, options) as Promise<
-        QueryResult<TService, M>
+        QueryResult<S, M>
       >,
 
     dispose: () => {

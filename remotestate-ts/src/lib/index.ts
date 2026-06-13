@@ -1,6 +1,6 @@
-export { createRemoteState } from "./client";
+export { createRemoteStateClient } from "./client";
 export { createRemoteTaskStore, TaskStoreImpl } from "./tasks";
-export type { RemoteState, RemoteStateOptions } from "./client";
+export type { RemoteStateClient, RemoteStateClientOptions } from "./client";
 export type {
   IncomingMessage,
   OutgoingMessage,

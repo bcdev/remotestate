@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { TaskController, TaskStoreImpl, createRemoteTaskStore } from "../lib/tasks";
+import {
+  TaskController,
+  TaskStoreImpl,
+  createRemoteTaskStore,
+} from "../lib/tasks";
 import { asTransport, mockTransportWithHandler } from "./mocks";
 
 describe("TaskStoreImpl", () => {

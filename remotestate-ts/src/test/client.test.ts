@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createRemoteState } from "../lib";
+import { createRemoteStateClient } from "../lib";
 
 let websocketUrls: string[];
 
@@ -27,7 +27,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("createRemoteState", () => {
+describe("createRemoteStateClient", () => {
   it("uses the ws query parameter when no URL is provided", () => {
     vi.stubGlobal("location", {
       search: "?ws=ws%3A%2F%2Flocalhost%3A9753%2Fws",
@@ -36,7 +36,7 @@ describe("createRemoteState", () => {
       pathname: "/",
     });
 
-    const client = createRemoteState();
+    const client = createRemoteStateClient();
 
     expect(websocketUrls[0]).toBe("ws://localhost:9753/ws");
     client.dispose();
@@ -50,14 +50,14 @@ describe("createRemoteState", () => {
       pathname: "/ui/route",
     });
 
-    const client = createRemoteState();
+    const client = createRemoteStateClient();
 
     expect(websocketUrls[0]).toBe("wss://example.test/ws");
     client.dispose();
   });
 
   it("accepts an HTTP server base URL", () => {
-    const client = createRemoteState("http://localhost:9753");
+    const client = createRemoteStateClient("http://localhost:9753");
 
     expect(websocketUrls[0]).toBe("ws://localhost:9753/ws");
     client.dispose();
