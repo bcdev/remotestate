@@ -126,7 +126,10 @@ def _set_or_append_segment(
         obj.append(value)
         return
     if require_appendable:
-        raise IndexError(segment.i)
+        if isinstance(segment, Index):
+            raise IndexError(segment.i)
+        else:
+            raise KeyError(segment.key)
     _set_segment(obj, segment, value)
 
 
