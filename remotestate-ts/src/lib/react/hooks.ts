@@ -11,18 +11,30 @@ import { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
 /**
+ * Get the nearest Remote State client from React context, if one is active.
+ *
+ * @typeParam S The type that defines the available service methods.
+ */
+export function useOptionalRemoteStateClient<
+  S = unknown,
+>(): RemoteStateClient<S> | null {
+  const client = useContext(RemoteStateContext);
+  return client as RemoteStateClient<S> | null;
+}
+
+/**
  * Get the nearest Remote State client from React context.
  *
  * @typeParam S The type that defines the available service methods.
  */
 export function useRemoteStateClient<S = unknown>(): RemoteStateClient<S> {
-  const client = useContext(RemoteStateContext);
+  const client = useOptionalRemoteStateClient<S>();
   if (!client) {
     throw new Error(
-      "useRemoteStateClient must be used inside <RemoteStateProvider>",
+      "useRemoteStateClient must be used inside an active <RemoteStateProvider>",
     );
   }
-  return client as RemoteStateClient<S>;
+  return client;
 }
 
 /**

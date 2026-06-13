@@ -43,7 +43,7 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateClientProvider`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, and hooks.
 
 ---
 
@@ -99,7 +99,11 @@ export interface MyService {
 ```
 
 ```tsx
-import { RemoteStateClientProvider, useRemoteStateClient, useState } from "remotestate";
+import {
+  RemoteStateProvider,
+  useRemoteStateClient,
+  useRemoteState,
+} from "remotestate";
 import type { MyService } from "./MyService";
 
 function AppInner() {
@@ -109,7 +113,9 @@ function AppInner() {
 
   return (
     <div>
-      <p>Hello, {name ?? "..."}! Count: {count ?? "..."}</p>
+      <p>
+        Hello, {name ?? "..."}! Count: {count ?? "..."}
+      </p>
       <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>+1</button>
       <button
         onClick={async () => {
@@ -125,9 +131,9 @@ function AppInner() {
 
 export default function App() {
   return (
-    <RemoteStateClientProvider url="ws://localhost:9753/ws">
+    <RemoteStateProvider url="ws://localhost:9753/ws">
       <AppInner />
-    </RemoteStateClientProvider>
+    </RemoteStateProvider>
   );
 }
 ```
@@ -298,18 +304,22 @@ Creates a typed RemoteState client.
 const remoteState = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 ```
 
-### `RemoteStateClientProvider` and `useRemoteStateClient<S>()`
+### `RemoteStateProvider` and client hooks
 
 React context wrapper for a RemoteState client bound to a WebSocket URL, plus
-a hook to access it.
+hooks to access it.
 
 ```tsx
-<RemoteStateClientProvider url="ws://localhost:9753/ws">
+<RemoteStateProvider url="ws://localhost:9753/ws">
   <App />
-</RemoteStateClientProvider>
+</RemoteStateProvider>
 
 const remoteState = useRemoteStateClient<MyService>();
 ```
+
+Use `active={false}` when Remote State is intentionally unavailable and the app
+should use a local fallback instead. `useOptionalRemoteStateClient<S>()` returns
+`null` in that case, while `useRemoteStateClient<S>()` stays strict and throws.
 
 ### `useRemoteState<T>(path, initialValue?)`
 
