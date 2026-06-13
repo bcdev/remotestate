@@ -20,13 +20,13 @@ jobs:
           locked: true
 
       - name: Lint
-        run: pixi run ruff check src
+        run: pixi run lint
 
       - name: Typecheck
-        run: pixi run mypy src
+        run: pixi run mypy
 
       - name: Test
-        run: pixi run pytest tests
+        run: pixi run tests
 
   typescript-library:
     name: TypeScript library
@@ -46,7 +46,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Lint and typecheck
+      - name: Typecheck and Lint
         run: npm run checks
 
       - name: Test
@@ -83,8 +83,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Typecheck and Lint
+        run: npm run checks
 
       - name: Typecheck and build
         run: npm run build

@@ -63,9 +63,9 @@ hatchling = ">=1,<2"
 remotestate = { path = ".", editable = true }
 
 [tool.pixi.tasks]
-checks = "ruff check src"
 build = "python -m build"
 format = "ruff format src"
 isort = "isort src"
+lint = "ruff check src"
 mypy = "mypy src"
 tests = "pytest tests"
