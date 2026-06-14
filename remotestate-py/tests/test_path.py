@@ -1,3 +1,4 @@
+import remotestate as rs
 import pytest
 
 from remotestate.path import (
@@ -137,3 +138,10 @@ def test_from_jsonpath():
 def test_from_jsonpath_invalid():
     with pytest.raises(ValueError):
         from_jsonpath("user.name")
+
+
+def test_path_namespace_is_exported_from_package_root():
+    assert rs.path.Property("user") == Property("user")
+    assert rs.path.Index(3) == Index(3)
+    assert not hasattr(rs, "Property")
+    assert not hasattr(rs, "Index")

@@ -211,8 +211,8 @@ Pass `default_factory` to materialize missing path prefixes during
 segments and returns the value to insert there:
 
 ```python
-def defaults(path: rs.Path):
-    if path == (rs.Property("items"),):
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("items"),):
         return []
     return {}
 
@@ -229,8 +229,8 @@ Factories may return typed objects, too. RemoteState inserts the object and
 then uses normal attribute assignment for the remaining path:
 
 ```python
-def defaults(path: rs.Path):
-    if path == (rs.Property("user"),):
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("user"),):
         return UserModel(name="", address=AddressModel(city="", street=""))
     return {}
 
@@ -271,18 +271,18 @@ async def process(self, path: str) -> dict:
 
 Starts the Remote State server and connects it to a frontend bundle.
 
-| Parameter          | Default       | Description                                                     |
-|--------------------|---------------|-----------------------------------------------------------------|
-| `service`          | required      | A `Service` instance                                            |
-| `ui_dist`          | `None`        | Path to the React build output (`dist/`) or URL                 |
-| `mounts`           | `None`        | Mapping of an endpoint paths to local directories               |
-| `app`              | `None`        | [FastAPI](https://fastapi.tiangolo.com/) instance               |
-| `open_browser`     | auto          | Open in browser, default outside Jupyter                        |
-| `open_iframe`      | auto          | Render as IFrame, default in Jupyter                            |
-| `iframe_height`    | `400`         | IFrame height in pixels                                         |
-| `host`             | `"localhost"` | Server host                                                     |
-| `port`             | `9753`        | Server port                                                     |
-| `uvicorn_settings` | -             | Additional [uvicorn settings]((https://uvicorn.dev/settings/)   |
+| Parameter          | Default       | Description                                                    |
+|--------------------|---------------|----------------------------------------------------------------|
+| `service`          | required      | A `Service` instance                                           |
+| `ui_dist`          | `None`        | Path to the React build output (`dist/`) or URL                |
+| `mounts`           | `None`        | Mapping of an endpoint paths to local directories              |
+| `app`              | `None`        | [FastAPI](https://fastapi.tiangolo.com/) instance              |
+| `open_browser`     | auto          | Open in browser, default outside Jupyter                       |
+| `open_iframe`      | auto          | Render as IFrame, default in Jupyter                           |
+| `iframe_height`    | `400`         | IFrame height in pixels                                        |
+| `host`             | `"localhost"` | Server host                                                    |
+| `port`             | `9753`        | Server port                                                    |
+| `uvicorn_settings` | -             | Additional [uvicorn settings](https://uvicorn.dev/settings/)   |
 
 Re-running the same Jupyter cell restarts the server automatically.
 
@@ -290,12 +290,12 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createRemoteState<S>(url)`
+### `createRemoteStateClient<S>(url)`
 
-Creates a typed RemoteState bridge.
+Creates a typed RemoteState client.
 
 ```typescript
-const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
+const client = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 ```
 
 ### `RemoteStateProvider` and `useRemoteStateClient<S>()`
@@ -308,7 +308,7 @@ a hook to access it.
   <App />
 </RemoteStateProvider>
 
-const remoteState = useRemoteStateClient<MyService>();
+const client = useRemoteStateClient<MyService>();
 ```
 
 ### `useRemoteState<T>(path, initialValue?)`
@@ -342,13 +342,6 @@ const result = await remoteState.query("compute", [2.5]);
 
 Low-level read hook for store values. Returns `undefined` while loading and
 re-renders on invalidation.
-
-### Naming notes
-
-- `RemoteState` is the bridge object that used to be called `Client`.
-- `useRemoteStateClient()` returns that bridge object.
-- `useRemoteStore()` returns the cached store view used by the hooks.
-- `useRemoteState()` remains the ergonomic path-bound state hook for components.
 
 ---
 
@@ -404,13 +397,13 @@ remotestate generate my_service.py --out ui/src/MyService.ts
 Python (source of truth)             TypeScript / React (renderer)
 ──────────────────────────────       ──────────────────────────────
 Store                                StoreImpl (cache)
-  state                              lazy fetch per path
-  actions + queries             ──►  invalidate -> re-render
-  progress events               ──►  task updates
+  state                         ──►    lazy fetch per path
+  actions + queries             ──►    invalidate -> re-render
+  progress events               ──►    task updates
 
-Service
-  @action -> mutate state       ──►  remoteState.action()
-  @query  -> read state/result  ──►  remoteState.query()
+Service                              RemoteStateClient
+  @action -> mutate state       ──►    client.action()
+  @query  -> read state/result  ──►    client.query()
 
 WebSocket transport
   ws://localhost:9753/ws

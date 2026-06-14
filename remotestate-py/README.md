@@ -53,8 +53,8 @@ values. Without a default factory, missing parents keep the original
 behavior and raise `KeyError`, `IndexError`, or `AttributeError`.
 
 ```python
-def defaults(path: rs.Path):
-    if path == (rs.Property("items"),):
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("items"),):
         return []
     return {}
 
@@ -71,8 +71,8 @@ The factory receives the missing prefix path as a tuple of path segments, so it
 can return typed values for specific parts of the state tree:
 
 ```python
-def defaults(path: rs.Path):
-    if path == (rs.Property("user"),):
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("user"),):
         return User(name="", address=Address(city="", street=""))
     return {}
 

@@ -2,8 +2,8 @@
 
 - Added `twine` to dev-dependencies.
 - Added `__version__` attribute to main package.
-- Added `Path`, `PathSegment`, `Property`, and `Index` to the main package
-  exports.
+- Exposed the `path` submodule from the package root and moved `Path`,
+  `PathSegment`, `Property`, and `Index` under `remotestate.path`.
 - Changed the `Store` default factory API:
   - Renamed the keyword argument from `default_value_factory` to
     `default_factory`.

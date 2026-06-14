@@ -39,10 +39,10 @@ class Store:
             initial: Initial application state.
             default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
-                missing prefix path, such as ``(Property("user"),)`` or
-                ``(Property("items"), Index(0))``. If omitted, missing parents
-                raise the same ``KeyError``, ``IndexError``, or
-                ``AttributeError`` as before.
+                missing prefix path as a ``Path`` tuple, such as one
+                containing ``Property("user")`` or ``Index(0)`` segments.
+                If omitted, missing parents raise the same ``KeyError``,
+                ``IndexError``, or ``AttributeError`` as before.
         """
         self._state = initial
         self._default_factory = default_factory
