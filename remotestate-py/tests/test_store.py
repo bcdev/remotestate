@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import BaseModel
 
+from remotestate.path import Property
+
 # noinspection PyProtectedMember
 from remotestate.store import Store, _batch_pending_updates
 
@@ -119,31 +121,34 @@ def test_set_missing_parent_without_default_factory_raises(simple_store):
         simple_store.set("profile.name", "Norman")
 
 
-def test_set_creates_missing_dict_parents_with_default_value_factory():
-    store = Store({}, default_value_factory=lambda _path: {})
+def test_set_creates_missing_dict_parents_with_default_factory():
+    store = Store({}, default_factory=lambda _path: {})
 
     store.set("user.address.city", "Hamburg")
 
     assert store.get("user") == {"address": {"city": "Hamburg"}}
 
 
-def test_set_default_value_factory_receives_missing_prefix_paths():
+def test_set_default_factory_receives_missing_prefix_paths():
     calls = []
 
     def factory(path):
         calls.append(path)
         return {}
 
-    store = Store({}, default_value_factory=factory)
+    store = Store({}, default_factory=factory)
 
     store.set("user.address.city", "Hamburg")
 
-    assert calls == ["user", "user.address"]
+    assert calls == [
+        (Property("user"),),
+        (Property("user"), Property("address")),
+    ]
 
 
-def test_set_default_value_factory_can_create_pydantic_objects():
+def test_set_default_factory_can_create_pydantic_objects():
     def factory(path):
-        if path == "user":
+        if path == (Property("user"),):
             return User(
                 name="",
                 age=0,
@@ -151,7 +156,7 @@ def test_set_default_value_factory_can_create_pydantic_objects():
             )
         return {}
 
-    store = Store({}, default_value_factory=factory)
+    store = Store({}, default_factory=factory)
 
     store.set("user.address.city", "Berlin")
 
@@ -159,54 +164,54 @@ def test_set_default_value_factory_can_create_pydantic_objects():
     assert store.get("user.address.city") == "Berlin"
 
 
-def test_set_default_value_factory_can_create_list_items():
+def test_set_default_factory_can_create_list_items():
     def factory(path):
-        if path == "items":
+        if path == (Property("items"),):
             return []
         return {}
 
-    store = Store({}, default_value_factory=factory)
+    store = Store({}, default_factory=factory)
 
     store.set("items[0].label", "foo")
 
     assert store.get("items") == [{"label": "foo"}]
 
 
-def test_set_list_leaf_still_raises_without_default_value_factory():
+def test_set_list_leaf_still_raises_without_default_factory():
     store = Store({"items": []})
 
     with pytest.raises(IndexError):
         store.set("items[0]", {"label": "foo"})
 
 
-def test_set_list_leaf_can_append_with_default_value_factory():
-    store = Store({"items": []}, default_value_factory=lambda _path: {})
+def test_set_list_leaf_can_append_with_default_factory():
+    store = Store({"items": []}, default_factory=lambda _path: {})
 
     store.set("items[0]", {"label": "foo"})
 
     assert store.get("items") == [{"label": "foo"}]
 
 
-def test_set_sparse_list_index_raises_with_default_value_factory():
+def test_set_sparse_list_index_raises_with_default_factory():
     calls = []
 
     def factory(path):
         calls.append(path)
-        if path == "items":
+        if path == (Property("items"),):
             return []
         return {}
 
-    store = Store({}, default_value_factory=factory)
+    store = Store({}, default_factory=factory)
 
     with pytest.raises(IndexError):
         store.set("items[1].label", "foo")
 
-    assert calls == ["items"]
+    assert calls == [(Property("items"),)]
 
 
-def test_get_never_calls_default_value_factory():
+def test_get_never_calls_default_factory():
     factory = MagicMock(return_value={})
-    store = Store({}, default_value_factory=factory)
+    store = Store({}, default_factory=factory)
 
     assert store.get("user.name") is None
     factory.assert_not_called()
