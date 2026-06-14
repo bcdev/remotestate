@@ -43,7 +43,8 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, 
+  `useRemoteStateClient`, `useOptionalRemoteStateClient`, and hooks.
 
 ---
 
@@ -299,13 +300,15 @@ Re-running the same Jupyter cell restarts the server automatically.
 Creates a typed RemoteState client.
 
 ```typescript
-const remoteState = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
+const client = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 ```
 
 ### `RemoteStateProvider` and client hooks
 
 React context wrapper for a RemoteState client bound to a WebSocket URL, plus
-hooks to access it.
+hooks to access it. `useOptionalRemoteStateClient<S>()` returns `null` when the
+provider is inactive or no client was supplied; `useRemoteStateClient<S>()`
+throws in that case.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">
@@ -316,8 +319,7 @@ const client = useRemoteStateClient<MyService>();
 ```
 
 Use `active={false}` when Remote State is intentionally unavailable and the app
-should use a local fallback instead. `useOptionalRemoteStateClient<S>()` returns
-`null` in that case, while `useRemoteStateClient<S>()` stays strict and throws.
+should use a local fallback instead.
 
 ### `useRemoteState<T>(path, initialValue?)`
 
