@@ -8,6 +8,8 @@
   - Renamed the keyword argument from `default_value_factory` to
     `default_factory`.
   - The factory now receives a parsed `Path` tuple instead of a path string.
+- Changed action-result protocol payloads from repeated prefix snapshots to
+  compact JSON Patch-style cache operations.
 - Changed signature and behavior of `serve()` function:
   - Renamed `iframe_heigh` argument into `height`, and added `width`.
   - It is no longer using FastAPI/Uvicorn default

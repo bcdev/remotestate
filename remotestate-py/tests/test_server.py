@@ -36,6 +36,10 @@ def service(store):
         async def increment(self):
             self.store.set("count", self.store.get("count") + 1)
 
+        @action
+        async def set_name(self):
+            self.store.set("user.name", "Klaus")
+
         @query
         async def get_count(self) -> int:
             return self.store.get("count")
@@ -142,7 +146,28 @@ async def test_dispatch_call_action(server):
     assert server._store.get("count") == 1
     assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].call_id == "abc"
-    assert "count" in sent[0].updates
+    assert len(sent[0].patches) == 1
+    assert sent[0].patches[0].op == "add"
+    assert sent[0].patches[0].path == "/count"
+    assert sent[0].patches[0].value == 1
+
+
+@pytest.mark.asyncio
+async def test_dispatch_call_action_sends_top_level_patches(server):
+    sent = []
+    server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
+
+    await server._dispatch(
+        ActionMessage(
+            call_id="abc", task_id="abc", method="set_name", args=[], kwargs={}
+        )
+    )
+
+    assert server._store.get("user.name") == "Klaus"
+    assert isinstance(sent[0], ActionResultMessage)
+    assert len(sent[0].patches) == 1
+    assert sent[0].patches[0].path == "/user"
+    assert sent[0].patches[0].value == {"name": "Klaus"}
 
 
 @pytest.mark.asyncio
@@ -162,7 +187,8 @@ async def test_dispatch_builtin_set_state_action(server):
 
     assert server._store.get("count") == 7
     assert isinstance(sent[0], ActionResultMessage)
-    assert sent[0].updates["count"] == 7
+    assert sent[0].patches[0].path == "/count"
+    assert sent[0].patches[0].value == 7
 
 
 @pytest.mark.asyncio

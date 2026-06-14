@@ -71,7 +71,7 @@ class Service:
 
     Subclasses define ``@action`` and ``@query`` methods. Dispatch helpers take
     care of call scoping, read-only enforcement for queries, and batched store
-    invalidation after actions complete.
+    update reporting after actions complete.
 
     The base class also provides the built-in ``get_state`` query and ``set_state``
     action used by the generic React bridge.
@@ -202,7 +202,7 @@ class Service:
             sender: Coroutine used to emit ``TaskUpdateMessage`` objects.
 
         Returns:
-            The batched store updates produced by the action.
+            The batched local store updates produced by the action.
         """
 
         fn = self._actions.get(method)

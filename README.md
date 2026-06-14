@@ -54,7 +54,7 @@ Remote State splits responsibilities cleanly:
 
 - **Python** owns state, domain logic, actions, queries, and progress reporting.
 - **TypeScript/React** owns rendering, local interaction, and typed bridge access.
-- **WebSocket transport** connects both sides and carries state reads, invalidations, and task updates.
+- **WebSocket transport** connects both sides and carries state reads, state patches, and task updates.
 
 That makes the package useful both as a notebook UI runtime and as a backend layer for a frontend addon system.
 
@@ -252,7 +252,7 @@ sparse indexes still raise `IndexError`.
 ### `@action`
 
 Declares a method that mutates the store. All `store.set()` calls are batched
-and sent as one invalidation after the handler finishes.
+and sent as one patch result after the handler finishes.
 
 ### `@query`
 
@@ -359,7 +359,7 @@ const result = await client.query("compute", [2.5]);
 ### `useRemoteStateValue<T>(path)`
 
 Low-level read hook for store values. Returns `undefined` while loading and
-re-renders on invalidation.
+re-renders when the remote cache is patched.
 
 ---
 
@@ -416,7 +416,7 @@ Python (source of truth)             TypeScript / React (renderer)
 ──────────────────────────────       ──────────────────────────────
 Store                                StoreImpl (cache)
   state                         ──►    lazy fetch per path
-  actions + queries             ──►    invalidate -> re-render
+  actions + queries             ──►    patch cache -> re-render
   progress events               ──►    task updates
 
 Service                              RemoteStateClient
@@ -435,7 +435,7 @@ WebSocket transport
 | JS -> PY | `action` | Call a `@action` method |
 | JS -> PY | `query` | Call a `@query` method |
 | PY -> JS | `get_result` | Response to `get` |
-| PY -> JS | `invalidate` | Batch store update |
+| PY -> JS | `action_result` | JSON Patch-style cache updates produced by an action |
 | PY -> JS | `query_result` | Response to `query` |
 | PY -> JS | `task_update` | Progress from `self.progress()` |
 | PY -> JS | `error` | Any error |

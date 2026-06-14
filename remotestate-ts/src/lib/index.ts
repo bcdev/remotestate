@@ -4,6 +4,7 @@ export type { RemoteStateClient, RemoteStateClientOptions } from "./client";
 export type {
   IncomingMessage,
   OutgoingMessage,
+  PatchOperation,
   TaskUpdateMessage,
 } from "./protocol";
 export type { ActionOptions, QueryOptions } from "./service";

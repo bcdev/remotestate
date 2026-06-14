@@ -7,6 +7,8 @@ from remotestate.protocol import (
     GetMessage,
     OutgoingMessage,
     ActionMessage,
+    ActionResultMessage,
+    PatchOperation,
 )
 
 _incoming_adapter = TypeAdapter(IncomingMessage)
@@ -40,3 +42,15 @@ def test_action_without_task_id():
     assert _incoming_adapter.validate_json(
         to_json(type="action", call_id="x", method="set_model", args=[], kwargs={})
     ) == ActionMessage(call_id="x", method="set_model", args=[], kwargs={})
+
+
+def test_action_result_with_patches():
+    assert _outgoing_adapter.validate_json(
+        to_json(
+            type="action_result",
+            call_id="x",
+            patches=[{"op": "add", "path": "/count", "value": 1}],
+        )
+    ) == ActionResultMessage(
+        call_id="x", patches=[PatchOperation(path="/count", value=1)]
+    )

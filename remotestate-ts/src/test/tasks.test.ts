@@ -115,7 +115,7 @@ describe("TaskController", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
-      updates: { result: "ok" },
+      patches: [{ op: "add", path: "/result", value: "ok" }],
     });
 
     expect(store.getTask("export")).toMatchObject({
@@ -186,7 +186,7 @@ describe("TaskController", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
-      updates: {},
+      patches: [],
     });
 
     expect(store.getTask("export")).toMatchObject({
@@ -208,7 +208,7 @@ describe("TaskController", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "call-1",
-      updates: {},
+      patches: [],
     });
     transport._triggerMessage({
       type: "update_task",

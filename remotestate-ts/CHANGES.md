@@ -16,6 +16,8 @@
   - Renamed `RemoteStateOptions` to `RemoteStateClientOptions`.
   - Renamed `createRemoteState` to `createRemoteStateClient`.
   - Renamed `useRemoteState` to `useRemoteStateClient`.
+- Changed action-result handling to apply compact JSON Patch-style cache
+  operations instead of repeated prefix snapshot maps.
 
 ## Version 0.1.0
 

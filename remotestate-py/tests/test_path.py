@@ -6,6 +6,7 @@ from remotestate.path import (
     Property,
     from_jsonpath,
     parse_path,
+    path_to_json_pointer,
     path_to_str,
     prefixes,
     to_jsonpath,
@@ -122,6 +123,13 @@ def test_roundtrip_index():
 def test_roundtrip_deep():
     s = "a.b[0].c[1].d"
     assert path_to_str(parse_path(s)) == s
+
+
+# --- json pointer ---
+
+
+def test_path_to_json_pointer():
+    assert path_to_json_pointer(parse_path("items[3].name")) == "/items/3/name"
 
 
 # --- jsonpath ---

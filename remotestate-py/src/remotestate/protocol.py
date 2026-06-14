@@ -24,7 +24,7 @@ class ActionMessage(BaseModel):
     """Invoke a service action.
 
     This is fire-and-forget from the caller's perspective. A matching
-    ``InvalidateMessage`` carries the resulting state changes.
+    ``ActionResultMessage`` carries the resulting state patches.
     """
 
     type: Literal["action"] = "action"
@@ -93,8 +93,21 @@ class GetResultMessage(BaseModel):
     """The JSON value of the state value."""
 
 
+class PatchOperation(BaseModel):
+    """Small JSON Patch subset used to update frontend store caches."""
+
+    op: Literal["add"] = "add"
+    """Patch operation. ``add`` behaves as set for object members."""
+
+    path: str
+    """JSON Pointer path into the store state."""
+
+    value: Any
+    """Value to write at ``path``."""
+
+
 class ActionResultMessage(BaseModel):
-    """Return the batched store updates produced by a previous ``ActionMessage``."""
+    """Return store patches produced by a previous ``ActionMessage``."""
 
     type: Literal["action_result"] = "action_result"
     """Message type."""
@@ -102,8 +115,8 @@ class ActionResultMessage(BaseModel):
     call_id: str
     """An internal action- or query-ID."""
 
-    updates: dict[str, Any]
-    """Mapping from state paths to changed state values. May be empty."""
+    patches: list[PatchOperation]
+    """JSON Patch-style operations that update the frontend cache."""
 
 
 class QueryResultMessage(BaseModel):

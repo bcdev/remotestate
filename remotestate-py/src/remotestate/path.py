@@ -47,7 +47,7 @@ def parse_path(path: str) -> Path:
 
 
 def prefixes(path: Path) -> list[Path]:
-    """Get prefix-paths for invalidation."""
+    """Get prefix paths for update reporting."""
     return [path[:i] for i in range(1, len(path) + 1)]
 
 
@@ -60,6 +60,17 @@ def path_to_str(path: Path) -> str:
             case Index(i):
                 parts.append(f"[{i}]")
     return "".join(parts)
+
+
+def path_to_json_pointer(path: Path) -> str:
+    parts: list[str] = []
+    for seg in path:
+        match seg:
+            case Property(key):
+                parts.append(key.replace("~", "~0").replace("/", "~1"))
+            case Index(i):
+                parts.append(str(i))
+    return "/" + "/".join(parts)
 
 
 def to_jsonpath(path: str) -> str:

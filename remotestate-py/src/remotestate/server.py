@@ -16,13 +16,16 @@ from .protocol import (
     IncomingMessage,
     ActionResultMessage,
     OutgoingMessage,
+    PatchOperation,
     QueryMessage,
     QueryResultMessage,
     TaskUpdateMessage,
 )
 from .service import Service
+from .store import PendingUpdates
 from .transport import Transport
 from .log import LOG
+from .path import parse_path, path_to_json_pointer
 
 
 _IncomingAdapter: TypeAdapter[IncomingMessage] = TypeAdapter(IncomingMessage)
@@ -114,7 +117,10 @@ class Server:
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    ActionResultMessage(call_id=call_id, updates=updates)
+                    ActionResultMessage(
+                        call_id=call_id,
+                        patches=_updates_to_patches(updates),
+                    )
                 )
 
             case QueryMessage(
@@ -186,3 +192,14 @@ class WebSocketTransport(Transport):
             pass
         finally:
             self._connections.discard(websocket)
+
+
+def _updates_to_patches(updates: PendingUpdates) -> list[PatchOperation]:
+    patches: list[PatchOperation] = []
+    for path_str, value in updates.items():
+        path = parse_path(path_str)
+        if len(path) == 1:
+            patches.append(
+                PatchOperation(path=path_to_json_pointer(path), value=value)
+            )
+    return patches

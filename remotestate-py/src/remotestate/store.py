@@ -24,7 +24,7 @@ class Store:
     """Reactive Python-side state container addressed by ``remotestate`` paths.
 
     Values live here as the single source of truth. Actions and queries read
-    from it, while actions may also mutate it to trigger UI invalidation.
+    from it, while actions may also mutate it to trigger UI cache updates.
     """
 
     def __init__(
