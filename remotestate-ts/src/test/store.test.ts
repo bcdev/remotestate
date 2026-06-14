@@ -22,18 +22,84 @@ describe("StoreImpl", () => {
     expect(store.get("count")).toBe(42);
   });
 
-  it("updates cache from ActionResultMessage", () => {
+  it("updates cache from ActionResultMessage patches", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { count: 99, "user.name": "Norman" },
+      patches: [
+        { op: "add", path: "/count", value: 99 },
+        { op: "add", path: "/user", value: { name: "Norman" } },
+      ],
     });
 
     expect(store.get("count")).toBe(99);
-    expect(store.get("user.name")).toBe("Norman");
+    expect(store.get("user")).toEqual({ name: "Norman" });
+  });
+
+  it("refreshes cached descendants from ActionResultMessage patches", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "user.name",
+      value: "Norman",
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      patches: [{ op: "add", path: "/user", value: { name: "Klaus" } }],
+    });
+
+    expect(store.get("user")).toEqual({ name: "Klaus" });
+    expect(store.get("user.name")).toBe("Klaus");
+  });
+
+  it("refreshes cached indexed descendants from patches", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "items[0].label",
+      value: "old",
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      patches: [{ op: "add", path: "/items", value: [{ label: "new" }] }],
+    });
+
+    expect(store.get("items")).toEqual([{ label: "new" }]);
+    expect(store.get("items[0].label")).toBe("new");
+  });
+
+  it("removes cached descendants missing from a patch value", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "user.name",
+      value: "Norman",
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      patches: [{ op: "add", path: "/user", value: { age: 42 } }],
+    });
+
+    expect(store.get("user")).toEqual({ age: 42 });
+    expect(store.get("user.name")).toBeUndefined();
   });
 
   it("notifies listeners on value update", () => {

@@ -74,7 +74,7 @@ describe("ServiceImpl", () => {
       transport._triggerMessage({
         type: "action_result",
         call_id: sentMsg.call_id,
-        updates: { count: 1 },
+        patches: [{ op: "add", path: "/count", value: 1 }],
       });
 
       await expect(promise).resolves.toBeUndefined();

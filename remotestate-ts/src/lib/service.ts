@@ -10,7 +10,7 @@ type Kwargs = Record<string, unknown>;
  */
 export interface ActionOptions {
   /**
-   * If true, waits for the ActionResultMessage before resolving.
+   * If true, waits for the ActionResultMessage cache patch before resolving.
    */
   awaitInvalidate?: boolean;
   /**

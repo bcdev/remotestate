@@ -50,12 +50,21 @@ export interface GetResultMessage {
 }
 
 /**
- * Return the batched store updates produced by an action.
+ * Small JSON Patch subset used to update frontend store caches.
+ */
+export interface PatchOperation {
+  op: "add";
+  path: string;
+  value: unknown;
+}
+
+/**
+ * Return the store patches produced by an action.
  */
 export interface ActionResultMessage {
   type: "action_result";
   call_id: string;
-  updates: Record<string, unknown>; // path --> value mapping
+  patches: PatchOperation[];
 }
 
 /**
