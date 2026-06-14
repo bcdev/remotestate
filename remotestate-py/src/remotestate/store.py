@@ -13,7 +13,6 @@ from .path import (
     Property,
     parse_path,
     path_to_str,
-    prefixes,
 )
 
 type PendingUpdates = dict[str, Any]
@@ -80,27 +79,19 @@ class Store:
         )
 
         pending = _batch_context.get()
+        update_path = path_to_str(parsed)
+        update_value = _serialize(_get_at(self._state, parsed, require=False))
         if pending is not None:
-            for prefix in prefixes(parsed):
-                prefix_str = path_to_str(prefix)
-                pending[prefix_str] = _serialize(
-                    _get_at(self._state, prefix, require=False)
-                )
+            pending[update_path] = update_value
         else:
-            updates = {
-                path_to_str(prefix): _serialize(
-                    _get_at(self._state, prefix, require=False)
-                )
-                for prefix in prefixes(parsed)
-            }
-            self._notify(updates)
+            self._notify({update_path: update_value})
 
     def subscribe(
         self, callback: Callable[[PendingUpdates], None]
     ) -> Callable[[], None]:
         """Subscribe to batched store updates.
 
-        The callback receives a mapping from changed prefix paths to serialized
+        The callback receives a mapping from changed paths to serialized
         values whenever ``set()`` flushes updates. Returns an unsubscribe
         function that removes the callback.
         """

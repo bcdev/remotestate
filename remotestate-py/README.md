@@ -84,3 +84,10 @@ store.set("user.address.city", "Berlin")
 `get()` does not use the factory; reads remain side-effect free. For list
 paths, `set()` can append at exactly the next index when a factory is
 configured; sparse indexes still raise `IndexError`.
+
+## Store Updates
+
+Subscribers receive a mapping from changed paths to serialized values. Nested
+updates are reported with the exact path that was written, so
+`store.set("items[1].label", "foo")` emits `{"items[1].label": "foo"}` without
+redundant parent values.

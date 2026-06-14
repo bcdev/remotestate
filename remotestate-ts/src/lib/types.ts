@@ -30,10 +30,11 @@ export interface Store {
   /**
    * Subscribes to this store by registering a listener.
    *
+   * @param path the state path to subscribe to
    * @param listener a listener that is informed about state changes
    * @returns a function that will unregister the listener
    */
-  subscribe(listener: () => void): () => void;
+  subscribe(path: string, listener: () => void): () => void;
 
   /**
    * Disposes this store.
