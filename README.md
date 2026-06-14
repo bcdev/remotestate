@@ -43,7 +43,7 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteState`, `RemoteStateProvider`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteState`, `RemoteStateProvider`, `useRemoteStateClient`, and hooks.
 
 ---
 
@@ -99,11 +99,11 @@ export interface MyService {
 ```
 
 ```tsx
-import { RemoteStateProvider, useRemoteStateClient, useState } from "remotestate";
+import { RemoteStateProvider, useRemoteStateClient, useRemoteState } from "remotestate";
 import type { MyService } from "./MyService";
 
 function AppInner() {
-  const remoteState = useRemoteStateClient<MyService>();
+  const client = useRemoteStateClient<MyService>();
   const [count, setCount] = useRemoteState<number>("count", 0);
   const [name] = useRemoteState<string>("user.name");
 
@@ -113,7 +113,7 @@ function AppInner() {
       <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>+1</button>
       <button
         onClick={async () => {
-          const result = await remoteState.query("compute", [5.0]);
+          const result = await client.query("compute", [5.0]);
           console.log(result);
         }}
       >
@@ -290,18 +290,18 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createRemoteStateClient<S>(url)`
+### `createRemoteState<S>(url)`
 
 Creates a typed RemoteState client.
 
 ```typescript
-const client = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
+const client = createRemoteState<MyService>("ws://localhost:9753/ws");
 ```
 
 ### `RemoteStateProvider` and `useRemoteStateClient<S>()`
 
-React context wrapper for a RemoteState bridge bound to a WebSocket URL, plus
-a hook to access it.
+`RemoteStateProvider` creates and exposes a Remote State bridge for child
+hooks. `useRemoteStateClient()` reads that client from context.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">
@@ -320,22 +320,22 @@ const [count, setCount] = useRemoteState<number>("count", 0);
 await setCount((prev) => (prev ?? 0) + 1);
 ```
 
-### `remoteState.action(method, args?, kwargs?, options?)`
+### `client.action(method, args?, kwargs?, options?)`
 
 Calls a Python `@action`. Fire-and-forget by default.
 
 ```typescript
-await remoteState.action("increment");
-await remoteState.action("set_name", ["forman"]);
-await remoteState.action("save", [], {}, { awaitInvalidate: true });
+await client.action("increment");
+await client.action("set_name", ["forman"]);
+await client.action("save", [], {}, { awaitInvalidate: true });
 ```
 
-### `remoteState.query(method, args?, kwargs?, options?)`
+### `client.query(method, args?, kwargs?, options?)`
 
 Calls a Python `@query` and returns the result.
 
 ```typescript
-const result = await remoteState.query("compute", [2.5]);
+const result = await client.query("compute", [2.5]);
 ```
 
 ### `useRemoteStateValue<T>(path)`
