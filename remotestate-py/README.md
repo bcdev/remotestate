@@ -40,7 +40,7 @@ class MyService(rs.Service):
         self.store.set("count", self.store.get("count") + 1)
 
 
-rs.serve(MyService(store), dist_dir="my-ui/dist")
+rs.serve(MyService(store), ui_dist="my-ui/dist")
 ```
 
 For the full project overview, see the repository root README:
