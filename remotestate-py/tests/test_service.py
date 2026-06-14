@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+# noinspection PyProtectedMember
 from remotestate.context import _call_context
 from remotestate.protocol import TaskUpdateMessage
 from remotestate.service import Service, action, query
@@ -69,8 +70,9 @@ def make_service(store: Store) -> Service:
 
 def invoke_action(service, method, *, args=None, kwargs=None):
     sender, sender_impl = make_sender()
+    # noinspection PyProtectedMember
     return (
-        service._zw_invoke_action(
+        service._rs_invoke_action(
             method,
             args or [],
             kwargs or {},
@@ -84,8 +86,9 @@ def invoke_action(service, method, *, args=None, kwargs=None):
 
 def invoke_action_without_task_id(service, method, *, args=None, kwargs=None):
     sender, sender_impl = make_sender()
+    # noinspection PyProtectedMember
     return (
-        service._zw_invoke_action(
+        service._rs_invoke_action(
             method,
             args or [],
             kwargs or {},
@@ -99,8 +102,9 @@ def invoke_action_without_task_id(service, method, *, args=None, kwargs=None):
 
 def invoke_query(service, method, args=None, kwargs=None):
     sender, _sender_impl = make_sender()
+    # noinspection PyProtectedMember
     return (
-        service._zw_invoke_query(
+        service._rs_invoke_query(
             method,
             args or [],
             kwargs or {},
@@ -309,7 +313,8 @@ async def test_update_task_available_in_query(store):
 
     svc = ProgressQuery(store)
     sender, sender_impl = make_sender()
-    result = await svc._zw_invoke_query(
+    # noinspection PyTypeChecker
+    result = await svc._rs_invoke_query(
         "slow_query",
         [],
         {},

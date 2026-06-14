@@ -49,17 +49,17 @@ For the full project overview, see the repository root README:
 ## Store Defaults
 
 `Store` can optionally create missing path prefixes while setting nested
-values. Without a default value factory, missing parents keep the original
+values. Without a default factory, missing parents keep the original
 behavior and raise `KeyError`, `IndexError`, or `AttributeError`.
 
 ```python
-def defaults(path: str):
-    if path == "items":
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("items"),):
         return []
     return {}
 
 
-store = rs.Store({}, default_value_factory=defaults)
+store = rs.Store({}, default_factory=defaults)
 store.set("user.address.city", "Hamburg")
 store.set("items[0].label", "foo")
 
@@ -67,17 +67,17 @@ assert store.get("user") == {"address": {"city": "Hamburg"}}
 assert store.get("items") == [{"label": "foo"}]
 ```
 
-The factory receives the missing prefix path, so it can return typed values for
-specific parts of the state tree:
+The factory receives the missing prefix path as a tuple of path segments, so it
+can return typed values for specific parts of the state tree:
 
 ```python
-def defaults(path: str):
-    if path == "user":
+def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("user"),):
         return User(name="", address=Address(city="", street=""))
     return {}
 
 
-store = rs.Store({}, default_value_factory=defaults)
+store = rs.Store({}, default_factory=defaults)
 store.set("user.address.city", "Berlin")
 ```
 

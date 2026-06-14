@@ -17,7 +17,7 @@ from .path import (
 )
 
 type PendingUpdates = dict[str, Any]
-type DefaultValueFactory = Callable[[str], Any]
+type DefaultFactory = Callable[[Path], Any]
 
 
 class Store:
@@ -31,20 +31,21 @@ class Store:
         self,
         initial: dict[str, Any],
         *,
-        default_value_factory: DefaultValueFactory | None = None,
+        default_factory: DefaultFactory | None = None,
     ) -> None:
         """Create a store.
 
         Args:
             initial: Initial application state.
-            default_value_factory: Optional callable used by ``set()`` to
+            default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
-                missing prefix path, such as ``"user.address"`` or
-                ``"items[0]"``. If omitted, missing parents raise the same
-                ``KeyError``, ``IndexError``, or ``AttributeError`` as before.
+                missing prefix path as a ``Path`` tuple, such as one
+                containing ``Property("user")`` or ``Index(0)`` segments.
+                If omitted, missing parents raise the same ``KeyError``,
+                ``IndexError``, or ``AttributeError`` as before.
         """
         self._state = initial
-        self._default_value_factory = default_value_factory
+        self._default_factory = default_factory
         self._subscribers: list[Callable[[PendingUpdates], None]] = []
 
     def get(self, path: str, *, require: bool = False) -> Any:
@@ -52,7 +53,7 @@ class Store:
 
         Missing values return ``None`` by default. Pass ``require=True`` to
         surface the underlying missing-path exception instead. ``get()`` never
-        calls the default value factory.
+        calls the default factory.
         """
         parsed = parse_path(path)
         return _get_at(self._state, parsed, require)
@@ -60,7 +61,7 @@ class Store:
     def set(self, path: str, value: Any) -> None:
         """Set ``value`` at ``path`` and notify subscribers.
 
-        If this store has a default value factory, missing intermediate path
+        If this store has a default factory, missing intermediate path
         values are created before assigning the final value. List indexes may
         append exactly one new item at the end; sparse indexes still raise
         ``IndexError``.
@@ -75,7 +76,7 @@ class Store:
             self._state,
             parsed,
             value,
-            default_value_factory=self._default_value_factory,
+            default_factory=self._default_factory,
         )
 
         pending = _batch_context.get()
@@ -177,14 +178,14 @@ def _set_at(
     root: Any,
     path: Path,
     value: Any,
-    default_value_factory: DefaultValueFactory | None = None,
+    default_factory: DefaultFactory | None = None,
 ) -> None:
     obj = root
     for i, segment in enumerate(path[:-1], start=1):
         try:
             obj = _get_segment(obj, segment, require=True)
         except (AttributeError, IndexError, KeyError):
-            if default_value_factory is None:
+            if default_factory is None:
                 raise
             if (
                 isinstance(segment, Index)
@@ -192,7 +193,7 @@ def _set_at(
                 and segment.i > len(obj)
             ):
                 raise
-            default_value = default_value_factory(path_to_str(path[:i]))
+            default_value = default_factory(path[:i])
             _set_or_append_segment(
                 obj,
                 segment,
@@ -204,7 +205,7 @@ def _set_at(
     try:
         _set_segment(obj, path[-1], value)
     except IndexError:
-        if default_value_factory is None:
+        if default_factory is None:
             raise
         _set_or_append_segment(obj, path[-1], value, require_appendable=True)
 

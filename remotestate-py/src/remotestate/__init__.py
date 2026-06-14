@@ -2,6 +2,7 @@
 
 from importlib.metadata import version
 
+from . import path
 from .service import Service, action, query
 from .serve import serve
 from .store import Store
@@ -14,4 +15,5 @@ __all__ = [
     "action",
     "query",
     "serve",
+    "path",
 ]

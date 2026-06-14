@@ -20,6 +20,24 @@ the Python backend from the main repository.
 npm install remotestate
 ```
 
+## Direct Client
+
+Use `createRemoteStateClient()` when you want a standalone bridge object.
+
+```tsx
+import { createRemoteStateClient } from "remotestate";
+
+type CounterService = {
+  increment(): Promise<void>;
+  compute(x: number): Promise<number>;
+};
+
+const client = createRemoteStateClient<CounterService>("ws://localhost:9753/ws");
+```
+
+`client` exposes `action()` and `query()` methods together with the reactive
+store and task store used by the React hooks.
+
 ## Using a Remote State
 
 Use `RemoteStateProvider` when your app always expects a RemoteState backend.
@@ -34,8 +52,8 @@ import {
 } from "remotestate";
 
 type CounterService = {
-  set_state(path: string, value: unknown): Promise<void>;
   increment(): Promise<void>;
+  compute(x: number): Promise<number>;
 };
 
 function Counter() {
@@ -44,7 +62,7 @@ function Counter() {
 
   return (
     <div>
-      <p>Count: {count}</p>
+      <p>Count: {count ?? "..."}</p>
       <button onClick={() => void setCount((prev) => (prev ?? 0) + 1)}>
         Set from React
       </button>
