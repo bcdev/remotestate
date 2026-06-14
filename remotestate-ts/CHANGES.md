@@ -11,6 +11,13 @@
     - a basic counter RemoteState usage example
     - an optional remote backend/local state fallback example
     - root README references to `RemoteStateProvider`
+- Slimmed store update handling:
+  - The client now accepts exact changed paths from `action_result` updates
+    instead of requiring redundant parent-prefix payloads.
+  - Cached parent and child snapshots are reconciled locally when related
+    paths update.
+  - `Store.subscribe()` now takes a required path first:
+    `subscribe(path, listener)`.
 - Refactorings:
   - Renamed `RemoteState` to `RemoteStateClient`.
   - Renamed `RemoteStateOptions` to `RemoteStateClientOptions`.
