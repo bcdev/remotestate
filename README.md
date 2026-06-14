@@ -43,7 +43,7 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteState`, `RemoteStateProvider`, `useRemoteStateClient`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, and hooks.
 
 ---
 
@@ -99,7 +99,11 @@ export interface MyService {
 ```
 
 ```tsx
-import { RemoteStateProvider, useRemoteStateClient, useRemoteState } from "remotestate";
+import {
+  RemoteStateProvider,
+  useRemoteStateClient,
+  useRemoteState,
+} from "remotestate";
 import type { MyService } from "./MyService";
 
 function AppInner() {
@@ -290,18 +294,18 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createRemoteState<S>(url)`
+### `createRemoteStateClient<S>(url)`
 
 Creates a typed RemoteState client.
 
 ```typescript
-const client = createRemoteState<MyService>("ws://localhost:9753/ws");
+const remoteState = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 ```
 
-### `RemoteStateProvider` and `useRemoteStateClient<S>()`
+### `RemoteStateProvider` and client hooks
 
-`RemoteStateProvider` creates and exposes a Remote State bridge for child
-hooks. `useRemoteStateClient()` reads that client from context.
+React context wrapper for a RemoteState client bound to a WebSocket URL, plus
+hooks to access it.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">
@@ -310,6 +314,10 @@ hooks. `useRemoteStateClient()` reads that client from context.
 
 const client = useRemoteStateClient<MyService>();
 ```
+
+Use `active={false}` when Remote State is intentionally unavailable and the app
+should use a local fallback instead. `useOptionalRemoteStateClient<S>()` returns
+`null` in that case, while `useRemoteStateClient<S>()` stays strict and throws.
 
 ### `useRemoteState<T>(path, initialValue?)`
 
