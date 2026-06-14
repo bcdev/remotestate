@@ -8,6 +8,8 @@
   - Renamed the keyword argument from `default_value_factory` to
     `default_factory`.
   - The factory now receives a parsed `Path` tuple instead of a path string.
+- Changed store update notifications to emit only the exact paths written by
+  `Store.set()`, instead of also including all parent prefixes.
 - Changed signature and behavior of `serve()` function:
   - Renamed `iframe_heigh` argument into `height`, and added `width`.
   - It is no longer using FastAPI/Uvicorn default

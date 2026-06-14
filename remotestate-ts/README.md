@@ -32,11 +32,24 @@ type CounterService = {
   compute(x: number): Promise<number>;
 };
 
-const client = createRemoteStateClient<CounterService>("ws://localhost:9753/ws");
+const client = createRemoteStateClient<CounterService>(
+  "ws://localhost:9753/ws",
+);
 ```
 
 `client` exposes `action()` and `query()` methods together with the reactive
 store and task store used by the React hooks.
+
+The low-level store can be observed by path:
+
+```typescript
+const unsubscribe = client.store.subscribe("items[1].label", () => {
+  console.log(client.store.get("items[1].label"));
+});
+```
+
+Subscriptions also react to related parent or child updates. For example, a
+listener on `"items"` fires when `"items[1].label"` changes.
 
 ## Using a Remote State
 

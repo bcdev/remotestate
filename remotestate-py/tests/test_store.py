@@ -27,7 +27,10 @@ def simple_store():
     return Store(
         {
             "user": {"name": "Norman", "age": 42},
-            "items": [{"id": 0, "label": "foo"}, {"id": 1, "label": "bar"}],
+            "items": [
+                {"id": 0, "label": "foo"},
+                {"id": 1, "label": "bar"},
+            ],
             "count": 0,
         }
     )
@@ -227,14 +230,12 @@ def test_subscribe_called_on_set(simple_store):
     cb.assert_called_once()
 
 
-def test_subscribe_updates_contain_prefixes(simple_store):
+def test_subscribe_updates_contain_exact_path_only(simple_store):
     cb = MagicMock()
     simple_store.subscribe(cb)
     simple_store.set("items[0].label", "new")
     updates = cb.call_args[0][0]
-    assert "items[0].label" in updates
-    assert "items[0]" in updates
-    assert "items" in updates
+    assert updates == {"items[0].label": "new"}
 
 
 def test_unsubscribe(simple_store):
@@ -252,6 +253,22 @@ def test_multiple_subscribers(simple_store):
     simple_store.set("count", 1)
     cb1.assert_called_once()
     cb2.assert_called_once()
+
+
+def test_multiple_changes(simple_store):
+    changes = []
+
+    def record_change(change):
+        changes.append(change)
+
+    simple_store.subscribe(record_change)
+    simple_store.set("items[1].label", "Test 2")
+    simple_store.set("items[0].label", "Test 1")
+
+    assert changes == [
+        {"items[1].label": "Test 2"},
+        {"items[0].label": "Test 1"},
+    ]
 
 
 # --- batch ---
@@ -277,18 +294,32 @@ def test_batch_contains_all_updates(simple_store):
     simple_store._flush(pending)
     updates = cb.call_args[0][0]
     assert "user.name" in updates
-    assert "user" in updates
     assert "count" in updates
+    assert "user" not in updates
 
 
-def test_batch_values_are_serialized(pydantic_store):
+def test_batch_leaf_values_are_serialized(pydantic_store):
     cb = MagicMock()
     pydantic_store.subscribe(cb)
     with _batch_pending_updates() as pending:
         pydantic_store.set("user.name", "Klaus")
     pydantic_store._flush(pending)
     updates = cb.call_args[0][0]
-    # Pydantic-Object must be serialized as dict
+    assert updates == {"user.name": "Klaus"}
+
+
+def test_batch_object_values_are_serialized(pydantic_store):
+    cb = MagicMock()
+    pydantic_store.subscribe(cb)
+    user = User(
+        name="Klaus",
+        age=43,
+        address=Address(city="Berlin", street="Unter den Linden"),
+    )
+    with _batch_pending_updates() as pending:
+        pydantic_store.set("user", user)
+    pydantic_store._flush(pending)
+    updates = cb.call_args[0][0]
     assert isinstance(updates["user"], dict)
     assert updates["user"]["name"] == "Klaus"
 

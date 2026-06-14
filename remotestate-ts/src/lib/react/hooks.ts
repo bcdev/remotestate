@@ -67,8 +67,8 @@ export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
   }, [store, path]);
 
   const subscribe = useCallback(
-    (onStoreChange: () => void) => store.subscribe(onStoreChange),
-    [store],
+    (onStoreChange: () => void) => store.subscribe(path, onStoreChange),
+    [store, path],
   );
 
   const getSnapshot = useCallback(

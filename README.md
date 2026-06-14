@@ -54,7 +54,7 @@ Remote State splits responsibilities cleanly:
 
 - **Python** owns state, domain logic, actions, queries, and progress reporting.
 - **TypeScript/React** owns rendering, local interaction, and typed bridge access.
-- **WebSocket transport** connects both sides and carries state reads, invalidations, and task updates.
+- **WebSocket transport** connects both sides and carries state reads, path updates, and task updates.
 
 That makes the package useful both as a notebook UI runtime and as a backend layer for a frontend addon system.
 
@@ -82,11 +82,11 @@ class MyService(rs.Service):
 
     @rs.query
     async def compute(self, x: float) -> float:
-        self.progress(name="Computing...", progress=50)
+        self.update_task(name="Computing...", progress=50)
         return x * self.store.get("count")
 
 
-rs.serve(MyService(store), dist_dir="my-ui/dist")
+rs.serve(MyService(store), ui_dist="my-ui/dist")
 ```
 
 ### React frontend
@@ -252,7 +252,9 @@ sparse indexes still raise `IndexError`.
 ### `@action`
 
 Declares a method that mutates the store. All `store.set()` calls are batched
-and sent as one invalidation after the handler finishes.
+and sent as one `action_result` update after the handler finishes. Nested
+updates include only the exact paths that were written, not redundant parent
+prefixes.
 
 ### `@query`
 
@@ -267,20 +269,20 @@ value by path, and `set_state` is the matching built-in action that writes one.
 They power `useRemoteState()` and related helpers so simple UI state does not
 need a custom service method for every path.
 
-### `self.progress(*, name, detail, progress)`
+### `self.update_task(*, name, detail, progress)`
 
 Reports progress of the current action or query to the frontend.
 
 ```python
 @rs.query
 async def process(self, path: str) -> dict:
-    self.progress(name="Loading data", progress=10)
+    self.update_task(name="Loading data", progress=10)
     # ... do work ...
-    self.progress(name="Processing", progress=80)
+    self.update_task(name="Processing", progress=80)
     return result
 ```
 
-### `rs.serve(service, *, ui_dist, app, open_browser, open_iframe, iframe_height, host, port, **uvicorn_settings)`
+### `rs.serve(service, *, ui_dist, mounts, app, open_browser, open_iframe, width, height, host, port, **uvicorn_settings)`
 
 Starts the Remote State server and connects it to a frontend bundle.
 
@@ -288,11 +290,12 @@ Starts the Remote State server and connects it to a frontend bundle.
 |--------------------|---------------|----------------------------------------------------------------|
 | `service`          | required      | A `Service` instance                                           |
 | `ui_dist`          | `None`        | Path to the React build output (`dist/`) or URL                |
-| `mounts`           | `None`        | Mapping of an endpoint paths to local directories              |
+| `mounts`           | `None`        | Mapping of endpoint paths to local directories or `StaticFiles` |
 | `app`              | `None`        | [FastAPI](https://fastapi.tiangolo.com/) instance              |
 | `open_browser`     | auto          | Open in browser, default outside Jupyter                       |
 | `open_iframe`      | auto          | Render as IFrame, default in Jupyter                           |
-| `iframe_height`    | `400`         | IFrame height in pixels                                        |
+| `width`            | `"100%"`      | IFrame width                                                   |
+| `height`           | `400`         | IFrame height                                                  |
 | `host`             | `"localhost"` | Server host                                                    |
 | `port`             | `9753`        | Server port                                                    |
 | `uvicorn_settings` | -             | Additional [uvicorn settings](https://uvicorn.dev/settings/)   |
@@ -359,7 +362,7 @@ const result = await client.query("compute", [2.5]);
 ### `useRemoteStateValue<T>(path)`
 
 Low-level read hook for store values. Returns `undefined` while loading and
-re-renders on invalidation.
+re-renders when its path, a parent path, or a child path changes.
 
 ---
 
@@ -367,8 +370,8 @@ re-renders on invalidation.
 
 ### Prerequisites
 
-- Python >= 3.11
-- Node.js >= 18
+- Python >= 3.12
+- Node.js >= 20
 - [pixi](https://pixi.sh) recommended, or pip + venv
 
 ### Setup
@@ -389,22 +392,18 @@ npm run tests
 npm run checks
 ```
 
-### Running the dev example
+### Running the demo frontend
 
 ```bash
-# Terminal 1 - Python server
-cd examples/basic
-pixi run python server.py
+# Build the TypeScript package first
+cd remotestate-ts
+npm install
+npm run build
 
-# Terminal 2 - Vite dev server
-cd examples/basic/ui
+# Then start the demo frontend
+cd ../remotestate-demo
+npm install
 npm run dev
-```
-
-### Generating a TypeScript interface from Python
-
-```bash
-remotestate generate my_service.py --out ui/src/MyService.ts
 ```
 
 ---
@@ -416,7 +415,7 @@ Python (source of truth)             TypeScript / React (renderer)
 ──────────────────────────────       ──────────────────────────────
 Store                                StoreImpl (cache)
   state                         ──►    lazy fetch per path
-  actions + queries             ──►    invalidate -> re-render
+  actions + queries             ──►    path updates -> re-render
   progress events               ──►    task updates
 
 Service                              RemoteStateClient
@@ -435,9 +434,9 @@ WebSocket transport
 | JS -> PY | `action` | Call a `@action` method |
 | JS -> PY | `query` | Call a `@query` method |
 | PY -> JS | `get_result` | Response to `get` |
-| PY -> JS | `invalidate` | Batch store update |
+| PY -> JS | `action_result` | Batched exact-path store updates from an action |
 | PY -> JS | `query_result` | Response to `query` |
-| PY -> JS | `task_update` | Progress from `self.progress()` |
+| PY -> JS | `update_task` | Progress from `self.update_task()` |
 | PY -> JS | `error` | Any error |
 
 ---
@@ -456,8 +455,8 @@ cd remotestate-py && pixi run ruff check src
 cd remotestate-ts && npm run checks
 ```
 
-Please follow the existing code style: ruff + black on the Python side, ESLint
-and TypeScript strict mode on the JavaScript side.
+Please follow the existing code style: Ruff format/check on the Python side,
+ESLint and TypeScript strict mode on the JavaScript side.
 
 ---
 

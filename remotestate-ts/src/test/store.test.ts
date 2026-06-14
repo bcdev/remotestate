@@ -40,7 +40,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe(listener);
+    store.subscribe("count", listener);
 
     transport._triggerMessage({
       type: "get_result",
@@ -52,11 +52,152 @@ describe("StoreImpl", () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
+  it("notifies listeners subscribed to an action update path", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("items[1].label", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[1].label": "Test 2" },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("notifies once when multiple action updates overlap a subscribed path", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("items", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: {
+        "items[1].label": "Test 2",
+        "items[0].label": "Test 1",
+      },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("does not notify listeners subscribed to sibling paths", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("items[1].label", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[0].label": "Test 1" },
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("notifies child listeners when a parent path updates", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("items[1].label", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[1]": { id: 1, label: "Test 2" } },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("notifies parent path listeners when a child path changes", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("x.y", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "x.y.z": "changed" },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("does not treat partial segment matches as parent paths", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe("x.y", listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "x.yz": "changed" },
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("patches cached parent values from a leaf action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const items = [
+      { id: 0, label: "foo" },
+      { id: 1, label: "bar" },
+    ];
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "items",
+      value: items,
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[1].label": "Test 2" },
+    });
+
+    expect(store.get("items")).toEqual([
+      { id: 0, label: "foo" },
+      { id: 1, label: "Test 2" },
+    ]);
+    expect(store.get("items")).not.toBe(items);
+  });
+
+  it("refreshes cached child values from a parent action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "items[1].label",
+      value: "bar",
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[1]": { id: 1, label: "Test 2" } },
+    });
+
+    expect(store.get("items[1].label")).toBe("Test 2");
+  });
+
   it("unsubscribe stops listener notifications", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    const unsubscribe = store.subscribe(listener);
+    const unsubscribe = store.subscribe("count", listener);
     unsubscribe();
 
     transport._triggerMessage({
