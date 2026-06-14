@@ -1,4 +1,4 @@
-## Version 0.1.1 (in development)
+## Version 0.2.0 (in development)
 
 - Added `twine` to dev-dependencies.
 - Added `__version__` attribute to main package.

@@ -1,9 +1,9 @@
-## Version 0.1.1 (in development)
+## Version 0.2.0 (in development)
 
 - Supporting optional remote backend with local state fallback:
   - Added `active?: boolean` to `RemoteStateProvider`.
   - Added `client?: RemoteStateClient | null` support to `RemoteStateProvider`.
-  - Added `useOptionalRemoteStateClient<S>()`, which returns `null` when no 
+  - Added `useOptionalRemoteStateClient<S>()`, which returns `null` when no
     active client is available.
   - Kept `useRemoteStateClient<S>()` strict, now throwing when used outside an active provider.
   - Exported `useOptionalRemoteStateClient` and `RemoteStateProviderProps`.

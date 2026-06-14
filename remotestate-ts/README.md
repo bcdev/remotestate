@@ -9,7 +9,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
 `remotestate` is the TypeScript and React bridge of the _RemoteState_ library.
 
 This package provides the frontend client, provider, and hooks that pair with
