@@ -1,6 +1,6 @@
-export { createRemoteState } from "./client";
+export { createRemoteStateClient } from "./client";
 export { createRemoteTaskStore, TaskStoreImpl } from "./tasks";
-export type { RemoteState, RemoteStateOptions } from "./client";
+export type { RemoteStateClient, RemoteStateClientOptions } from "./client";
 export type {
   IncomingMessage,
   OutgoingMessage,
@@ -17,6 +17,7 @@ export type {
 
 // TODO: consider a dedicated package remotestate-react
 export {
+  useOptionalRemoteStateClient,
   useRemoteStateClient,
   useRemoteStore,
   useRemoteStateValue,
@@ -26,3 +27,4 @@ export {
   useRemoteTasks,
 } from "./react/hooks";
 export { RemoteStateProvider } from "./react/provider";
+export type { RemoteStateProviderProps } from "./react/provider";

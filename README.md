@@ -43,7 +43,7 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteState`, `RemoteStateProvider`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, and hooks.
 
 ---
 
@@ -99,7 +99,11 @@ export interface MyService {
 ```
 
 ```tsx
-import { RemoteStateProvider, useRemoteStateClient, useState } from "remotestate";
+import {
+  RemoteStateProvider,
+  useRemoteStateClient,
+  useRemoteState,
+} from "remotestate";
 import type { MyService } from "./MyService";
 
 function AppInner() {
@@ -109,7 +113,9 @@ function AppInner() {
 
   return (
     <div>
-      <p>Hello, {name ?? "..."}! Count: {count ?? "..."}</p>
+      <p>
+        Hello, {name ?? "..."}! Count: {count ?? "..."}
+      </p>
       <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>+1</button>
       <button
         onClick={async () => {
@@ -290,18 +296,18 @@ Re-running the same Jupyter cell restarts the server automatically.
 
 ## TypeScript API
 
-### `createRemoteState<S>(url)`
+### `createRemoteStateClient<S>(url)`
 
-Creates a typed RemoteState bridge.
+Creates a typed RemoteState client.
 
 ```typescript
-const remoteState = createRemoteState<MyService>("ws://localhost:9753/ws");
+const remoteState = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 ```
 
-### `RemoteStateProvider` and `useRemoteStateClient<S>()`
+### `RemoteStateProvider` and client hooks
 
-React context wrapper for a RemoteState bridge bound to a WebSocket URL, plus
-a hook to access it.
+React context wrapper for a RemoteState client bound to a WebSocket URL, plus
+hooks to access it.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">
@@ -310,6 +316,10 @@ a hook to access it.
 
 const remoteState = useRemoteStateClient<MyService>();
 ```
+
+Use `active={false}` when Remote State is intentionally unavailable and the app
+should use a local fallback instead. `useOptionalRemoteStateClient<S>()` returns
+`null` in that case, while `useRemoteStateClient<S>()` stays strict and throws.
 
 ### `useRemoteState<T>(path, initialValue?)`
 
@@ -345,7 +355,7 @@ re-renders on invalidation.
 
 ### Naming notes
 
-- `RemoteState` is the bridge object that used to be called `Client`.
+- `RemoteStateClient` is the bridge object that used to be called `Client`.
 - `useRemoteStateClient()` returns that bridge object.
 - `useRemoteStore()` returns the cached store view used by the hooks.
 - `useRemoteState()` remains the ergonomic path-bound state hook for components.
