@@ -105,7 +105,7 @@ class Server:
                 kwargs=kwargs,
             ):
                 # noinspection PyProtectedMember
-                updates = await self._service._zw_invoke_action(
+                updates = await self._service._rs_invoke_action(
                     method,
                     args,
                     kwargs,
@@ -125,7 +125,7 @@ class Server:
                 kwargs=kwargs,
             ):
                 # noinspection PyProtectedMember
-                result = await self._service._zw_invoke_query(
+                result = await self._service._rs_invoke_query(
                     method,
                     args,
                     kwargs,

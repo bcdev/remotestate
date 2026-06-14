@@ -13,14 +13,14 @@ function App() {
         </div>
 
         <div>
-          <p>{`Count is ${count}`}</p>
+          <p>{`Count is ${count ?? "..."}`}</p>
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
           <button
             type="button"
             className="counter"
-            onClick={() => client.action("increment")}
+            onClick={() => void client.action("increment")}
           >
             Increment
           </button>
@@ -28,7 +28,7 @@ function App() {
           <button
             type="button"
             className="counter"
-            onClick={() => setCount(count + 2)}
+            onClick={() => void setCount((prev) => (prev ?? 0) + 2)}
           >
             Add 2
           </button>

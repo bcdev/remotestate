@@ -67,11 +67,27 @@ def query(fn: Callable) -> _QueryMarker:
 
 
 class Service:
-    """Base class for Python services exposed over the websocket bridge.
+    """Implements the Python queries and actions exposed over the websocket bridge.
 
     Subclasses define ``@action`` and ``@query`` methods. Dispatch helpers take
     care of call scoping, read-only enforcement for queries, and batched store
     invalidation after actions complete.
+
+    The base class also provides the built-in ``get_state`` query and ``set_state``
+    action used by the generic React bridge.
+
+    ``Service`` may serve as a base class for store-specific queries and actions,
+    but it can also be instantiated as-is, if no queries and actions are required
+    for a given store.
+
+    The following names of ``Service`` class members are reserved and shall not
+    be used for store-specific queries and actions in derived service classes:
+
+    - ``init_app`` - FastAPI instance initialization
+    - ``store`` - property that provides reactive state container
+    - ``get_state`` - built-in query to get a state value
+    - ``set_state`` - built-in action to set a state value
+    - ``update_task`` - report task updates
 
     Argument:
         store: The reactive state container.
@@ -115,16 +131,20 @@ class Service:
 
     @query
     def get_state(self, path: str) -> Any:
-        """Get a store value by path."""
+        """Built-in query that returns a store value by path.
+
+        This is the read side of the generic bridge used by the TypeScript
+        ``useRemoteState()`` hook and related helpers.
+        """
         return self.store.get(path)
 
     @action
     def set_state(self, path: str, value: Any) -> None:
-        """Set a store value by path.
+        """Built-in action that sets a store value by path.
 
-        This built-in action enables simple UI patterns such as a
-        remotestate-side ``useRemoteState(path, initial)`` helper without requiring a
-        custom action on every user service.
+        This is the write side of the generic bridge used by the TypeScript
+        ``useRemoteState()`` hook and related helpers, so simple UI state does
+        not require a custom action on every user service.
         """
         self.store.set(path, value)
 
@@ -162,7 +182,7 @@ class Service:
         # noinspection PyTypeChecker
         asyncio.create_task(message_coro)
 
-    async def _zw_invoke_action(
+    async def _rs_invoke_action(
         self,
         method: str,
         args: list[Any],
@@ -207,7 +227,7 @@ class Service:
         finally:
             _call_context.reset(token)
 
-    async def _zw_invoke_query(
+    async def _rs_invoke_query(
         self,
         method: str,
         args: list[Any],
