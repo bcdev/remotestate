@@ -1,4 +1,4 @@
-# RemoteState - TypeScript/React
+# RemoteState - TypeScript/React Library
 
 [![CI](https://github.com/bcdev/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/bcdev/remotestate/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/remotestate?logo=npm)](https://www.npmjs.com/package/remotestate)

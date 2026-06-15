@@ -9,7 +9,7 @@ function App() {
     <>
       <section id="center">
         <div>
-          <h1>remotestate Demo</h1>
+          <h1>RemoteState App Demo</h1>
         </div>
 
         <div>
