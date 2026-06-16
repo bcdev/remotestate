@@ -14,6 +14,8 @@ import type { TaskState, TaskStore } from "../tasks";
  * Get the nearest Remote State client from React context.
  *
  * @typeParam S The type that defines the available service methods.
+ * @returns The nearest typed Remote State client.
+ * @throws If called outside `RemoteStateProvider`.
  */
 export function useRemoteStateClient<S = unknown>(): RemoteStateClient<S> {
   const client = useContext(RemoteStateContext);
@@ -27,6 +29,8 @@ export function useRemoteStateClient<S = unknown>(): RemoteStateClient<S> {
 
 /**
  * Get the nearest reactive store from the current Remote State bridge.
+ *
+ * @returns The reactive store for the current client.
  */
 export function useRemoteStore(): Store {
   const remoteState = useRemoteStateClient();
@@ -35,6 +39,8 @@ export function useRemoteStore(): Store {
 
 /**
  * Get the nearest task store from the current Remote State bridge.
+ *
+ * @returns The task store for the current client.
  */
 export function useRemoteTaskStore(): TaskStore {
   const remoteState = useRemoteStateClient();
@@ -43,6 +49,10 @@ export function useRemoteTaskStore(): TaskStore {
 
 /**
  * Subscribe to one store path and return its current cached value.
+ *
+ * @typeParam T The expected value type at the path.
+ * @param path The state path to read and subscribe to.
+ * @returns The cached value, or `undefined` until it is available.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
@@ -69,12 +79,18 @@ export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
 
 /**
  * Functional-update shape accepted by `useRemoteState`.
+ *
+ * @typeParam T The state value type.
  */
 export type SetStateValue<T> = T | ((prev: T | undefined) => T);
 
 /**
  * Bind a store path to a React-friendly getter/setter pair.
  * Works similar to React's `useState` hook.
+ *
+ * @typeParam T The expected value type at the path.
+ * @param path The state path to read, subscribe to, and write.
+ * @returns A tuple containing the current value and an async setter.
  */
 export function useRemoteState<T = unknown>(
   path: string,
@@ -137,6 +153,7 @@ export function useRemoteState<T = unknown>(
  *
  * @param taskId The task-ID passed as option to `remoteState.action()`
  *   or `remoteState.query()`.
+ * @returns The current task snapshot, or `undefined` if not tracked.
  */
 export function useRemoteTask(taskId: string): TaskState | undefined {
   const taskStore = useRemoteTaskStore();
@@ -156,6 +173,8 @@ export function useRemoteTask(taskId: string): TaskState | undefined {
 
 /**
  * Observe all tracked tasks. The list is not sorted.
+ *
+ * @returns All current task snapshots.
  */
 export function useRemoteTasks(): readonly TaskState[] {
   const taskStore = useRemoteTaskStore();

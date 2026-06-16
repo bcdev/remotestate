@@ -92,7 +92,7 @@ class Service:
     - ``set`` - built-in action to set a state value
     - ``update_task`` - report task updates
 
-    Argument:
+    Args:
         store: The reactive state container.
     """
 
@@ -123,22 +123,34 @@ class Service:
                 setattr(cls, name, value.fn)
 
     def __init__(self, store: Store) -> None:
+        """Create a service bound to a reactive store.
+
+        Args:
+            store: The reactive state container exposed through the service.
+        """
         self._store = store
 
     def init_app(self, app: FastAPI):
-        """
-        Initialize the new FastAPI instance used by the service,
-        for example, in order to add routes for a REST API.
+        """Initialize the FastAPI app used by the service.
+
+        Override this method to add routes, middleware, or other FastAPI
+        configuration.
 
         Only called if the FastAPI instance was newly created by the remotestate server.
         Not called if the user provided an app instance to the remotestate server.
 
         The default implementation does nothing.
+
+        Args:
+            app: FastAPI instance owned by the remotestate server.
+
+        Returns:
+            None.
         """
 
     @property
     def store(self) -> Store:
-        """The reactive state container."""
+        """Store: The reactive state container."""
         return self._store
 
     @query
@@ -147,6 +159,12 @@ class Service:
 
         This is the read side of the generic bridge used by the TypeScript
         ``useRemoteState()`` hook and related helpers.
+
+        Args:
+            path: RemoteState path to read.
+
+        Returns:
+            The value at ``path``, or ``None`` when the path is missing.
         """
         return self.store.get(path)
 
@@ -157,6 +175,13 @@ class Service:
         This is the write side of the generic bridge used by the TypeScript
         ``useRemoteState()`` hook and related helpers, so simple UI state does
         not require a custom action on every user service.
+
+        Args:
+            path: RemoteState path to write.
+            value: New value to assign at ``path``.
+
+        Returns:
+            None.
         """
         self.store.set(path, value)
 
@@ -173,6 +198,14 @@ class Service:
         Fire-and-forget — does not block the caller. Safe to call from
         both @action and @query methods. Has no effect if called outside
         a dispatched action or query (e.g. during testing).
+
+        Args:
+            name: Optional short task name for display.
+            detail: Optional task detail for display.
+            progress: Optional progress percentage from 0 to 100.
+
+        Returns:
+            None.
         """
         ctx = _call_context.get()
         if ctx is None or ctx.task_id is None:

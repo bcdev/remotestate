@@ -53,6 +53,22 @@ class Store:
         Missing values return ``None`` by default. Pass ``require=True`` to
         surface the underlying missing-path exception instead. ``get()`` never
         calls the default factory.
+
+        Args:
+            path: RemoteState path to read, such as ``"user.name"`` or
+                ``"items[0].label"``.
+            require: If true, raise when the path is missing instead of
+                returning ``None``.
+
+        Returns:
+            The value at ``path``, or ``None`` when the path is missing and
+            ``require`` is false.
+
+        Raises:
+            ValueError: If ``path`` is not a valid RemoteState path.
+            KeyError: If a required mapping key is missing.
+            IndexError: If a required list index is missing.
+            AttributeError: If a required object attribute is missing.
         """
         parsed = parse_path(path)
         return _get_at(self._state, parsed, require)
@@ -64,6 +80,18 @@ class Store:
         values are created before assigning the final value. List indexes may
         append exactly one new item at the end; sparse indexes still raise
         ``IndexError``.
+
+        Args:
+            path: RemoteState path to write, such as ``"user.name"`` or
+                ``"items[0].label"``.
+            value: New value to assign at ``path``.
+
+        Raises:
+            PermissionError: If called while dispatching a query.
+            ValueError: If ``path`` is not a valid RemoteState path.
+            KeyError: If a required mapping key is missing.
+            IndexError: If a required list index is missing or sparse.
+            AttributeError: If a required object attribute is missing.
         """
         # Queries are read-only — enforce via call context.
         ctx = _call_context.get()
@@ -94,6 +122,13 @@ class Store:
         The callback receives a mapping from changed paths to serialized
         values whenever ``set()`` flushes updates. Returns an unsubscribe
         function that removes the callback.
+
+        Args:
+            callback: Function called with a path-to-value mapping after
+                updates are flushed.
+
+        Returns:
+            A function that unsubscribes ``callback`` from future updates.
         """
         self._subscribers.append(callback)
 

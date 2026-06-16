@@ -11,6 +11,7 @@ import { type MethodArgs, type QueryMethod, type QueryResult } from "./types";
  * @typeParam S The type that defines the available service methods.
  * @param url The websocket endpoint URL.
  * @param options Client options.
+ * @returns A `RemoteStateClient` connected to the given endpoint.
  */
 export function createRemoteStateClient<S = unknown>(
   url: string,

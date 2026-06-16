@@ -116,6 +116,33 @@ def invoke_query(service, method, args=None, kwargs=None):
     )
 
 
+# --- built-ins ---
+
+
+@pytest.mark.asyncio
+async def test_builtin_get_query_works_on_base_service(store):
+    service = Service(store)
+    coro, _ = invoke_query(service, "get", args=["count"])
+    result = await coro
+    assert result == 0
+
+
+@pytest.mark.asyncio
+async def test_builtin_set_action_works_on_base_service(store):
+    service = Service(store)
+    coro, _ = invoke_action(service, "set", args=["count", 7])
+    await coro
+    assert store.get("count") == 7
+
+
+def test_builtin_method_names_are_reserved():
+    with pytest.raises(TypeError, match="conflicts with a built-in"):
+        class BadService(Service):
+            @query
+            async def get(self):
+                return self.store.get("count")
+
+
 # --- action dispatch ---
 
 

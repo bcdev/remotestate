@@ -23,8 +23,7 @@ class GetMessage(BaseModel):
 class ActionMessage(BaseModel):
     """Invoke a service action.
 
-    This is fire-and-forget from the caller's perspective. A matching
-    ``InvalidateMessage`` carries the resulting state changes.
+    A matching ``ActionResultMessage`` carries the resulting state changes.
     """
 
     type: Literal["action"] = "action"
