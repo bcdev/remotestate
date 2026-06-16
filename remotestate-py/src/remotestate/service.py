@@ -66,7 +66,7 @@ def query(fn: Callable) -> _QueryMarker:
     return _QueryMarker(_ensure_async(fn))
 
 
-_BUILTIN_SERVICE_METHODS = {"get", "set"}
+_BUILTIN_SERVICE_METHODS = {"get", "set", "notify"}
 
 
 class Service:
@@ -86,11 +86,11 @@ class Service:
     The following names of ``Service`` class members are reserved and shall not
     be used for store-specific queries and actions in derived service classes:
 
-    - ``init_app`` - FastAPI instance initialization
+    - ``_init_app`` - FastAPI instance initialization
     - ``store`` - property that provides reactive state container
     - ``get`` - built-in query to get a state value
     - ``set`` - built-in action to set a state value
-    - ``update_task`` - report task updates
+    - ``notify`` - report task updates
 
     Args:
         store: The reactive state container.
@@ -130,7 +130,7 @@ class Service:
         """
         self._store = store
 
-    def init_app(self, app: FastAPI):
+    def _init_app(self, app: FastAPI):
         """Initialize the FastAPI app used by the service.
 
         Override this method to add routes, middleware, or other FastAPI
@@ -172,8 +172,8 @@ class Service:
     def set(self, path: str, value: Any) -> None:
         """Built-in action that sets a store value by path.
 
-        This is the write side of the generic bridge used by the TypeScript
-        ``useRemoteState()`` hook and related helpers, so simple UI state does
+        This is the write-side of the generic bridge used by the TypeScript
+        ``useRemoteState()`` hook and related helpers, so a simple UI state does
         not require a custom action on every user service.
 
         Args:
@@ -186,18 +186,18 @@ class Service:
         self.store.set(path, value)
 
     # noinspection PyMethodMayBeStatic
-    def update_task(
+    def notify(
         self,
         *,
         name: str | None = None,
         detail: str | None = None,
         progress: float | None = None,
     ) -> None:
-        """Report progress of the current action or query.
+        """Report status changes of the current action or query.
 
         Fire-and-forget — does not block the caller. Safe to call from
         both @action and @query methods. Has no effect if called outside
-        a dispatched action or query (e.g. during testing).
+        a dispatched action or query (e.g., during testing).
 
         Args:
             name: Optional short task name for display.
@@ -222,7 +222,7 @@ class Service:
             progress=progress,
         )
         message_coro = ctx.sender(message)
-        # create_task() is safe here — update_task() is always called from within
+        # create_task() is safe here — notify() is always called from within
         # a running async handler, so the event loop is guaranteed to exist.
         # noinspection PyTypeChecker
         asyncio.create_task(message_coro)

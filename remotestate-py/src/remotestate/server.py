@@ -44,7 +44,8 @@ class Server:
         self._app = app if app is not None else FastAPI()
         self._init_app(mounts)
         if app is None:
-            self._service.init_app(self._app)
+            # noinspection PyProtectedMember
+            self._service._init_app(self._app)
 
     @property
     def app(self) -> FastAPI:

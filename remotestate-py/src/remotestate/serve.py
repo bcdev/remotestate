@@ -60,7 +60,7 @@ def serve(
         mounts: Mapping of an endpoint path to either a
             `fastapi.staticfiles.StaticFiles` object or a directory path.
         app: A FastAPI instance to use. If not provided,
-            a new instance is created and passed to `Service.init_app(app)`
+            a new instance is created and passed to `Service._init_app(app)`
             so that it can be initialized by the user.
         open_browser: Open the UI in the default browser after starting.
             Defaults to True when not running in Jupyter.
