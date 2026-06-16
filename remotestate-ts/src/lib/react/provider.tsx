@@ -1,5 +1,8 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { type RemoteStateClient, type RemoteStateClientOptions } from "../client";
+import {
+  type RemoteStateClient,
+  type RemoteStateClientOptions,
+} from "../client";
 import { createRemoteStateClient } from "../remote";
 import { RemoteStateContext } from "./context";
 
@@ -21,6 +24,9 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
    */
   client?: RemoteStateClient;
 
+  /**
+   * React children rendered inside the provider.
+   */
   children: ReactNode;
 }
 
@@ -39,6 +45,10 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
  *
  * `client`: Optional externally-created client. When supplied, this provider
  *     exposes the client without disposing it.
+ *
+ * @param props Provider configuration and children.
+ * @returns A React context provider element.
+ * @throws If no `url`, `fallback`, or non-null `client` is provided.
  */
 export function RemoteStateProvider(props: RemoteStateProviderProps) {
   const { client: providedClient, fallback, url, taskStore, children } = props;

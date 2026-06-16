@@ -107,6 +107,12 @@ Fallback clients use the same `RemoteStateClient` shape as remote clients, so
 the standard hooks keep working and remain reactive. The example below adapts a
 [Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
 
+The `set(path, value)` action shown below mirrors RemoteState's built-in
+Python service action used by `useRemoteState()` setters. It is not required by
+`RemoteStateClient` itself, but a local fallback should provide this action when
+it needs to support `useRemoteState()` writes. Declaring it on the service type
+lets TypeScript check that the local handler uses the expected signature.
+
 ```tsx
 import type { ReactNode } from "react";
 import {
@@ -118,7 +124,7 @@ import {
 import { useCounterStore } from "./counterStore";
 
 type CounterService = {
-  set_state(path: string, value: unknown): Promise<void>;
+  set(path: string, value: unknown): Promise<void>;
   increment(): Promise<void>;
 };
 
@@ -139,7 +145,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
   return createLocalRemoteStateClient<CounterService>({
     store,
     actions: {
-      set_state: (path, value) => {
+      set: (path, value) => {
         if (path === "count" && typeof value === "number") {
           useCounterStore.getState().setCount(value);
         }

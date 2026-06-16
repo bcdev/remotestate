@@ -48,7 +48,7 @@ def serve(
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
     **uvicorn_settings: Any,
-) -> Any:
+) -> None:
     """Start the ``remotestate`` web server and display the UI.
 
     Args:
@@ -70,9 +70,12 @@ def serve(
         height: Height of the IFrame.
         host: Host to bind the server to.
         port: Port to bind the server to.
-        uvicorn_settings: Additional [uvicorn settings]((https://uvicorn.dev/settings/)
+        uvicorn_settings: Additional uvicorn settings
             to pass to the underlying
             [uvicorn server](https://uvicorn.dev/#config-and-server-instances).
+
+    Returns:
+        None.
     """
     in_jupyter = _in_jupyter()
     should_open_browser = open_browser if open_browser is not None else not in_jupyter

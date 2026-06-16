@@ -18,15 +18,54 @@ export type TaskStatus = TaskUpdateMessage["status"];
  * - The `taskId` is the user-visible task key.
  */
 export interface TaskState {
+  /**
+   * Internal call ID used to correlate protocol messages.
+   */
   callId: string;
+
+  /**
+   * User-supplied task ID passed to an action or query.
+   */
   taskId: string;
+
+  /**
+   * Service method associated with the tracked call.
+   */
   method: string;
+
+  /**
+   * Current task status.
+   */
   status: TaskStatus;
+
+  /**
+   * Optional short task name for display.
+   */
   name?: string;
+
+  /**
+   * Optional task detail for display.
+   */
   detail?: string;
+
+  /**
+   * Optional progress percentage from 0 to 100.
+   */
   progress?: number;
+
+  /**
+   * Optional error message when the task is in the `error` state.
+   */
   error?: string;
+
+  /**
+   * Timestamp when the tracked call started, in milliseconds since epoch.
+   */
   startedAt: number;
+
+  /**
+   * Timestamp when the task was last updated, in milliseconds since epoch.
+   */
   updatedAt: number;
 }
 
@@ -37,20 +76,23 @@ export interface TaskStore {
   /**
    * Get the current task snapshot for the given task-ID.
    *
-   * @param taskId the task-ID passed to an action or query call.
+   * @param taskId The task-ID passed to an action or query call.
+   * @returns The current task snapshot, or `undefined` if not tracked.
    */
   getTask(taskId: string): TaskState | undefined;
 
   /**
-   * Get snapshots of all current tasks sorted by
+   * Get snapshots of all current tasks.
+   *
+   * @returns All current task snapshots.
    */
   getAllTasks(): readonly TaskState[];
 
   /**
    * Subscribes to this store by registering a listener.
    *
-   * @param listener a listener that is informed about task state changes
-   * @returns a function that will unregister the listener
+   * @param listener A listener that is informed about task state changes.
+   * @returns A function that unregisters the listener.
    */
   subscribe(listener: () => void): () => void;
 }
@@ -65,14 +107,14 @@ export interface WritableTaskStore extends TaskStore {
   /**
    * Set the task state.
    *
-   * @param task the new task state.
+   * @param task The new task state.
    */
   setTask(task: TaskState): void;
 
   /**
    * Delete a task from this store.
    *
-   * @param taskId the task-ID
+   * @param taskId The task-ID to delete.
    */
   deleteTask(taskId: string): void;
 
@@ -91,8 +133,19 @@ export interface WritableTaskStore extends TaskStore {
  * Minimal metadata needed to register a newly started task.
  */
 export interface TaskStart {
+  /**
+   * Internal call ID used to correlate protocol messages.
+   */
   callId: string;
+
+  /**
+   * User-supplied task ID.
+   */
   taskId: string;
+
+  /**
+   * Service method associated with the task.
+   */
   method: string;
 }
 
@@ -109,19 +162,41 @@ export class TaskStoreImpl implements WritableTaskStore {
   private tasks: Map<string, TaskState> = new Map();
   private listeners: Set<TaskListener> = new Set();
 
+  /**
+   * Get the current task snapshot for the given task-ID.
+   *
+   * @param taskId The task-ID passed to an action or query call.
+   * @returns The current task snapshot, or `undefined` if not tracked.
+   */
   getTask(taskId: string): TaskState | undefined {
     return this.tasks.get(taskId);
   }
 
+  /**
+   * Get snapshots of all current tasks.
+   *
+   * @returns All current task snapshots.
+   */
   getAllTasks(): readonly TaskState[] {
     return Array.from(this.tasks.values());
   }
 
+  /**
+   * Set the task state and notify subscribers.
+   *
+   * @param task The new task state.
+   */
   setTask(task: TaskState): void {
     this.tasks.set(task.taskId, { ...task });
     this.notify();
   }
 
+  /**
+   * Register a listener for task state changes.
+   *
+   * @param listener A listener that is informed about task state changes.
+   * @returns A function that unregisters the listener.
+   */
   subscribe(listener: TaskListener): () => void {
     this.listeners.add(listener);
     return () => {
@@ -129,6 +204,11 @@ export class TaskStoreImpl implements WritableTaskStore {
     };
   }
 
+  /**
+   * Delete a task and notify subscribers when it existed.
+   *
+   * @param taskId The task-ID to delete.
+   */
   deleteTask(taskId: string): void {
     if (!this.tasks.delete(taskId)) {
       return;
@@ -136,6 +216,9 @@ export class TaskStoreImpl implements WritableTaskStore {
     this.notify();
   }
 
+  /**
+   * Remove all tasks and notify subscribers when the store changed.
+   */
   clearTasks(): void {
     if (this.tasks.size === 0) {
       return;
@@ -144,6 +227,9 @@ export class TaskStoreImpl implements WritableTaskStore {
     this.notify();
   }
 
+  /**
+   * Clear all tasks and listeners.
+   */
   dispose(): void {
     this.listeners.clear();
     this.tasks.clear();
@@ -158,6 +244,8 @@ export class TaskStoreImpl implements WritableTaskStore {
 
 /**
  * Create the default in-memory task store used by `createRemoteStateClient`.
+ *
+ * @returns A writable in-memory task store.
  */
 export function createRemoteTaskStore(): WritableTaskStore {
   return new TaskStoreImpl();
@@ -179,6 +267,12 @@ export class TaskController {
   private finishedCallIds: Set<string> = new Set();
   private nextSequence = 0;
 
+  /**
+   * Create a task controller for one transport.
+   *
+   * @param store Writable task store that receives task state changes.
+   * @param transport Transport that emits task and result messages.
+   */
   constructor(
     private readonly store: WritableTaskStore,
     transport: Transport,
@@ -188,6 +282,11 @@ export class TaskController {
     });
   }
 
+  /**
+   * Register a newly started tracked call.
+   *
+   * @param task Metadata for the tracked task.
+   */
   startTask(task: TaskStart): void {
     const now = Date.now();
     const sequence = this.nextCallSequence();
@@ -205,6 +304,9 @@ export class TaskController {
     });
   }
 
+  /**
+   * Stop listening to transport messages and clear internal tracking state.
+   */
   dispose(): void {
     this.unsubscribeTransport();
     this.callToTaskId.clear();

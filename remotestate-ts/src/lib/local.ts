@@ -44,10 +44,29 @@ export type LocalQueryHandlers<S = unknown> = unknown extends S
  * instead of the built-in in-memory implementation.
  */
 export interface LocalRemoteStateClientOptions<S = unknown> {
+  /**
+   * Reactive local store that backs the client.
+   */
   store: Store;
+
+  /**
+   * Optional task store used instead of the default in-memory task store.
+   */
   tasks?: WritableTaskStore;
+
+  /**
+   * Local implementations of typed action methods.
+   */
   actions?: LocalActionHandlers<S>;
+
+  /**
+   * Local implementations of typed query methods.
+   */
   queries?: LocalQueryHandlers<S>;
+
+  /**
+   * Optional cleanup callback invoked when the local client is disposed.
+   */
   dispose?: () => void;
 }
 
@@ -60,6 +79,7 @@ export interface LocalRemoteStateClientOptions<S = unknown> {
  *
  * @typeParam S The type that defines the available service methods.
  * @param options Local client options.
+ * @returns A `RemoteStateClient` backed by the supplied local store and handlers.
  */
 export function createLocalRemoteStateClient<S = unknown>(
   options: LocalRemoteStateClientOptions<S>,

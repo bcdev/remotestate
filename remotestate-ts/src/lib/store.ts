@@ -8,12 +8,23 @@ type StoreSubscription = {
 };
 type PathSegment = string | number;
 
+/**
+ * Transport-backed reactive store cache.
+ *
+ * The store fetches missing paths from Python on demand, applies action
+ * invalidation updates, and notifies listeners when related paths change.
+ */
 export class StoreImpl implements Store {
   private cache: Map<string, unknown> = new Map();
   private listeners: Set<StoreSubscription> = new Set();
   private pendingFetches: Set<string> = new Set();
   private readonly unsubscribeTransport: () => void;
 
+  /**
+   * Create a store cache bound to one transport.
+   *
+   * @param transport Transport used to request and receive state values.
+   */
   constructor(private readonly transport: Transport) {
     this.unsubscribeTransport = transport.subscribe((msg) => {
       if (msg.type === "get_result") {
@@ -24,10 +35,21 @@ export class StoreImpl implements Store {
     });
   }
 
+  /**
+   * Get the current cached value for a path.
+   *
+   * @param path The state path to read.
+   * @returns The cached value, or `undefined` if the path is not cached.
+   */
   get(path: string): unknown {
     return this.cache.get(path);
   }
 
+  /**
+   * Ensure a path is fetched from Python if it is not already cached.
+   *
+   * @param path The state path to provide.
+   */
   provide(path: string): void {
     if (this.cache.has(path) || this.pendingFetches.has(path)) {
       return;
@@ -40,6 +62,13 @@ export class StoreImpl implements Store {
     });
   }
 
+  /**
+   * Register a listener for changes related to one path.
+   *
+   * @param path The state path to subscribe to.
+   * @param listener Listener called when the path or a related path changes.
+   * @returns A function that unregisters the listener.
+   */
   subscribe(path: string, listener: StoreListener): () => void {
     const subscription = { listener, path };
     this.listeners.add(subscription);
@@ -48,6 +77,9 @@ export class StoreImpl implements Store {
     };
   }
 
+  /**
+   * Stop listening to transport messages and clear local cache/listeners.
+   */
   dispose(): void {
     this.unsubscribeTransport();
     this.listeners.clear();

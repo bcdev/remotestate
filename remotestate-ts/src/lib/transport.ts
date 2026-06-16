@@ -6,6 +6,9 @@ type MessageHandler = (msg: OutgoingMessage) => void;
 const RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30_000;
 
+/**
+ * WebSocket transport with reconnect and send-queue handling.
+ */
 export class TransportImpl implements Transport {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
@@ -13,6 +16,11 @@ export class TransportImpl implements Transport {
   private reconnectDelay = RECONNECT_DELAY_MS;
   private closed = false;
 
+  /**
+   * Create a WebSocket transport.
+   *
+   * @param url WebSocket endpoint URL.
+   */
   constructor(private readonly url: string) {
     this.connect();
   }
@@ -68,6 +76,11 @@ export class TransportImpl implements Transport {
     };
   }
 
+  /**
+   * Send a message to Python, queueing it until the socket is open if needed.
+   *
+   * @param msg The protocol message to send.
+   */
   send(msg: IncomingMessage): void {
     // Use literal 1 instead of WebSocket.OPEN — the constant may not be
     // available in all environments (e.g. jsdom in tests).
@@ -78,6 +91,12 @@ export class TransportImpl implements Transport {
     }
   }
 
+  /**
+   * Register a callback for messages received from Python.
+   *
+   * @param handler The callback invoked for each outgoing protocol message.
+   * @returns A function that unregisters the callback.
+   */
   subscribe(handler: MessageHandler): () => void {
     this.handlers.add(handler);
     return () => {
@@ -85,6 +104,9 @@ export class TransportImpl implements Transport {
     };
   }
 
+  /**
+   * Close the socket and disable reconnect attempts.
+   */
   close(): void {
     this.closed = true;
     this.ws?.close();

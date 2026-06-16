@@ -14,7 +14,7 @@ export interface ActionOptions {
    */
   awaitInvalidate?: boolean;
   /**
-   * Bridge-supplied task ID for progress tracking via useTask().
+   * Bridge-supplied task ID for progress tracking via `useRemoteTask()`.
    * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;
@@ -25,7 +25,7 @@ export interface ActionOptions {
  */
 export interface QueryOptions {
   /**
-   * Bridge-supplied task ID for progress tracking via useTask().
+   * Bridge-supplied task ID for progress tracking via `useRemoteTask()`.
    * If omitted, task progress tracking is disabled for this call.
    */
   taskId?: string;
@@ -38,11 +38,27 @@ export interface QueryOptions {
  * task controller so progress updates can be surfaced to the UI.
  */
 export class ServiceImpl implements Service {
+  /**
+   * Create a service bridge.
+   *
+   * @param transport Transport used to send and receive protocol messages.
+   * @param taskController Optional controller used for task progress tracking.
+   */
   constructor(
     private readonly transport: Transport,
     private readonly taskController?: TaskController,
   ) {}
 
+  /**
+   * Invoke a state-mutating Python service method.
+   *
+   * @param method The service action name.
+   * @param args Positional arguments passed to the action.
+   * @param kwargs Keyword arguments passed to the action.
+   * @param options Action dispatch and task-tracking options.
+   * @returns A promise that resolves when the action is sent, or after the
+   * action result when `awaitInvalidate` is true.
+   */
   async action(
     method: string,
     args: Args = [],
@@ -91,6 +107,15 @@ export class ServiceImpl implements Service {
     });
   }
 
+  /**
+   * Invoke a read-only Python service method.
+   *
+   * @param method The service query name.
+   * @param args Positional arguments passed to the query.
+   * @param kwargs Keyword arguments passed to the query.
+   * @param options Query dispatch and task-tracking options.
+   * @returns A promise for the value returned by the query.
+   */
   async query(
     method: string,
     args: Args = [],

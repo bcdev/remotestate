@@ -146,7 +146,28 @@ async def test_dispatch_call_action(server):
 
 
 @pytest.mark.asyncio
-async def test_dispatch_builtin_set_state_action(server):
+async def test_dispatch_builtin_get_query(server):
+    sent = []
+    server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
+
+    await server._dispatch(
+        QueryMessage(
+            call_id="abc",
+            task_id="abc",
+            method="get",
+            args=["count"],
+            kwargs={},
+        )
+    )
+
+    assert len(sent) == 1
+    assert isinstance(sent[0], QueryResultMessage)
+    assert sent[0].call_id == "abc"
+    assert sent[0].value == 0
+
+
+@pytest.mark.asyncio
+async def test_dispatch_builtin_set_action(server):
     sent = []
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
@@ -154,7 +175,7 @@ async def test_dispatch_builtin_set_state_action(server):
         ActionMessage(
             call_id="abc",
             task_id="abc",
-            method="set_state",
+            method="set",
             args=["count", 7],
             kwargs={},
         )

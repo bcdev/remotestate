@@ -13,6 +13,8 @@ describe("createLocalRemoteStateClient", () => {
 
   it("dispatches local actions and queries", async () => {
     type CounterService = {
+      get(path: string): Promise<number>;
+      set(path: string, value: number): Promise<void>;
       increment(step: number): Promise<void>;
       count(): Promise<number>;
     };
@@ -20,11 +22,17 @@ describe("createLocalRemoteStateClient", () => {
     const client = createLocalRemoteStateClient<CounterService>({
       store: createStore(),
       actions: {
+        set: (path, value) => {
+          if (path === "count") {
+            count = value;
+          }
+        },
         increment: (step) => {
           count += step;
         },
       },
       queries: {
+        get: (path) => (path === "count" ? count : 0),
         count: () => count,
       },
     });
@@ -32,6 +40,11 @@ describe("createLocalRemoteStateClient", () => {
     await client.action("increment", [2]);
 
     await expect(client.query("count")).resolves.toBe(2);
+    await expect(client.query("get", ["count"])).resolves.toBe(2);
+
+    await client.action("set", ["count", 7]);
+
+    await expect(client.query("count")).resolves.toBe(7);
   });
 
   it("throws for unsupported local methods", async () => {
