@@ -31,6 +31,8 @@
 
 ## Refactorings
 
+- [x] Rename `Service.update_task` to `Service.notify`
+- [x] Rename `Service.init_app` to `Service._init_app`
 - [x] Rename protocol `id` to `call_id`
 - [x] Rename protocol `tid` to `task_id`
 - [x] Rename `InvalidateMessage` to `ActionResultMessage`

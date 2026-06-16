@@ -1,6 +1,11 @@
 ## Version 0.2.0 (in development)
 
 - Added `twine` to dev-dependencies.
+- Changed member names in the `Service` class:
+  - `init_app` to `_init_app`
+  - `get_state` to `get`
+  - `set_state` to `set`
+  - `update_task` to `notify`
 - Added `__version__` attribute to main package.
 - Exposed the `path` submodule from the package root and moved `Path`,
   `PathSegment`, `Property`, and `Index` under `remotestate.path`.

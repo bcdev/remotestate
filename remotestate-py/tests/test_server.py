@@ -29,7 +29,7 @@ def service(store):
     class MyService(Service):
         the_app: FastAPI
 
-        def init_app(self, app: FastAPI):
+        def _init_app(self, app: FastAPI):
             self.the_app = app
 
         @action

@@ -41,7 +41,7 @@ def make_service(store: Store) -> Service:
 
         @action
         async def set_with_progress(self):
-            self.update_task(name="Preparing", progress=16)
+            self.notify(name="Preparing", progress=16)
             self.store.set("count", 1)
 
         @query
@@ -54,7 +54,7 @@ def make_service(store: Store) -> Service:
 
         @query
         async def compute_with_progress(self, x: float) -> float:
-            self.update_task(name="Working", progress=53)
+            self.notify(name="Working", progress=53)
             return x * self.store.get("factor")
 
         @action
@@ -141,6 +141,12 @@ def test_builtin_method_names_are_reserved():
             @query
             async def get(self):
                 return self.store.get("count")
+
+    with pytest.raises(TypeError, match="conflicts with a built-in"):
+        class BadNotifyService(Service):
+            @action
+            async def notify(self):
+                pass
 
 
 # --- action dispatch ---
@@ -272,11 +278,11 @@ async def test_call_context_reset_after_error(store):
     assert _call_context.get() is None
 
 
-# --- update_task ---
+# --- notify ---
 
 
 @pytest.mark.asyncio
-async def test_update_task_calls_sender_from_action(store):
+async def test_notify_calls_sender_from_action(store):
     service = make_service(store)
     coro, sender_impl = invoke_action(service, "set_with_progress")
     await coro
@@ -295,7 +301,7 @@ async def test_update_task_calls_sender_from_action(store):
 
 
 @pytest.mark.asyncio
-async def test_update_task_calls_sender_from_query(store):
+async def test_notify_calls_sender_from_query(store):
     service = make_service(store)
     coro, sender_impl = invoke_query(service, "compute_with_progress", args=[3])
     await coro
@@ -315,14 +321,14 @@ async def test_update_task_calls_sender_from_query(store):
 
 
 @pytest.mark.asyncio
-async def test_update_task_no_effect_outside_dispatch(store):
+async def test_notify_no_effect_outside_dispatch(store):
     service = make_service(store)
     # Should not raise — just silently does nothing
-    service.update_task(name="test", progress=50)
+    service.notify(name="test", progress=50)
 
 
 @pytest.mark.asyncio
-async def test_update_task_no_effect_without_task_id(store):
+async def test_notify_no_effect_without_task_id(store):
     service = make_service(store)
     coro, sender_impl = invoke_action_without_task_id(service, "set_with_progress")
     await coro
@@ -331,11 +337,11 @@ async def test_update_task_no_effect_without_task_id(store):
 
 
 @pytest.mark.asyncio
-async def test_update_task_available_in_query(store):
+async def test_notify_available_in_query(store):
     class ProgressQuery(Service):
         @query
         async def slow_query(self) -> int:
-            self.update_task(name="Computing", progress=50)
+            self.notify(name="Computing", progress=50)
             return 42
 
     svc = ProgressQuery(store)
