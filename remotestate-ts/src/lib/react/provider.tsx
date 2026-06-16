@@ -8,24 +8,21 @@ import { RemoteStateContext } from "./context";
 
 export interface RemoteStateProviderProps extends RemoteStateClientOptions {
   /**
-   * The websocket endpoint URL. If not provided, it may be passed as query
-   * parameter `ws`. Otherwise, defaults to `ws(s)://{location.host}/ws`.
+   * The websocket endpoint URL. If omitted or blank, `fallback` is used.
    */
   url?: string | null;
 
   /**
-   * Whether this provider should create and expose a Remote State client.
-   *
-   * Set this to `false` when Remote State is intentionally unavailable and
-   * consumers should use a local fallback instead.
+   * Factory for a local RemoteState-compatible client used when no URL is
+   * configured.
    */
-  active?: boolean;
+  fallback?: () => RemoteStateClient;
 
   /**
    * Optional externally-created client. When provided, the provider exposes it
    * without taking ownership of its lifecycle.
    */
-  client?: RemoteStateClient | null;
+  client?: RemoteStateClient;
 
   children: ReactNode;
 }
@@ -35,42 +32,55 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
  *
  * Properties:
  *
- * `url`: The websocket endpoint URL. If not provided,
- *     it may be passed as query parameter `ws`. Otherwise,
- *     defaults to `ws(s)://{location.host}/ws`.
+ * `url`: The websocket endpoint URL. If omitted or blank, `fallback` is used.
  *
  * `taskStore`: Optional data store that receives and maintains
  *     task state information received from the backend.
  *
- * `active`: If false, no client is created or exposed. Use this when
- *     Remote State is intentionally unavailable and consumers should fall
- *     back to local state.
+ * `fallback`: Factory for a local RemoteState-compatible client used when no
+ *     URL is configured.
  *
  * `client`: Optional externally-created client. When supplied, this provider
  *     exposes the client without disposing it.
  */
 export function RemoteStateProvider(props: RemoteStateProviderProps) {
   const {
-    active = true,
     client: providedClient,
+    fallback,
     url,
     taskStore,
     children,
   } = props;
   const hasProvidedClient = Object.hasOwn(props, "client");
   const client = useMemo(
-    () =>
-      active
-        ? hasProvidedClient
-          ? (providedClient ?? null)
-          : createRemoteStateClient(url, taskStore ? { taskStore } : {})
-        : null,
-    [active, hasProvidedClient, providedClient, url, taskStore],
+    () => {
+      if (hasProvidedClient) {
+        if (!providedClient) {
+          throw new Error("RemoteStateProvider client cannot be null");
+        }
+        return providedClient;
+      }
+
+      const explicitUrl = url?.trim();
+      if (explicitUrl) {
+        return createRemoteStateClient(
+          explicitUrl,
+          taskStore ? { taskStore } : {},
+        );
+      }
+
+      if (fallback) {
+        return fallback();
+      }
+
+      throw new Error("RemoteStateProvider requires either url or fallback");
+    },
+    [hasProvidedClient, providedClient, url, taskStore, fallback],
   );
 
   useEffect(() => {
     return () => {
-      if (client && client !== providedClient) {
+      if (client !== providedClient) {
         client.dispose();
       }
     };

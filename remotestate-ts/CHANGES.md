@@ -1,15 +1,13 @@
 ## Version 0.2.0 (in development)
 
 - Supporting optional remote backend with local state fallback:
-  - Added `active?: boolean` to `RemoteStateProvider`.
-  - Added `client?: RemoteStateClient | null` support to `RemoteStateProvider`.
-  - Added `useOptionalRemoteStateClient<S>()`, which returns `null` when no
-    active client is available.
-  - Kept `useRemoteStateClient<S>()` strict, now throwing when used outside an active provider.
-  - Exported `useOptionalRemoteStateClient` and `RemoteStateProviderProps`.
+  - Added `fallback?: () => RemoteStateClient` to `RemoteStateProvider`.
+  - Added `client?: RemoteStateClient` support to `RemoteStateProvider`.
+  - `createRemoteStateClient()` now requires an explicit URL.
+  - Exported `RemoteStateProviderProps`.
   - Updated docs with:
     - a basic counter RemoteState usage example
-    - an optional remote backend/local state fallback example
+    - an optional remote backend/local client fallback example
     - root README references to `RemoteStateProvider`
 - Slimmed store update handling:
   - The client now accepts exact changed paths from `action_result` updates

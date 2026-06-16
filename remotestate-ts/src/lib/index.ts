@@ -17,7 +17,6 @@ export type {
 
 // TODO: consider a dedicated package remotestate-react
 export {
-  useOptionalRemoteStateClient,
   useRemoteStateClient,
   useRemoteStore,
   useRemoteStateValue,

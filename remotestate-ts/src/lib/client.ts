@@ -71,13 +71,11 @@ export interface RemoteStateClientOptions {
  * Create a Remote State client bound to one websocket endpoint.
  *
  * @typeParam S The type that defines the available service methods.
- * @param url The websocket endpoint URL. If not provided,
- *     it may be passed as query parameter `ws`. Otherwise,
- *     defaults to `ws(s)://{location.host}/ws`.
+ * @param url The websocket endpoint URL.
  * @param options Client options.
  */
 export function createRemoteStateClient<S = unknown>(
-  url?: string | null,
+  url: string,
   options: RemoteStateClientOptions = {},
 ): RemoteStateClient<S> {
   const transport = new TransportImpl(coerceUrl(url));
@@ -115,20 +113,13 @@ export function createRemoteStateClient<S = unknown>(
   };
 }
 
-function coerceUrl(url: string | null | undefined): string {
-  const explicitUrl = url?.trim();
-  if (explicitUrl) {
-    return normalizeWebSocketUrl(explicitUrl);
+function coerceUrl(url: string): string {
+  const explicitUrl = url.trim();
+  if (!explicitUrl) {
+    throw new Error("createRemoteStateClient requires a non-empty URL");
   }
 
-  const params = new URLSearchParams(location.search);
-  const queryUrl = params.get("ws")?.trim();
-  if (queryUrl) {
-    return queryUrl;
-  }
-
-  const protocol = location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${location.host}/ws`;
+  return normalizeWebSocketUrl(explicitUrl);
 }
 
 function normalizeWebSocketUrl(url: string): string {
