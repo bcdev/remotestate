@@ -2,7 +2,7 @@
 
 ## New Features
 
-- [ ] Ease implementing the `RemoteStateClient` interface in general.
+- [x] Ease implementing the `RemoteStateClient` interface in general.
       See example in `README.md`, which is quite complex.
 - [ ] Ease implementing the `RemoteStateClient` interface for zustand-users.
       Create a new subpackage `zustand` for this and make zustand a peer dependency.

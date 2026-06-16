@@ -110,7 +110,7 @@ the standard hooks keep working and remain reactive. The example below adapts a
 ```tsx
 import type { ReactNode } from "react";
 import {
-  createRemoteTaskStore,
+  createLocalRemoteStateClient,
   RemoteStateProvider,
   type RemoteStateClient,
   type Store,
@@ -123,8 +123,6 @@ type CounterService = {
 };
 
 function createLocalCounterClient(): RemoteStateClient<CounterService> {
-  const tasks = createRemoteTaskStore();
-
   const store: Store = {
     get: (path) =>
       path === "count" ? useCounterStore.getState().count : undefined,
@@ -138,31 +136,19 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
     dispose: () => {},
   };
 
-  return {
+  return createLocalRemoteStateClient<CounterService>({
     store,
-    tasks,
-    action: async (method, args = []) => {
-      if (method === "set_state") {
-        const [path, value] = args;
+    actions: {
+      set_state: (path, value) => {
         if (path === "count" && typeof value === "number") {
           useCounterStore.getState().setCount(value);
         }
-        return;
-      }
-      if (method === "increment") {
+      },
+      increment: () => {
         useCounterStore.getState().increment();
-        return;
-      }
-      throw new Error(`Unsupported local action: ${String(method)}`);
+      },
     },
-    query: async (method) => {
-      throw new Error(`Unsupported local query: ${String(method)}`);
-    },
-    dispose: () => {
-      store.dispose();
-      tasks.dispose?.();
-    },
-  };
+  });
 }
 
 export function CounterStateProvider({

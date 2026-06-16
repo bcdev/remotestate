@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import {
-  createRemoteTaskStore,
+  createLocalRemoteStateClient,
   RemoteStateProvider,
   useRemoteStateClient,
   type RemoteStateClient,
@@ -42,17 +42,9 @@ function createFallbackClient(): RemoteStateClient {
     dispose: vi.fn(),
   };
 
-  return {
+  return createLocalRemoteStateClient({
     store,
-    tasks: createRemoteTaskStore(),
-    action: vi.fn(() => Promise.resolve()),
-    query: vi.fn(() =>
-      Promise.resolve(undefined),
-    ) as RemoteStateClient["query"],
-    dispose: vi.fn(() => {
-      store.dispose();
-    }),
-  };
+  });
 }
 
 function RequiredClientStatus() {

@@ -318,7 +318,9 @@ const client = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 
 React context wrapper for a RemoteState client, plus hooks to access it. Provide
 a WebSocket `url` for remote state, an externally-created `client`, or a
-`fallback` factory that returns a local `RemoteStateClient`.
+`fallback` factory that returns a local `RemoteStateClient`. Use
+`createLocalRemoteStateClient()` to wrap a reactive local store and local
+action/query handlers.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">

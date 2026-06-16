@@ -3,7 +3,12 @@
 - Supporting optional remote backend with local state fallback:
   - Added `fallback?: () => RemoteStateClient` to `RemoteStateProvider`.
   - Added `client?: RemoteStateClient` support to `RemoteStateProvider`.
+  - Removed `active?: boolean` from `RemoteStateProvider`.
+  - Removed `useOptionalRemoteStateClient<S>()`; hooks now always require a
+    provider with either `url`, `client`, or `fallback`.
   - `createRemoteStateClient()` now requires an explicit URL.
+  - Added `createLocalRemoteStateClient()` to wrap local stores and
+    action/query handlers as fallback clients.
   - Exported `RemoteStateProviderProps`.
   - Updated docs with:
     - a basic counter RemoteState usage example
