@@ -1,5 +1,29 @@
 import type { IncomingMessage, OutgoingMessage } from "./protocol";
 
+type ReturnType<T> = T extends (...args: never[]) => Promise<infer R>
+  ? R
+  : never;
+
+export type ActionKeys<S> = {
+  [K in keyof S]: undefined extends ReturnType<S[K]> ? K : never;
+}[keyof S];
+
+export type QueryKeys<S> = {
+  [K in keyof S]: undefined extends ReturnType<S[K]> ? never : K;
+}[keyof S];
+
+export type ActionMethod<S> = unknown extends S ? string : ActionKeys<S>;
+
+export type QueryMethod<S> = unknown extends S ? string : QueryKeys<S>;
+
+export type QueryResult<S, M> = M extends keyof S ? ReturnType<S[M]> : unknown;
+
+export type MethodArgs<S, K> = K extends keyof S
+  ? S[K] extends (...args: infer A) => unknown
+    ? A
+    : never
+  : unknown[];
+
 /**
  * Low-level transport used by the Remote State bridge, store, and service layers.
  */

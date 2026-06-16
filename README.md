@@ -43,8 +43,8 @@ React handles presentation, interaction, and reactivity on the browser side.
 - **Progress updates** - long-running actions and queries can emit progress events to the UI.
 - **Notebook rendering** - show the UI inline in Jupyter or open it in a browser.
 - **Addon-friendly architecture** - bundle a React UI and an optional Python backend behind one API surface.
-- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`, 
-  `useRemoteStateClient`, `useOptionalRemoteStateClient`, and hooks.
+- **Typed TypeScript bridge** - consume the backend from React with `createRemoteStateClient`, `RemoteStateProvider`,
+  `useRemoteStateClient`, and hooks.
 
 ---
 
@@ -316,10 +316,11 @@ const client = createRemoteStateClient<MyService>("ws://localhost:9753/ws");
 
 ### `RemoteStateProvider` and client hooks
 
-React context wrapper for a RemoteState client bound to a WebSocket URL, plus
-hooks to access it. `useOptionalRemoteStateClient<S>()` returns `null` when the
-provider is inactive or no client was supplied; `useRemoteStateClient<S>()`
-throws in that case.
+React context wrapper for a RemoteState client, plus hooks to access it. Provide
+a WebSocket `url` for remote state, an externally-created `client`, or a
+`fallback` factory that returns a local `RemoteStateClient`. Use
+`createLocalRemoteStateClient()` to wrap a reactive local store and local
+action/query handlers.
 
 ```tsx
 <RemoteStateProvider url="ws://localhost:9753/ws">
@@ -329,8 +330,9 @@ throws in that case.
 const client = useRemoteStateClient<MyService>();
 ```
 
-Use `active={false}` when Remote State is intentionally unavailable and the app
-should use a local fallback instead.
+If no `url`, `client`, or `fallback` is provided, the provider throws. Fallback
+clients use the same reactive `store` contract as remote clients, so
+`useRemoteState()` and `useRemoteStateValue()` continue to work in local mode.
 
 ### `useRemoteState<T>(path, initialValue?)`
 

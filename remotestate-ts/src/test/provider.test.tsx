@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import {
+  createLocalRemoteStateClient,
   RemoteStateProvider,
-  useOptionalRemoteStateClient,
   useRemoteStateClient,
+  type RemoteStateClient,
+  type Store,
 } from "../lib";
 
 let websocketUrls: string[];
@@ -26,69 +28,84 @@ beforeEach(() => {
   }
 
   vi.stubGlobal("WebSocket", MockWebSocket);
-  vi.stubGlobal("location", {
-    search: "",
-    protocol: "http:",
-    host: "localhost:5173",
-    pathname: "/",
-  });
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function OptionalClientStatus() {
-  const client = useOptionalRemoteStateClient();
-  return <span>{client ? "remote" : "local"}</span>;
+function createFallbackClient(): RemoteStateClient {
+  const store: Store = {
+    get: (path) => (path === "source" ? "fallback" : undefined),
+    provide: vi.fn(),
+    subscribe: vi.fn(() => vi.fn()),
+    dispose: vi.fn(),
+  };
+
+  return createLocalRemoteStateClient({
+    store,
+  });
 }
 
 function RequiredClientStatus() {
-  useRemoteStateClient();
-  return <span>remote</span>;
+  const client = useRemoteStateClient();
+  const source = client.store.get("source");
+  return <span>{typeof source === "string" ? source : "remote"}</span>;
 }
 
 describe("RemoteStateProvider", () => {
-  it("does not create a client when inactive", () => {
+  it("creates a remote client when URL is provided", () => {
     const html = renderToString(
-      <RemoteStateProvider active={false}>
-        <OptionalClientStatus />
-      </RemoteStateProvider>,
-    );
-
-    expect(html).toContain("local");
-    expect(websocketUrls).toEqual([]);
-  });
-
-  it("returns null from the optional hook for an explicit null client", () => {
-    const html = renderToString(
-      <RemoteStateProvider client={null}>
-        <OptionalClientStatus />
-      </RemoteStateProvider>,
-    );
-
-    expect(html).toContain("local");
-    expect(websocketUrls).toEqual([]);
-  });
-
-  it("creates a client by default", () => {
-    const html = renderToString(
-      <RemoteStateProvider>
-        <OptionalClientStatus />
+      <RemoteStateProvider url="ws://localhost:9753/ws">
+        <RequiredClientStatus />
       </RemoteStateProvider>,
     );
 
     expect(html).toContain("remote");
-    expect(websocketUrls).toEqual(["ws://localhost:5173/ws"]);
+    expect(websocketUrls).toEqual(["ws://localhost:9753/ws"]);
   });
 
-  it("keeps the required hook strict when the provider is inactive", () => {
+  it("uses fallback when URL is absent", () => {
+    const fallback = vi.fn(createFallbackClient);
+
+    const html = renderToString(
+      <RemoteStateProvider fallback={fallback}>
+        <RequiredClientStatus />
+      </RemoteStateProvider>,
+    );
+
+    expect(html).toContain("fallback");
+    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(websocketUrls).toEqual([]);
+  });
+
+  it("uses fallback when URL is blank", () => {
+    const fallback = vi.fn(createFallbackClient);
+
+    const html = renderToString(
+      <RemoteStateProvider url="  " fallback={fallback}>
+        <RequiredClientStatus />
+      </RemoteStateProvider>,
+    );
+
+    expect(html).toContain("fallback");
+    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(websocketUrls).toEqual([]);
+  });
+
+  it("throws when neither URL nor fallback is provided", () => {
     expect(() =>
       renderToString(
-        <RemoteStateProvider active={false}>
+        <RemoteStateProvider>
           <RequiredClientStatus />
         </RemoteStateProvider>,
       ),
-    ).toThrow("useRemoteStateClient must be used inside an active");
+    ).toThrow("RemoteStateProvider requires either url or fallback");
+  });
+
+  it("keeps the hook strict without a provider", () => {
+    expect(() => renderToString(<RequiredClientStatus />)).toThrow(
+      "useRemoteStateClient must be used inside <RemoteStateProvider>",
+    );
   });
 });

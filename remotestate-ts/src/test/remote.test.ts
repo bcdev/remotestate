@@ -28,32 +28,11 @@ afterEach(() => {
 });
 
 describe("createRemoteStateClient", () => {
-  it("uses the ws query parameter when no URL is provided", () => {
-    vi.stubGlobal("location", {
-      search: "?ws=ws%3A%2F%2Flocalhost%3A9753%2Fws",
-      protocol: "http:",
-      host: "localhost:5173",
-      pathname: "/",
-    });
-
-    const client = createRemoteStateClient();
-
-    expect(websocketUrls[0]).toBe("ws://localhost:9753/ws");
-    client.dispose();
-  });
-
-  it("falls back to the current origin without including the page path", () => {
-    vi.stubGlobal("location", {
-      search: "",
-      protocol: "https:",
-      host: "example.test",
-      pathname: "/ui/route",
-    });
-
-    const client = createRemoteStateClient();
-
-    expect(websocketUrls[0]).toBe("wss://example.test/ws");
-    client.dispose();
+  it("requires a non-empty URL", () => {
+    expect(() => createRemoteStateClient("")).toThrow(
+      "createRemoteStateClient requires a non-empty URL",
+    );
+    expect(websocketUrls).toEqual([]);
   });
 
   it("accepts an HTTP server base URL", () => {

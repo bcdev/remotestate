@@ -20,7 +20,8 @@ npm install remotestate
 
 ## Direct Client
 
-Use `createRemoteStateClient()` when you want a standalone bridge object.
+Use `createRemoteStateClient(url)` when you want a standalone bridge object.
+The URL must be provided explicitly.
 
 ```tsx
 import { createRemoteStateClient } from "remotestate";
@@ -96,23 +97,23 @@ export function App() {
 ## Optional Remote State With Local State Fallback
 
 Some applications can run with or without a RemoteState backend. For example,
-an addon might use Python-owned state when a RemoteState client is configured,
-but fall back to the app's existing local state store when no backend is
-available. The example below uses [Zustand](https://zustand.docs.pmnd.rs/),
-but the same pattern works with other state management libraries.
+an addon might use Python-owned state when a RemoteState URL is configured, but
+fall back to the app's existing local state store when no backend is available.
+The provider always exposes a client: it creates a remote client when `url` is a
+non-empty string, otherwise it calls `fallback`. If neither `url` nor
+`fallback` is provided, the provider throws.
 
-In that shape, avoid passing a nullable `RemoteStateClient` into every action.
-Instead, define a small app-owned state API and provide one implementation for
-RemoteState and one implementation for local state. Components and actions
-depend on that non-null API, while the provider decides which implementation to
-use.
+Fallback clients use the same `RemoteStateClient` shape as remote clients, so
+the standard hooks keep working and remain reactive. The example below adapts a
+[Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
 
 ```tsx
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
+  createLocalRemoteStateClient,
   RemoteStateProvider,
-  useOptionalRemoteStateClient,
   type RemoteStateClient,
+  type Store,
 } from "remotestate";
 import { useCounterStore } from "./counterStore";
 
@@ -121,38 +122,34 @@ type CounterService = {
   increment(): Promise<void>;
 };
 
-type CounterActions = {
-  setCount(next: number): Promise<void>;
-  increment(): Promise<void>;
-};
-
-function createRemoteCounterActions(
-  client: RemoteStateClient<CounterService>,
-): CounterActions {
-  return {
-    setCount: (next) =>
-      client.action(
-        "set_state",
-        ["count", next],
-        {},
-        { awaitInvalidate: true },
-      ),
-    increment: () => client.action("increment"),
-  };
-}
-
-function createLocalCounterActions(): CounterActions {
-  return {
-    setCount: async (next) => {
-      useCounterStore.getState().setCount(next);
+function createLocalCounterClient(): RemoteStateClient<CounterService> {
+  const store: Store = {
+    get: (path) =>
+      path === "count" ? useCounterStore.getState().count : undefined,
+    provide: () => {},
+    subscribe: (path, listener) => {
+      if (path !== "count") {
+        return () => {};
+      }
+      return useCounterStore.subscribe(listener);
     },
-    increment: async () => {
-      useCounterStore.getState().increment();
-    },
+    dispose: () => {},
   };
-}
 
-const CounterActionsContext = createContext<CounterActions | null>(null);
+  return createLocalRemoteStateClient<CounterService>({
+    store,
+    actions: {
+      set_state: (path, value) => {
+        if (path === "count" && typeof value === "number") {
+          useCounterStore.getState().setCount(value);
+        }
+      },
+      increment: () => {
+        useCounterStore.getState().increment();
+      },
+    },
+  });
+}
 
 export function CounterStateProvider({
   remoteUrl,
@@ -162,43 +159,17 @@ export function CounterStateProvider({
   children: ReactNode;
 }) {
   return (
-    <RemoteStateProvider active={Boolean(remoteUrl)} url={remoteUrl}>
-      <CounterActionsProvider>{children}</CounterActionsProvider>
+    <RemoteStateProvider url={remoteUrl} fallback={createLocalCounterClient}>
+      {children}
     </RemoteStateProvider>
   );
 }
-
-function CounterActionsProvider({ children }: { children: ReactNode }) {
-  const client = useOptionalRemoteStateClient<CounterService>();
-  const actions = useMemo(
-    () =>
-      client ? createRemoteCounterActions(client) : createLocalCounterActions(),
-    [client],
-  );
-
-  return (
-    <CounterActionsContext.Provider value={actions}>
-      {children}
-    </CounterActionsContext.Provider>
-  );
-}
-
-export function useCounterActions(): CounterActions {
-  const actions = useContext(CounterActionsContext);
-  if (!actions) {
-    throw new Error(
-      "useCounterActions must be used inside CounterStateProvider",
-    );
-  }
-  return actions;
-}
 ```
 
-The same pattern works for larger stores: keep the shared TypeScript state type
-in your app, expose the smallest set of reads and mutations your UI needs, and
-hide whether those operations are backed by RemoteState or local state. Reads can
-use the same idea: expose an app-owned hook or selector that chooses
-`useRemoteState()` or a local selector behind the provider boundary.
+Components can now use `useRemoteState()`, `useRemoteStateValue()`, and
+`useRemoteStateClient()` in both modes. When `url` changes between absent and
+present, the provider switches clients and disposes the client it created. It
+does not sync state between the fallback client and the remote client.
 
 ---
 
