@@ -1,4 +1,5 @@
 import type { ActionResultMessage, GetResultMessage } from "./protocol";
+import { parsePath, type PathSegment } from "./path";
 import type { Store, Transport } from "./types";
 
 type StoreListener = () => void;
@@ -6,7 +7,6 @@ type StoreSubscription = {
   path: string;
   listener: StoreListener;
 };
-type PathSegment = string | number;
 
 /**
  * Transport-backed reactive store cache.
@@ -18,6 +18,7 @@ export class StoreImpl implements Store {
   private cache: Map<string, unknown> = new Map();
   private listeners: Set<StoreSubscription> = new Set();
   private pendingFetches: Set<string> = new Set();
+  private parsedPaths: Map<string, readonly PathSegment[]> = new Map();
   private readonly unsubscribeTransport: () => void;
 
   /**
@@ -84,6 +85,7 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport();
     this.listeners.clear();
     this.cache.clear();
+    this.parsedPaths.clear();
   }
 
   private _onGetResult(msg: GetResultMessage): void {
@@ -102,17 +104,26 @@ export class StoreImpl implements Store {
 
   private _applyUpdate(path: string, value: unknown): void {
     this.cache.set(path, value);
+    const pathSegments = this._getParsedPath(path);
+    if (pathSegments.length === 0) {
+      return;
+    }
 
     for (const [cachedPath, cachedValue] of [...this.cache.entries()]) {
       if (cachedPath === path) {
         continue;
       }
 
-      if (isPathPrefix(cachedPath, path)) {
-        const relativePath = pathSegmentsAfter(cachedPath, path);
+      const cachedSegments = this._getParsedPath(cachedPath);
+      if (cachedSegments.length === 0) {
+        continue;
+      }
+
+      if (isPathPrefixSegments(cachedSegments, pathSegments)) {
+        const relativePath = pathSegmentsAfter(cachedSegments, pathSegments);
         this.cache.set(cachedPath, setAtPath(cachedValue, relativePath, value));
-      } else if (isPathPrefix(path, cachedPath)) {
-        const relativePath = pathSegmentsAfter(path, cachedPath);
+      } else if (isPathPrefixSegments(pathSegments, cachedSegments)) {
+        const relativePath = pathSegmentsAfter(pathSegments, cachedSegments);
         this.cache.set(cachedPath, getAtPath(value, relativePath));
       }
     }
@@ -130,10 +141,30 @@ export class StoreImpl implements Store {
       }
     }
   }
+
+  private _getParsedPath(path: string): readonly PathSegment[] {
+    const cached = this.parsedPaths.get(path);
+    if (cached) {
+      return cached;
+    }
+    const parsed = parsePath(path);
+    this.parsedPaths.set(path, parsed);
+    return parsed;
+  }
 }
 
 function pathsOverlap(left: string, right: string): boolean {
   return isPathPrefix(left, right) || isPathPrefix(right, left);
+}
+
+function isPathPrefixSegments(
+  prefix: readonly PathSegment[],
+  path: readonly PathSegment[],
+): boolean {
+  if (prefix.length > path.length) {
+    return false;
+  }
+  return prefix.every((segment, index) => segment === path[index]);
 }
 
 function isPathPrefix(prefix: string, path: string): boolean {
@@ -144,36 +175,11 @@ function isPathPrefix(prefix: string, path: string): boolean {
   return path.startsWith(prefix) && (next === "." || next === "[");
 }
 
-function pathSegmentsAfter(prefix: string, path: string): PathSegment[] {
-  return parsePath(path).slice(parsePath(prefix).length);
-}
-
-function parsePath(path: string): PathSegment[] {
-  const segments: PathSegment[] = [];
-  const first = /^[a-zA-Z_][a-zA-Z0-9_]*/.exec(path);
-  if (!first || first.index !== 0) {
-    return segments;
-  }
-  segments.push(first[0]);
-
-  const segmentPattern = /\.([a-zA-Z_][a-zA-Z0-9_]*)|\[(\d+)\]/g;
-  segmentPattern.lastIndex = first[0].length;
-  let position = first[0].length;
-  let match: RegExpExecArray | null;
-  while ((match = segmentPattern.exec(path)) !== null) {
-    if (match.index !== position) {
-      return segments;
-    }
-    const token = match[0];
-    if (token.startsWith(".")) {
-      segments.push(token.slice(1));
-    } else {
-      segments.push(Number(token.slice(1, -1)));
-    }
-    position = segmentPattern.lastIndex;
-  }
-
-  return position === path.length ? segments : [];
+function pathSegmentsAfter(
+  prefix: readonly PathSegment[],
+  path: readonly PathSegment[],
+): PathSegment[] {
+  return path.slice(prefix.length);
 }
 
 function getAtPath(value: unknown, path: readonly PathSegment[]): unknown {
