@@ -263,9 +263,9 @@ inside queries.
 
 ### Built-in bridge methods
 
-`Service` also provides built-in `get_state` and `set_state` methods for the
-generic TypeScript bridge. `get_state` is a built-in query that reads a store
-value by path, and `set_state` is the matching built-in action that writes one.
+`Service` also provides built-in `get` and `set` methods for the generic
+TypeScript bridge. `get` is a built-in query that reads a store value by path,
+and `set` is the matching built-in action that writes one.
 They power `useRemoteState()` and related helpers so simple UI state does not
 need a custom service method for every path.
 

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { type RemoteStateClient, type RemoteStateClientOptions } from "../client";
+import {
+  type RemoteStateClient,
+  type RemoteStateClientOptions,
+} from "../client";
 import { createRemoteStateClient } from "../remote";
 import { RemoteStateContext } from "./context";
 

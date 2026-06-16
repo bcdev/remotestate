@@ -66,6 +66,9 @@ def query(fn: Callable) -> _QueryMarker:
     return _QueryMarker(_ensure_async(fn))
 
 
+_BUILTIN_SERVICE_METHODS = {"get", "set"}
+
+
 class Service:
     """Implements the Python queries and actions exposed over the websocket bridge.
 
@@ -73,7 +76,7 @@ class Service:
     care of call scoping, read-only enforcement for queries, and batched store
     invalidation after actions complete.
 
-    The base class also provides the built-in ``get_state`` query and ``set_state``
+    The base class also provides the built-in ``get`` query and ``set``
     action used by the generic React bridge.
 
     ``Service`` may serve as a base class for store-specific queries and actions,
@@ -85,8 +88,8 @@ class Service:
 
     - ``init_app`` - FastAPI instance initialization
     - ``store`` - property that provides reactive state container
-    - ``get_state`` - built-in query to get a state value
-    - ``set_state`` - built-in action to set a state value
+    - ``get`` - built-in query to get a state value
+    - ``set`` - built-in action to set a state value
     - ``update_task`` - report task updates
 
     Argument:
@@ -102,7 +105,16 @@ class Service:
         cls._actions = {}
         cls._queries = {}
 
-        for name, value in inspect.getmembers(cls):
+        for base in reversed(cls.__mro__[1:]):
+            cls._actions.update(getattr(base, "_actions", {}))
+            cls._queries.update(getattr(base, "_queries", {}))
+
+        for name, value in list(cls.__dict__.items()):
+            if name in _BUILTIN_SERVICE_METHODS:
+                raise TypeError(
+                    f"{cls.__name__}.{name} conflicts with a built-in "
+                    "RemoteState service method"
+                )
             if isinstance(value, _ActionMarker):
                 cls._actions[name] = value.fn
                 setattr(cls, name, value.fn)
@@ -130,7 +142,7 @@ class Service:
         return self._store
 
     @query
-    def get_state(self, path: str) -> Any:
+    def get(self, path: str) -> Any:
         """Built-in query that returns a store value by path.
 
         This is the read side of the generic bridge used by the TypeScript
@@ -139,7 +151,7 @@ class Service:
         return self.store.get(path)
 
     @action
-    def set_state(self, path: str, value: Any) -> None:
+    def set(self, path: str, value: Any) -> None:
         """Built-in action that sets a store value by path.
 
         This is the write side of the generic bridge used by the TypeScript
@@ -267,3 +279,14 @@ class Service:
             return await fn(self, *args, **kwargs)
         finally:
             _call_context.reset(token)
+
+
+Service._actions = {}
+Service._queries = {}
+for _name, _value in list(Service.__dict__.items()):
+    if isinstance(_value, _ActionMarker):
+        Service._actions[_name] = _value.fn
+        setattr(Service, _name, _value.fn)
+    elif isinstance(_value, _QueryMarker):
+        Service._queries[_name] = _value.fn
+        setattr(Service, _name, _value.fn)

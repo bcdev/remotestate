@@ -106,7 +106,7 @@ export function useRemoteState<T = unknown>(
     }
     hasInitialized.current = true;
     void remoteState.action(
-      "set_state",
+      "set",
       [path, initialValue],
       {},
       { awaitInvalidate: true },
@@ -120,7 +120,7 @@ export function useRemoteState<T = unknown>(
           ? (next as (prev: T | undefined) => T)(valueRef.current)
           : next;
       await remoteState.action(
-        "set_state",
+        "set",
         [path, nextValue],
         {},
         { awaitInvalidate: true },

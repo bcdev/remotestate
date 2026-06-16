@@ -1,16 +1,9 @@
 import { StoreImpl } from "./store";
 import { ServiceImpl, type QueryOptions } from "./service";
 import { TransportImpl } from "./transport";
-import {
-  createRemoteTaskStore,
-  TaskController,
-} from "./tasks";
+import { createRemoteTaskStore, TaskController } from "./tasks";
 import type { RemoteStateClient, RemoteStateClientOptions } from "./client";
-import {
-  type MethodArgs,
-  type QueryMethod,
-  type QueryResult,
-} from "./types";
+import { type MethodArgs, type QueryMethod, type QueryResult } from "./types";
 
 /**
  * Create a Remote State client bound to one websocket endpoint.
