@@ -173,10 +173,7 @@ export function CounterStateProvider({
   children: ReactNode;
 }) {
   return (
-    <RemoteStateProvider
-      url={remoteUrl}
-      fallback={createLocalCounterClient}
-    >
+    <RemoteStateProvider url={remoteUrl} fallback={createLocalCounterClient}>
       {children}
     </RemoteStateProvider>
   );

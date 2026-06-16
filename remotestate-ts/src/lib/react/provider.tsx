@@ -44,39 +44,30 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
  *     exposes the client without disposing it.
  */
 export function RemoteStateProvider(props: RemoteStateProviderProps) {
-  const {
-    client: providedClient,
-    fallback,
-    url,
-    taskStore,
-    children,
-  } = props;
+  const { client: providedClient, fallback, url, taskStore, children } = props;
   const hasProvidedClient = Object.hasOwn(props, "client");
-  const client = useMemo(
-    () => {
-      if (hasProvidedClient) {
-        if (!providedClient) {
-          throw new Error("RemoteStateProvider client cannot be null");
-        }
-        return providedClient;
+  const client = useMemo(() => {
+    if (hasProvidedClient) {
+      if (!providedClient) {
+        throw new Error("RemoteStateProvider client cannot be null");
       }
+      return providedClient;
+    }
 
-      const explicitUrl = url?.trim();
-      if (explicitUrl) {
-        return createRemoteStateClient(
-          explicitUrl,
-          taskStore ? { taskStore } : {},
-        );
-      }
+    const explicitUrl = url?.trim();
+    if (explicitUrl) {
+      return createRemoteStateClient(
+        explicitUrl,
+        taskStore ? { taskStore } : {},
+      );
+    }
 
-      if (fallback) {
-        return fallback();
-      }
+    if (fallback) {
+      return fallback();
+    }
 
-      throw new Error("RemoteStateProvider requires either url or fallback");
-    },
-    [hasProvidedClient, providedClient, url, taskStore, fallback],
-  );
+    throw new Error("RemoteStateProvider requires either url or fallback");
+  }, [hasProvidedClient, providedClient, url, taskStore, fallback]);
 
   useEffect(() => {
     return () => {

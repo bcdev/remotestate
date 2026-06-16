@@ -46,7 +46,9 @@ function createFallbackClient(): RemoteStateClient {
     store,
     tasks: createRemoteTaskStore(),
     action: vi.fn(() => Promise.resolve()),
-    query: vi.fn(() => Promise.resolve(undefined)) as RemoteStateClient["query"],
+    query: vi.fn(() =>
+      Promise.resolve(undefined),
+    ) as RemoteStateClient["query"],
     dispose: vi.fn(() => {
       store.dispose();
     }),

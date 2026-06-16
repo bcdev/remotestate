@@ -3,11 +3,11 @@
 ## New Features
 
 - [ ] Ease implementing the `RemoteStateClient` interface in general.
-  See example in `README.md`, which is quite complex.
+      See example in `README.md`, which is quite complex.
 - [ ] Ease implementing the `RemoteStateClient` interface for zustand-users.
-  Create a new subpackage `zustand` for this and make zustand a peer dependency. 
+      Create a new subpackage `zustand` for this and make zustand a peer dependency.
 - [ ] Make `react` a truly optional submodule.
-  No longer export it from maon module.
+      No longer export it from maon module.
 - [x] Require an explicit WebSocket URL or local fallback client.
 - [x] Retry connecting to `WebSocket`, if connection could not be
       established yet, or it was lost.
