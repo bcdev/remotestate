@@ -7,10 +7,13 @@
 [![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-`remotestate` is the TypeScript and React bridge of the _RemoteState_ library.
+`remotestate` is the browser-side bridge for RemoteState apps. It gives React a typed client, a provider, hooks, path helpers, and task tracking to talk to the Python backend.
 
-This package provides the frontend client, provider, and hooks that pair with
-the Python backend from the main repository.
+If you want the high-level product overview, start with the repository root README:
+[RemoteState](../README.md)
+
+If you want the Python runtime details, see:
+[remotestate-py/README.md](../remotestate-py/README.md)
 
 ## Install
 
@@ -18,49 +21,23 @@ the Python backend from the main repository.
 npm install remotestate
 ```
 
-## Direct Client
+## Development
 
-Use `createRemoteStateClient(url)` when you want a standalone bridge object.
-The URL must be provided explicitly.
+- Node.js `>= 20`
+- from the package directory: `cd remotestate-ts`
+- install dependencies with `npm install`
+- build with `npm run build`
+- run tests with `npm run tests`
+- run type-checks and linting with `npm run checks`
+- format the workspace with `npm run format`
 
-```tsx
-import { createRemoteStateClient } from "remotestate";
-
-type CounterService = {
-  increment(): Promise<void>;
-  compute(x: number): Promise<number>;
-};
-
-const client = createRemoteStateClient<CounterService>(
-  "ws://localhost:9753/ws",
-);
-```
-
-`client` exposes `action()` and `query()` methods together with the reactive
-store and task store used by the React hooks.
-
-The low-level store can be observed by path:
-
-```typescript
-const unsubscribe = client.store.subscribe("items[1].label", () => {
-  console.log(client.store.get("items[1].label"));
-});
-```
-
-Subscriptions also react to related parent or child updates. For example, a
-listener on `"items"` fires when `"items[1].label"` changes.
-
-## Using a Remote State
-
-Use `RemoteStateProvider` when your app always expects a RemoteState backend.
-The hooks below bind React components to the Python-owned `"count"` state and
-the typed `increment` action.
+## Quick Start
 
 ```tsx
 import {
   RemoteStateProvider,
-  useRemoteStateClient,
   useRemoteState,
+  useRemoteStateClient,
 } from "remotestate";
 
 type CounterService = {
@@ -74,12 +51,12 @@ function Counter() {
 
   return (
     <div>
-      <p>Count: {count ?? "..."}</p>
-      <button onClick={() => void setCount((prev) => (prev ?? 0) + 1)}>
-        Set from React
+      <p>Count: {count}</p>
+      <button onClick={() => void setCount((n) => (n ?? 0) + 1)}>
+        Local +1
       </button>
       <button onClick={() => void client.action("increment")}>
-        Run backend action
+        Backend +1
       </button>
     </div>
   );
@@ -94,126 +71,194 @@ export function App() {
 }
 ```
 
-## Optional Remote State With Local State Fallback
+## API Overview
 
-Some applications can run with or without a RemoteState backend. For example,
-an addon might use Python-owned state when a RemoteState URL is configured, but
-fall back to the app's existing local state store when no backend is available.
-The provider always exposes a client: it creates a remote client when `url` is a
-non-empty string, otherwise it calls `fallback`. If neither `url` nor
-`fallback` is provided, the provider throws.
+The public TypeScript API is exported from `remotestate`:
 
-Fallback clients use the same `RemoteStateClient` shape as remote clients, so
-the standard hooks keep working and remain reactive. The example below adapts a
-[Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
+- `createRemoteStateClient`
+- `createLocalRemoteStateClient`
+- `RemoteStateProvider`
+- `useRemoteStateClient`
+- `useRemoteStore`
+- `useRemoteTaskStore`
+- `useRemoteStateValue`
+- `useRemoteState`
+- `useRemoteTask`
+- `useRemoteTasks`
+- `createRemoteTaskStore`
+- `TaskStoreImpl`
+- `parsePath`
+- `formatPath`
+- `getPathAt`
+- `setPathAt`
 
-When you implement a fallback store, the store methods receive parsed,
-non-empty path segments. `getPathAt()` and `setPathAt()` are the shared path
-helpers to use for nested reads and writes. `setPathAt()` preserves the
-original identity when the target value is unchanged, which makes it easy to
-skip unnecessary Zustand updates and avoid extra renders.
+## Remote Client
+
+`createRemoteStateClient<S>(url, options?)` creates a typed client bound to one WebSocket endpoint.
+
+- `url` can be a `ws://`/`wss://` endpoint or an `http://`/`https://` URL
+- `http://` and `https://` URLs are normalized to the corresponding WebSocket endpoint
+- the returned client exposes `store`, `tasks`, `action()`, `query()`, and `dispose()`
+- `options.taskStore` lets you replace the default in-memory task store
+
+```ts
+import { createRemoteStateClient } from "remotestate";
+
+type CounterService = {
+  increment(): Promise<void>;
+  compute(x: number): Promise<number>;
+};
+
+const client = createRemoteStateClient<CounterService>(
+  "http://localhost:9753",
+);
+```
+
+`client.action(method, args?, kwargs?, options?)` calls a Python `@action`.
+
+- `taskId` enables progress tracking for the call
+- `awaitInvalidate` waits for the resulting store update before resolving
+
+`client.query(method, args?, kwargs?, options?)` calls a Python `@query` and returns the typed result.
+
+## Provider and Hooks
+
+`RemoteStateProvider` exposes one client to child components.
+
+- `url` creates a remote client when it is present and non-blank
+- `fallback` creates a local client when `url` is missing or blank
+- `client` lets you inject an already-created client
+- `taskStore` is passed through to `createRemoteStateClient` when the provider creates the client itself
+- owned clients are disposed automatically when the provider unmounts
 
 ```tsx
-import type { ReactNode } from "react";
+import { RemoteStateProvider } from "remotestate";
+
+export function App() {
+  return <RemoteStateProvider url="ws://localhost:9753/ws">{/* ... */}</RemoteStateProvider>;
+}
+```
+
+Hook overview:
+
+- `useRemoteStateClient<S>()` returns the nearest typed client
+- `useRemoteStore()` returns the reactive value store behind the hooks
+- `useRemoteTaskStore()` returns the task store behind the progress hooks
+- `useRemoteStateValue(path)` subscribes to one path and returns the cached value or `undefined`
+- `useRemoteState(path, initialValue?)` behaves like React `useState` for one remote path
+- `useRemoteTask(taskId)` returns one tracked task snapshot
+- `useRemoteTasks()` returns all tracked task snapshots
+
+```tsx
+import {
+  useRemoteState,
+  useRemoteTask,
+  useRemoteTasks,
+} from "remotestate";
+
+const [count, setCount] = useRemoteState<number>("count", 0);
+const saveTask = useRemoteTask("save");
+const allTasks = useRemoteTasks();
+```
+
+## Local Clients
+
+`createLocalRemoteStateClient<S>(options)` wraps local application state in a RemoteState-compatible client.
+
+- `store` is required
+- `actions` and `queries` provide local implementations of the service contract
+- `tasks` can replace the default in-memory task store
+- `dispose` runs when the local client is released
+
+This is the main building block for `RemoteStateProvider` fallback mode.
+
+```tsx
 import {
   RemoteStateProvider,
   createLocalRemoteStateClient,
   getPathAt,
   setPathAt,
-  type LocalActionHandlers,
-  type LocalQueryHandlers,
   type Path,
   type RemoteStateClient,
   type Store,
 } from "remotestate";
-import { useCounterStore } from "./counterStore";
 
 type CounterService = {
   increment(): Promise<void>;
+  compute(x: number): Promise<number>;
 };
 
-type CounterActions = LocalActionHandlers<CounterService>;
-type CounterQueries = LocalQueryHandlers<CounterService>;
+function createCounterClient(): RemoteStateClient<CounterService> {
+  let state = { count: 0 };
+  const listeners = new Set<() => void>();
 
-function createLocalCounterClient(): RemoteStateClient<CounterService> {
+  const notify = () => {
+    listeners.forEach((listener) => listener());
+  };
+
   const store: Store = {
-    // Read the current local value for one RemoteState path.
-    get: (path: Path): unknown => {
-      if (path.length === 1 && path[0] === "count") {
-        return getPathAt(useCounterStore.getState(), path);
+    get: (path: Path) => getPathAt(state, path),
+    set: async (path: Path, value: unknown) => {
+      const nextState = setPathAt(state, path, value) as typeof state;
+      if (nextState !== state) {
+        state = nextState;
+        notify();
       }
     },
-
-    // Write one RemoteState path; useRemoteState() setters call this method.
-    set: (path: Path, value: unknown): void => {
-      if (path.length === 1 && path[0] === "count") {
-        const currentState = useCounterStore.getState();
-        const nextState = setPathAt(currentState, pathSegments, value);
-        if (nextState !== currentState) {
-          useCounterStore.setState(nextState);
-        }
-      }
+    provide: () => {},
+    subscribe: (_path: Path, listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
-
-    // Re-render hook consumers when the subscribed path changes.
-    subscribe: (path: Path, listener: () => void): (() => void) => {
-      if (path.length === 1 && path[0] === "count") {
-        return useCounterStore.subscribe(listener);
-      }
-      return () => {};
-    },
-
-    // Ensure a path is available; local stores are already available here.
-    provide: (_path: Path): void => {},
-
-    // Release local resources owned by this store, if any.
-    dispose: (): void => {},
+    dispose: () => listeners.clear(),
   };
 
-  const actions: CounterActions = {
-    // Implement local equivalents for client.action("increment").
-    increment: (): void => {
-      useCounterStore.getState().increment();
-    },
-  };
-
-  const queries: CounterQueries = {
-    // Add local equivalents for client.query(...) methods. Not used here.
-  };
-
-  return createLocalRemoteStateClient<CounterService>({
-    // Reactive store used by useRemoteStateValue() and useRemoteState().
+  return createLocalRemoteStateClient({
     store,
-
-    // Local service actions used by useRemoteStateClient().action(...).
-    actions,
-
-    // Local service queries used by useRemoteStateClient().query(...).
-    queries,
+    actions: {
+      increment: async () => {
+        state = setPathAt(state, ["count"] as const, state.count + 1) as typeof state;
+        notify();
+      },
+    },
+    queries: {
+      compute: async (x: number) => x * state.count,
+    },
   });
 }
 
-export function CounterStateProvider({
-  remoteUrl,
-  children,
-}: {
-  remoteUrl?: string | null;
-  children: ReactNode;
-}) {
-  return (
-    <RemoteStateProvider url={remoteUrl} fallback={createLocalCounterClient}>
-      {children}
-    </RemoteStateProvider>
-  );
+export function App() {
+  return <RemoteStateProvider fallback={createCounterClient}>{/* ... */}</RemoteStateProvider>;
 }
 ```
 
-Components can now use `useRemoteState()`, `useRemoteStateValue()`, and
-`useRemoteStateClient()` in both modes. When `url` changes between absent and
-present, the provider switches clients and disposes the client it created. It
-does not sync state between the fallback client and the remote client.
+## Path Helpers
 
----
+The path helpers are useful when you need to work with nested state outside the React hooks.
 
-For full project documentation, see the repository root README:
-[Remote State](https://github.com/bcdev/remotestate)
+- `parsePath(path)` turns a string path into parsed segments
+- `formatPath(path)` turns parsed segments back into a string path
+- `getPathAt(value, path)` reads a nested value
+- `setPathAt(value, path, nextValue)` writes a nested value without mutating when nothing changes
+
+```ts
+import { getPathAt, parsePath, setPathAt } from "remotestate";
+
+const path = parsePath("items[0].label");
+const current = getPathAt(state, path);
+const next = setPathAt(state, path, "updated");
+```
+
+## Task Stores
+
+RemoteState tracks long-running actions and queries as task snapshots.
+
+- `createRemoteTaskStore()` returns the default in-memory task store
+- `TaskStoreImpl` is the concrete store implementation
+- `useRemoteTaskStore()` and `useRemoteTasks()` let React components observe progress
+- `useRemoteTask(taskId)` is useful when you know the task identifier up front
+
+## More Docs
+
+- [Repository root README](../README.md)
+- [Python package README](../remotestate-py/README.md)

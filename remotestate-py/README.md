@@ -1,6 +1,6 @@
 # RemoteState - Python Library
 
-[![CI](https://github.com/bcdev/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/bcdev/remotestate/actions/workflows/ci.yml) 
+[![CI](https://github.com/bcdev/remotestate/actions/workflows/ci.yml/badge.svg)](https://github.com/bcdev/remotestate/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/remotestate?logo=pypi)](https://pypi.org/project/remotestate/)
 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -8,15 +8,10 @@
 [![Ruff](https://img.shields.io/badge/Ruff-2C2F3A?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+`remotestate` is the Python runtime for RemoteState apps. It owns the state store, service methods, and server that expose Python state to React.
 
-`remotestate` is the Python runtime for the _RemoteState_ library.
-
-It gives you:
-
-- `Store` for application state
-- `Service` for defining actions and queries
-- `action` and `query` decorators
-- `serve()` for exposing the backend to the React frontend
+If you want the high-level product overview, start with the repository root README:
+[RemoteState](../README.md)
 
 ## Install
 
@@ -24,68 +19,157 @@ It gives you:
 pip install remotestate
 ```
 
+Or with [pixi](https://pixi.sh):
+
+```bash
+pixi add remotestate
+```
+
+## Development
+
+- Python `>= 3.12`
+- from the package directory: `cd remotestate-py`
+- install dependencies with `pixi install`
+- run tests with `pixi run tests`
+- lint with `pixi run lint`
+- format with `pixi run format`
+- reorder imports with `pixi run isort`
+- type-check with `pixi run mypy`
+- build a wheel with `pixi run build`
+
 ## Quick Start
 
 ```python
 import remotestate as rs
 
-store = rs.Store({"count": 0})
 
+class Counter(rs.Service):
+    def __init__(self) -> None:
+        super().__init__(rs.Store({"count": 0, "user": {"name": "forman"}}))
 
-class MyService(rs.Service):
     @rs.action
-    async def increment(self):
+    async def increment(self) -> None:
         self.store.set("count", self.store.get("count") + 1)
 
+    @rs.query
+    async def compute(self, x: float) -> float:
+        self.notify(name="Computing", detail="reading current count", progress=50)
+        return x * self.store.get("count")
 
-rs.serve(MyService(store), ui_dist="my-ui/dist")
+
+rs.serve(Counter(), ui_dist="my-ui/dist")
 ```
 
-For the full project overview, see the repository root README:
-[Remote State](https://github.com/bcdev/remotestate)
+## API Overview
 
-## Store Defaults
+The public Python API is exported from `remotestate`:
 
-`Store` can optionally create missing path prefixes while setting nested
-values. Without a default factory, missing parents keep the original
-behavior and raise `KeyError`, `IndexError`, or `AttributeError`.
+- `Store`
+- `Service`
+- `action`
+- `query`
+- `serve`
+- `path`
+
+## Store
+
+`Store(initial, *, default_factory=None)` holds the Python-side application state.
+
+- nested dicts, lists, Pydantic models, and dataclasses are all supported
+- `default_factory` receives the missing prefix as a `rs.path.Path` tuple
+
+- `get(path, require=False)` reads a value from a path such as `user.name` or `items[0].label`
+- `set(path, value)` writes a value and notifies subscribers
+- `subscribe(callback)` receives batched path-to-value updates after changes flush
+- `default_factory` can materialize missing parents while setting nested values
 
 ```python
+import remotestate as rs
+
+
+class User:
+    def __init__(self, name: str = "", city: str = "") -> None:
+        self.name = name
+        self.city = city
+
+
 def defaults(path: rs.path.Path):
+    if path == (rs.path.Property("user"),):
+        return User()
     if path == (rs.path.Property("items"),):
         return []
     return {}
 
 
 store = rs.Store({}, default_factory=defaults)
-store.set("user.address.city", "Hamburg")
+store.set("user.city", "Hamburg")
 store.set("items[0].label", "foo")
 
-assert store.get("user") == {"address": {"city": "Hamburg"}}
+assert store.get("user.city") == "Hamburg"
 assert store.get("items") == [{"label": "foo"}]
 ```
 
-The factory receives the missing prefix path as a tuple of path segments, so it
-can return typed values for specific parts of the state tree:
+`get()` never calls the default factory. Reads stay side-effect free, and missing values return `None` unless `require=True` is passed.
+
+## Actions and Queries
+
+Use `@action` for state-changing service methods and `@query` for read-only methods.
+
+- `@action` batches `store.set()` calls and flushes them as one `action_result`
+- `@query` is read-only; mutating the store inside a query raises `PermissionError`
+- sync and async methods are both supported
 
 ```python
-def defaults(path: rs.path.Path):
-    if path == (rs.path.Property("user"),):
-        return User(name="", address=Address(city="", street=""))
-    return {}
+class Counter(rs.Service):
+    def __init__(self) -> None:
+        super().__init__(rs.Store({"count": 0}))
 
+    @rs.action
+    def increment(self) -> None:
+        self.store.set("count", self.store.get("count") + 1)
 
-store = rs.Store({}, default_factory=defaults)
-store.set("user.address.city", "Berlin")
+    @rs.query
+    async def multiply(self, x: float) -> float:
+        self.notify(name="Working", progress=25)
+        return x * self.store.get("count")
 ```
 
-`get()` does not use the factory; reads remain side-effect free. For list
-paths, `set()` can append at exactly the next index when a factory is
-configured; sparse indexes still raise `IndexError`.
+## Service Helpers
 
-## Store Updates
+`Service` also provides built-in methods that power the generic TypeScript bridge:
 
-Subscribers receive a mapping from changed paths to serialized values. Nested
-updates are reported with the exact path that was written, so
-`store.set("items[1].label", "foo")` emits `{"items[1].label": "foo"}` without
-redundant parent values.
+- `get(path)` reads a store value by path
+- `set(path, value)` writes a store value by path
+- `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages for tracked calls
+
+The reserved service method names are `get`, `set`, and `notify`. Do not reuse those names for custom actions or queries.
+
+`Service._init_app(app)` can be overridden to customize the FastAPI app when `serve()` creates one.
+
+## Serving
+
+`serve(service, *, ui_dist, mounts, app, open_browser, open_iframe, width, height, host, port, **uvicorn_settings)` starts the RemoteState server and connects it to a frontend bundle.
+
+- `service` is a `Service` instance
+- `ui_dist` can be a local React build directory or an HTTP(S) URL
+- `mounts` adds additional static paths
+- `app` lets you supply your own FastAPI app
+- `open_browser` and `open_iframe` control how the UI is shown
+- `host` and `port` configure the backend server
+
+By default, RemoteState opens a browser outside Jupyter and renders an iframe inside Jupyter. Re-running the same notebook cell restarts the server automatically.
+
+## Paths
+
+`remotestate.path` exposes the parsed path types used by `Store.default_factory` and other advanced integrations:
+
+- `Path`
+- `Property`
+- `Index`
+
+Use them when you need to inspect or construct missing-path prefixes in a factory.
+
+## More Docs
+
+- [Repository root README](../README.md)
+- [TypeScript package README](../remotestate-ts/README.md)
