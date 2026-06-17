@@ -6,7 +6,9 @@ import {
 import { createRemoteStateClient } from "../remote";
 import { RemoteStateContext } from "./context";
 
-export interface RemoteStateProviderProps extends RemoteStateClientOptions {
+export interface RemoteStateProviderProps<
+  S = unknown,
+> extends RemoteStateClientOptions {
   /**
    * The websocket endpoint URL. If omitted or blank, `fallback` is used.
    */
@@ -16,13 +18,13 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
    * Factory for a local RemoteState-compatible client used when no URL is
    * configured.
    */
-  fallback?: () => RemoteStateClient;
+  fallback?: () => RemoteStateClient<S>;
 
   /**
    * Optional externally-created client. When provided, the provider exposes it
    * without taking ownership of its lifecycle.
    */
-  client?: RemoteStateClient;
+  client?: RemoteStateClient<S>;
 
   /**
    * React children rendered inside the provider.
