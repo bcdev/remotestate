@@ -6,7 +6,9 @@ import {
 import { createRemoteStateClient } from "../remote";
 import { RemoteStateContext } from "./context";
 
-export interface RemoteStateProviderProps extends RemoteStateClientOptions {
+export interface RemoteStateProviderProps<
+  S = unknown,
+> extends RemoteStateClientOptions {
   /**
    * The websocket endpoint URL. If omitted or blank, `fallback` is used.
    */
@@ -16,13 +18,13 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
    * Factory for a local RemoteState-compatible client used when no URL is
    * configured.
    */
-  fallback?: () => RemoteStateClient;
+  fallback?: () => RemoteStateClient<S>;
 
   /**
    * Optional externally-created client. When provided, the provider exposes it
    * without taking ownership of its lifecycle.
    */
-  client?: RemoteStateClient;
+  client?: RemoteStateClient<S>;
 
   /**
    * React children rendered inside the provider.
@@ -50,10 +52,10 @@ export interface RemoteStateProviderProps extends RemoteStateClientOptions {
  * @returns A React context provider element.
  * @throws If no `url`, `fallback`, or non-null `client` is provided.
  */
-export function RemoteStateProvider(props: RemoteStateProviderProps) {
+export function RemoteStateProvider<S = unknown>(props: RemoteStateProviderProps<S>) {
   const { client: providedClient, fallback, url, taskStore, children } = props;
   const hasProvidedClient = Object.hasOwn(props, "client");
-  const client = useMemo(() => {
+  const client: RemoteStateClient<S> = useMemo(() => {
     if (hasProvidedClient) {
       if (!providedClient) {
         throw new Error("RemoteStateProvider client cannot be null");
@@ -85,7 +87,7 @@ export function RemoteStateProvider(props: RemoteStateProviderProps) {
   }, [client, providedClient]);
 
   return (
-    <RemoteStateContext.Provider value={client}>
+    <RemoteStateContext.Provider value={client as RemoteStateClient}>
       {children}
     </RemoteStateContext.Provider>
   );
