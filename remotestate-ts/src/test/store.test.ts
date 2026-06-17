@@ -5,7 +5,7 @@ import { mockTransport, mockTransportWithHandler, asTransport } from "./mocks";
 describe("StoreImpl", () => {
   it("returns undefined for uncached path", () => {
     const store = new StoreImpl(asTransport(mockTransport()));
-    expect(store.get("count")).toBeUndefined();
+    expect(store.get(["count"])).toBeUndefined();
   });
 
   it("caches value from GetResultMessage", () => {
@@ -19,7 +19,7 @@ describe("StoreImpl", () => {
       value: 42,
     });
 
-    expect(store.get("count")).toBe(42);
+    expect(store.get(["count"])).toBe(42);
   });
 
   it("updates cache from ActionResultMessage", () => {
@@ -32,15 +32,15 @@ describe("StoreImpl", () => {
       updates: { count: 99, "user.name": "Norman" },
     });
 
-    expect(store.get("count")).toBe(99);
-    expect(store.get("user.name")).toBe("Norman");
+    expect(store.get(["count"])).toBe(99);
+    expect(store.get(["user", "name"])).toBe("Norman");
   });
 
   it("notifies listeners on value update", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("count", listener);
+    store.subscribe(["count"], listener);
 
     transport._triggerMessage({
       type: "get_result",
@@ -56,7 +56,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("items[1].label", listener);
+    store.subscribe(["items", 1, "label"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -71,7 +71,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("items", listener);
+    store.subscribe(["items"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -89,7 +89,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("items[1].label", listener);
+    store.subscribe(["items", 1, "label"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -104,7 +104,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("items[1].label", listener);
+    store.subscribe(["items", 1, "label"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -119,7 +119,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("x.y", listener);
+    store.subscribe(["x", "y"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -134,7 +134,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    store.subscribe("x.y", listener);
+    store.subscribe(["x", "y"], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -166,11 +166,11 @@ describe("StoreImpl", () => {
       updates: { "items[1].label": "Test 2" },
     });
 
-    expect(store.get("items")).toEqual([
+    expect(store.get(["items"])).toEqual([
       { id: 0, label: "foo" },
       { id: 1, label: "Test 2" },
     ]);
-    expect(store.get("items")).not.toBe(items);
+    expect(store.get(["items"])).not.toBe(items);
   });
 
   it("refreshes cached child values from a parent action update", () => {
@@ -190,14 +190,14 @@ describe("StoreImpl", () => {
       updates: { "items[1]": { id: 1, label: "Test 2" } },
     });
 
-    expect(store.get("items[1].label")).toBe("Test 2");
+    expect(store.get(["items", 1, "label"])).toBe("Test 2");
   });
 
   it("unsubscribe stops listener notifications", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
-    const unsubscribe = store.subscribe("count", listener);
+    const unsubscribe = store.subscribe(["count"], listener);
     unsubscribe();
 
     transport._triggerMessage({
@@ -214,7 +214,7 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store.provide("count");
+    store.provide(["count"]);
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({ type: "get", path: "count" }),
@@ -225,7 +225,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    void store.set("count", 3);
+    void store.set(["count"], 3);
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -241,7 +241,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    const promise = store.set("count", 3);
+    const promise = store.set(["count"], 3);
     const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
     transport._triggerMessage({
@@ -251,14 +251,14 @@ describe("StoreImpl", () => {
     });
 
     await expect(promise).resolves.toBeUndefined();
-    expect(store.get("count")).toBe(3);
+    expect(store.get(["count"])).toBe(3);
   });
 
   it("rejects set on matching error", async () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    const promise = store.set("count", 3);
+    const promise = store.set(["count"], 3);
     const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
     transport._triggerMessage({
@@ -282,7 +282,7 @@ describe("StoreImpl", () => {
     });
     transport.send.mockClear();
 
-    store.provide("count");
+    store.provide(["count"]);
 
     expect(transport.send).not.toHaveBeenCalled();
   });
@@ -291,8 +291,8 @@ describe("StoreImpl", () => {
     const transport = mockTransport();
     const store = new StoreImpl(asTransport(transport));
 
-    store.provide("count");
-    store.provide("count");
+    store.provide(["count"]);
+    store.provide(["count"]);
 
     expect(transport.send).toHaveBeenCalledOnce();
   });
@@ -301,7 +301,7 @@ describe("StoreImpl", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
-    store.provide("count");
+    store.provide(["count"]);
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
@@ -310,7 +310,7 @@ describe("StoreImpl", () => {
     });
     transport.send.mockClear();
 
-    store.provide("count");
+    store.provide(["count"]);
 
     expect(transport.send).not.toHaveBeenCalled();
   });

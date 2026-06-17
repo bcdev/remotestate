@@ -1,4 +1,5 @@
 import type { RemoteStateClient } from "./client";
+import { parsePath, type Path } from "./path";
 import { createRemoteTaskStore, type WritableTaskStore } from "./tasks";
 import {
   type ActionMethod,
@@ -137,6 +138,14 @@ function createLocalSetAction(
     if (typeof path !== "string") {
       throw new Error("Local set action requires a string path");
     }
-    await store.set(path, value);
+    await store.set(toPath(path), value);
   };
+}
+
+function toPath(path: string): Path {
+  const segments = parsePath(path);
+  if (segments.length === 0) {
+    throw new Error("Local set action requires a non-empty path");
+  }
+  return segments as unknown as Path;
 }

@@ -46,7 +46,7 @@ describe("createLocalRemoteStateClient", () => {
 
     await client.action("set", ["count", 7]);
 
-    expect(set).toHaveBeenCalledWith("count", 7);
+    expect(set).toHaveBeenCalledWith(["count"], 7);
   });
 
   it("rejects built-in set action without a string path", async () => {

@@ -9,11 +9,6 @@
   - `createRemoteStateClient()` now requires an explicit URL.
   - Added `createLocalRemoteStateClient()` to wrap local stores and
     action/query handlers as fallback clients.
-  - Made `parsePath(path: string)` function public to support implementing 
-    local stores using `createLocalRemoteStateClient()`.
-  - Added `Store.set(path, value)` and changed `useRemoteState()` writes to use
-    the store directly.
-  - Exported `RemoteStateProviderProps`.
   - Updated docs with:
     - a basic counter RemoteState usage example
     - an optional remote backend/local client fallback example

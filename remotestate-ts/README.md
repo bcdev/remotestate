@@ -107,14 +107,23 @@ Fallback clients use the same `RemoteStateClient` shape as remote clients, so
 the standard hooks keep working and remain reactive. The example below adapts a
 [Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
 
+When you implement a fallback store, the store methods receive parsed,
+non-empty path segments. `getPathAt()` and `setPathAt()` are the shared path
+helpers to use for nested reads and writes. `setPathAt()` preserves the
+original identity when the target value is unchanged, which makes it easy to
+skip unnecessary Zustand updates and avoid extra renders.
+
 ```tsx
 import type { ReactNode } from "react";
 import {
   createLocalRemoteStateClient,
+  getPathAt,
   RemoteStateProvider,
+  setPathAt,
   type LocalActionHandlers,
   type LocalQueryHandlers,
   type RemoteStateClient,
+  type Store,
 } from "remotestate";
 import { useCounterStore } from "./counterStore";
 
@@ -126,24 +135,30 @@ type CounterActions = LocalActionHandlers<CounterService>;
 type CounterQueries = LocalQueryHandlers<CounterService>;
 
 function createLocalCounterClient(): RemoteStateClient<CounterService> {
-  const store = {
+  const store: Store = {
     // Read the current local value for one RemoteState path.
-    get: (path: string): unknown =>
-      path === "count" ? useCounterStore.getState().count : undefined,
+    get: (pathSegments): unknown =>
+      pathSegments.length === 1 && pathSegments[0] === "count"
+        ? getPathAt(useCounterStore.getState(), pathSegments)
+        : undefined,
 
     // Write one RemoteState path; useRemoteState() setters call this method.
-    set: (path: string, value: unknown): void => {
-      if (path === "count" && typeof value === "number") {
-        useCounterStore.getState().setCount(value);
+    set: (pathSegments, value: unknown): void => {
+      if (pathSegments.length === 1 && pathSegments[0] === "count") {
+        const currentState = useCounterStore.getState();
+        const nextState = setPathAt(currentState, pathSegments, value);
+        if (nextState !== currentState) {
+          useCounterStore.setState(nextState);
+        }
       }
     },
 
     // Ensure a path is available; local stores are already available here.
-    provide: (_path: string): void => {},
+    provide: (_pathSegments): void => {},
 
     // Re-render hook consumers when the subscribed path changes.
-    subscribe: (path: string, listener: () => void): (() => void) => {
-      if (path !== "count") {
+    subscribe: (pathSegments, listener: () => void): (() => void) => {
+      if (pathSegments.length !== 1 || pathSegments[0] !== "count") {
         return () => {};
       }
       return useCounterStore.subscribe(listener);
@@ -161,7 +176,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
   };
 
   const queries: CounterQueries = {
-    // Add local equivalents for client.query(...) methods. Not used here. 
+    // Add local equivalents for client.query(...) methods. Not used here.
   };
 
   return createLocalRemoteStateClient<CounterService>({
@@ -184,10 +199,7 @@ export function CounterStateProvider({
   children: ReactNode;
 }) {
   return (
-    <RemoteStateProvider
-      url={remoteUrl}
-      fallback={createLocalCounterClient}
-    >
+    <RemoteStateProvider url={remoteUrl} fallback={createLocalCounterClient}>
       {children}
     </RemoteStateProvider>
   );

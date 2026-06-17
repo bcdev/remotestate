@@ -1,13 +1,15 @@
 import {
   useContext,
   useEffect,
+  useMemo,
   useSyncExternalStore,
   useCallback,
   useRef,
 } from "react";
 import { type RemoteStateClient } from "../client";
+import { parsePath, type Path } from "../path";
 import { RemoteStateContext } from "./context";
-import { Store } from "../types";
+import type { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
 /**
@@ -56,22 +58,27 @@ export function useRemoteTaskStore(): TaskStore {
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useRemoteStateValue<T = unknown>(path: string): T | undefined {
+  const pathSegments = useMemo(() => toPath(path), [path]);
+  return useRemoteStateValueAt(pathSegments) as T | undefined;
+}
+
+function useRemoteStateValueAt(pathSegments: Path): unknown {
   const store = useRemoteStore();
 
   // Trigger fetch if not cached — runs after render, not during,
   // so getSnapshot remains pure and side effect free.
   useEffect(() => {
-    store.provide(path);
-  }, [store, path]);
+    store.provide(pathSegments);
+  }, [store, pathSegments]);
 
   const subscribe = useCallback(
-    (onStoreChange: () => void) => store.subscribe(path, onStoreChange),
-    [store, path],
+    (onStoreChange: () => void) => store.subscribe(pathSegments, onStoreChange),
+    [store, pathSegments],
   );
 
   const getSnapshot = useCallback(
-    () => store.get(path) as T | undefined,
-    [store, path],
+    () => store.get(pathSegments),
+    [store, pathSegments],
   );
 
   return useSyncExternalStore(subscribe, getSnapshot);
@@ -104,7 +111,8 @@ export function useRemoteState<T = unknown>(
   initialValue?: T,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
   const store = useRemoteStore();
-  const value = useRemoteStateValue<T>(path);
+  const pathSegments = useMemo(() => toPath(path), [path]);
+  const value = useRemoteStateValueAt(pathSegments) as T | undefined;
   const hasInitialized = useRef(false);
   const valueRef = useRef<T | undefined>(value);
 
@@ -121,8 +129,8 @@ export function useRemoteState<T = unknown>(
       return;
     }
     hasInitialized.current = true;
-    void store.set(path, initialValue);
-  }, [store, path, value, initialValue]);
+    void store.set(pathSegments, initialValue);
+  }, [store, pathSegments, value, initialValue]);
 
   const setValue = useCallback(
     async (next: SetStateValue<T>) => {
@@ -130,12 +138,20 @@ export function useRemoteState<T = unknown>(
         typeof next === "function"
           ? (next as (prev: T | undefined) => T)(valueRef.current)
           : next;
-      await store.set(path, nextValue);
+      await store.set(pathSegments, nextValue);
     },
-    [store, path],
+    [store, pathSegments],
   );
 
   return [value, setValue];
+}
+
+function toPath(path: string): Path {
+  const segments = parsePath(path);
+  if (segments.length === 0) {
+    throw new Error("RemoteState paths must be non-empty");
+  }
+  return segments as unknown as Path;
 }
 
 /**

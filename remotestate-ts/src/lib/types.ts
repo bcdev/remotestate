@@ -1,4 +1,5 @@
 import type { IncomingMessage, OutgoingMessage } from "./protocol";
+import type { Path } from "./path";
 
 type ReturnType<T> = T extends (...args: never[]) => Promise<infer R>
   ? R
@@ -86,43 +87,43 @@ export interface Transport {
  */
 export interface Store {
   /**
-   * Get the current value snapshot for the given path.
+   * Get the current value snapshot for the given path segments.
    *
-   * @param path The path into the state.
+   * @param path The parsed non-empty path into the state.
    * @returns The cached value, or `undefined` if the value is not cached.
    */
-  get(path: string): unknown;
+  get(path: Path): unknown;
 
   /**
-   * Set the value at a state path.
+   * Set the value at a parsed non-empty state path.
    *
    * Remote stores dispatch the built-in backend `set` action and resolve after
    * the resulting update is applied. Local stores should update their backing
    * state container and notify subscribers.
    *
-   * @param path The state path to write.
+   * @param path The parsed non-empty state path to write.
    * @param value The value to assign.
    */
-  set(path: string, value: unknown): void | Promise<void>;
+  set(path: Path, value: unknown): void | Promise<void>;
 
   /**
-   * Provides the given path.
+   * Provides the given path segments.
    * If the path's value is not provided yet (e.g., already cached),
    * fetch its current value (and cache it) so ``get()`` can return its
    * latest value.
    *
-   * @param path The state path to provide.
+   * @param path The parsed non-empty state path to provide.
    */
-  provide(path: string): void;
+  provide(path: Path): void;
 
   /**
    * Subscribes to this store by registering a listener.
    *
-   * @param path The state path to subscribe to.
+   * @param path The parsed non-empty state path to subscribe to.
    * @param listener A listener that is informed about state changes.
    * @returns A function that unregisters the listener.
    */
-  subscribe(path: string, listener: () => void): () => void;
+  subscribe(path: Path, listener: () => void): () => void;
 
   /**
    * Disposes this store.
