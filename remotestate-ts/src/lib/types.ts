@@ -82,7 +82,7 @@ export interface Transport {
 }
 
 /**
- * Read-only view of the reactive value cache used by hooks.
+ * Reactive value store used by hooks.
  */
 export interface Store {
   /**
@@ -92,6 +92,18 @@ export interface Store {
    * @returns The cached value, or `undefined` if the value is not cached.
    */
   get(path: string): unknown;
+
+  /**
+   * Set the value at a state path.
+   *
+   * Remote stores dispatch the built-in backend `set` action and resolve after
+   * the resulting update is applied. Local stores should update their backing
+   * state container and notify subscribers.
+   *
+   * @param path The state path to write.
+   * @param value The value to assign.
+   */
+  set(path: string, value: unknown): void | Promise<void>;
 
   /**
    * Provides the given path.

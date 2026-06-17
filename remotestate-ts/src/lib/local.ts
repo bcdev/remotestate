@@ -89,7 +89,10 @@ export function createLocalRemoteStateClient<S = unknown>(
   const ownsTaskStore = options.tasks === undefined;
   const actionHandlers: Partial<
     Record<string, (...args: unknown[]) => Awaitable<unknown>>
-  > = actions;
+  > = {
+    ...actions,
+    set: createLocalSetAction(store),
+  };
   const queryHandlers: Partial<
     Record<string, (...args: unknown[]) => Awaitable<unknown>>
   > = queries;
@@ -124,5 +127,16 @@ export function createLocalRemoteStateClient<S = unknown>(
         taskStore.dispose();
       }
     },
+  };
+}
+
+function createLocalSetAction(
+  store: Store,
+): (path: unknown, value: unknown) => Promise<void> {
+  return async (path, value) => {
+    if (typeof path !== "string") {
+      throw new Error("Local set action requires a string path");
+    }
+    await store.set(path, value);
   };
 }

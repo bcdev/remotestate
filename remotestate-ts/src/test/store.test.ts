@@ -221,6 +221,55 @@ describe("StoreImpl", () => {
     );
   });
 
+  it("sets a path through the built-in set action", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    void store.set("count", 3);
+
+    expect(transport.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "action",
+        method: "set",
+        args: ["count", 3],
+        kwargs: {},
+      }),
+    );
+  });
+
+  it("resolves set after matching action result", async () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    const promise = store.set("count", 3);
+    const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: sentMsg.call_id,
+      updates: { count: 3 },
+    });
+
+    await expect(promise).resolves.toBeUndefined();
+    expect(store.get("count")).toBe(3);
+  });
+
+  it("rejects set on matching error", async () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    const promise = store.set("count", 3);
+    const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
+
+    transport._triggerMessage({
+      type: "error",
+      call_id: sentMsg.call_id,
+      message: "oops",
+    });
+
+    await expect(promise).rejects.toThrow("oops");
+  });
+
   it("does not fetch path if already cached", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
