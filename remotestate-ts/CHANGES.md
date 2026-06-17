@@ -7,7 +7,7 @@
   - Removed `useOptionalRemoteStateClient<S>()`; hooks now always require a
     provider with either `url`, `client`, or `fallback`.
   - `createRemoteStateClient()` now requires an explicit URL.
-  - Added `createLocalRemoteStateClient()` to wrap local stores and
+  - Added `createLocalStateClient()` to wrap local stores and
     action/query handlers as fallback clients.
   - Updated docs with:
     - a basic counter RemoteState usage example

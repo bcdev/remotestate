@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import {
-  createLocalRemoteStateClient,
+  createLocalStateClient,
   RemoteStateProvider,
   useRemoteStateClient,
   type RemoteStateClient,
@@ -46,7 +46,7 @@ function createFallbackClient(): RemoteStateClient {
     dispose: vi.fn(),
   };
 
-  return createLocalRemoteStateClient({
+  return createLocalStateClient({
     store,
   });
 }
