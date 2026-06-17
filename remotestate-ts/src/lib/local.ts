@@ -17,7 +17,7 @@ type ServiceMethod<S, K> = K extends keyof S
   : never;
 
 /**
- * Local action handlers used by `createLocalRemoteStateClient`.
+ * Local action handlers used by `createLocalStateClient`.
  *
  * @typeParam S The type that defines the available service methods.
  */
@@ -28,7 +28,7 @@ export type LocalActionHandlers<S = unknown> = unknown extends S
     }>;
 
 /**
- * Local query handlers used by `createLocalRemoteStateClient`.
+ * Local query handlers used by `createLocalStateClient`.
  *
  * @typeParam S The type that defines the available service methods.
  */
@@ -44,7 +44,7 @@ export type LocalQueryHandlers<S = unknown> = unknown extends S
  * Supplying `tasks` lets applications keep task state in a custom store
  * instead of the built-in in-memory implementation.
  */
-export interface LocalRemoteStateClientOptions<S = unknown> {
+export interface LocalStateClientOptions<S = unknown> {
   /**
    * Reactive local store that backs the client.
    */
@@ -82,8 +82,8 @@ export interface LocalRemoteStateClientOptions<S = unknown> {
  * @param options Local client options.
  * @returns A `RemoteStateClient` backed by the supplied local store and handlers.
  */
-export function createLocalRemoteStateClient<S = unknown>(
-  options: LocalRemoteStateClientOptions<S>,
+export function createLocalStateClient<S = unknown>(
+  options: LocalStateClientOptions<S>,
 ): RemoteStateClient<S> {
   const { store, actions = {}, queries = {}, dispose } = options;
   const taskStore = options.tasks ?? createRemoteTaskStore();

@@ -76,7 +76,7 @@ export function App() {
 The public TypeScript API is exported from `remotestate`:
 
 - `createRemoteStateClient`
-- `createLocalRemoteStateClient`
+- `createLocalStateClient`
 - `RemoteStateProvider`
 - `useRemoteStateClient`
 - `useRemoteStore`
@@ -163,7 +163,7 @@ const allTasks = useRemoteTasks();
 
 ## Fallback Clients
 
-`createLocalRemoteStateClient<S>(options)` wraps local application state in a RemoteState-compatible client.
+`createLocalStateClient<S>(options)` wraps local application state in a RemoteState-compatible client.
 
 - `store` is required
 - `actions` and `queries` provide local implementations of the service contract
@@ -302,7 +302,7 @@ skip unnecessary Zustand updates and avoid extra renders.
 import type { ReactNode } from "react";
 import {
   RemoteStateProvider,
-  createLocalRemoteStateClient,
+  createLocalStateClient,
   getPathAt,
   setPathAt,
   type LocalActionHandlers,
@@ -321,17 +321,20 @@ type CounterActions = LocalActionHandlers<CounterService>;
 type CounterQueries = LocalQueryHandlers<CounterService>;
 
 function createLocalCounterClient(): RemoteStateClient<CounterService> {
+  
+  const isCountProperty = (path: Path) => path.length === 1 && path[0] === "count";
+    
   const store: Store = {
     // Read the current local value for one RemoteState path.
     get: (path: Path): unknown => {
-      if (path.length === 1 && path[0] === "count") {
+      if (isCountProperty(path)) {
         return getPathAt(useCounterStore.getState(), path);
       }
     },
 
     // Write one RemoteState path; useRemoteState() setters call this method.
     set: (path: Path, value: unknown): void => {
-      if (path.length === 1 && path[0] === "count") {
+      if (isCountProperty(path)) {
         const currentState = useCounterStore.getState();
         const nextState = setPathAt(currentState, pathSegments, value);
         if (nextState !== currentState) {
@@ -342,7 +345,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
 
     // Re-render hook consumers when the subscribed path changes.
     subscribe: (path: Path, listener: () => void): (() => void) => {
-      if (path.length === 1 && path[0] === "count") {
+      if (isCountProperty(path)) {
         return useCounterStore.subscribe(listener);
       }
       return () => {};
@@ -366,7 +369,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
     // Add local equivalents for client.query(...) methods. Not used here.
   };
 
-  return createLocalRemoteStateClient<CounterService>({
+  return createLocalStateClient<CounterService>({
     // Reactive store used by useRemoteStateValue() and useRemoteState().
     store,
 

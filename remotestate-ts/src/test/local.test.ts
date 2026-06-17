@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLocalRemoteStateClient, type Store } from "../lib";
+import { createLocalStateClient, type Store } from "../lib";
 
-describe("createLocalRemoteStateClient", () => {
+describe("createLocalStateClient", () => {
   function createStore(): Store {
     return {
       get: vi.fn(),
@@ -18,7 +18,7 @@ describe("createLocalRemoteStateClient", () => {
       count(): Promise<number>;
     };
     let count = 0;
-    const client = createLocalRemoteStateClient<CounterService>({
+    const client = createLocalStateClient<CounterService>({
       store: createStore(),
       actions: {
         increment: (step) => {
@@ -37,7 +37,7 @@ describe("createLocalRemoteStateClient", () => {
 
   it("delegates the built-in set action to the store", async () => {
     const set = vi.fn();
-    const client = createLocalRemoteStateClient({
+    const client = createLocalStateClient({
       store: {
         ...createStore(),
         set,
@@ -50,7 +50,7 @@ describe("createLocalRemoteStateClient", () => {
   });
 
   it("rejects built-in set action without a string path", async () => {
-    const client = createLocalRemoteStateClient({
+    const client = createLocalStateClient({
       store: createStore(),
     });
 
@@ -60,7 +60,7 @@ describe("createLocalRemoteStateClient", () => {
   });
 
   it("throws for unsupported local methods", async () => {
-    const client = createLocalRemoteStateClient({
+    const client = createLocalStateClient({
       store: createStore(),
     });
 
@@ -82,7 +82,7 @@ describe("createLocalRemoteStateClient", () => {
       dispose: storeDispose,
     };
     const dispose = vi.fn();
-    const client = createLocalRemoteStateClient({ store, dispose });
+    const client = createLocalStateClient({ store, dispose });
 
     client.dispose();
 
