@@ -5,6 +5,7 @@ describe("createLocalRemoteStateClient", () => {
   function createStore(): Store {
     return {
       get: vi.fn(),
+      set: vi.fn(),
       provide: vi.fn(),
       subscribe: vi.fn(() => vi.fn()),
       dispose: vi.fn(),
@@ -13,8 +14,6 @@ describe("createLocalRemoteStateClient", () => {
 
   it("dispatches local actions and queries", async () => {
     type CounterService = {
-      get(path: string): Promise<number>;
-      set(path: string, value: number): Promise<void>;
       increment(step: number): Promise<void>;
       count(): Promise<number>;
     };
@@ -22,17 +21,11 @@ describe("createLocalRemoteStateClient", () => {
     const client = createLocalRemoteStateClient<CounterService>({
       store: createStore(),
       actions: {
-        set: (path, value) => {
-          if (path === "count") {
-            count = value;
-          }
-        },
         increment: (step) => {
           count += step;
         },
       },
       queries: {
-        get: (path) => (path === "count" ? count : 0),
         count: () => count,
       },
     });
@@ -40,11 +33,30 @@ describe("createLocalRemoteStateClient", () => {
     await client.action("increment", [2]);
 
     await expect(client.query("count")).resolves.toBe(2);
-    await expect(client.query("get", ["count"])).resolves.toBe(2);
+  });
+
+  it("delegates the built-in set action to the store", async () => {
+    const set = vi.fn();
+    const client = createLocalRemoteStateClient({
+      store: {
+        ...createStore(),
+        set,
+      },
+    });
 
     await client.action("set", ["count", 7]);
 
-    await expect(client.query("count")).resolves.toBe(7);
+    expect(set).toHaveBeenCalledWith("count", 7);
+  });
+
+  it("rejects built-in set action without a string path", async () => {
+    const client = createLocalRemoteStateClient({
+      store: createStore(),
+    });
+
+    await expect(client.action("set", [7, "count"])).rejects.toThrow(
+      "Local set action requires a string path",
+    );
   });
 
   it("throws for unsupported local methods", async () => {
@@ -64,6 +76,7 @@ describe("createLocalRemoteStateClient", () => {
     const storeDispose = vi.fn();
     const store: Store = {
       get: vi.fn(),
+      set: vi.fn(),
       provide: vi.fn(),
       subscribe: vi.fn(() => vi.fn()),
       dispose: storeDispose,

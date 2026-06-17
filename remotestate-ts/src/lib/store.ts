@@ -47,6 +47,38 @@ export class StoreImpl implements Store {
   }
 
   /**
+   * Set a state value through the backend's built-in `set` action.
+   *
+   * @param path The state path to write.
+   * @param value The value to assign.
+   * @returns A promise that resolves after the action result is applied.
+   */
+  set(path: string, value: unknown): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const callId = crypto.randomUUID();
+      const unsubscribe = this.transport.subscribe((msg) => {
+        if (!("call_id" in msg) || msg.call_id !== callId) {
+          return;
+        }
+        unsubscribe();
+        if (msg.type === "action_result") {
+          resolve();
+        } else if (msg.type === "error") {
+          reject(new Error(msg.message));
+        }
+      });
+
+      this.transport.send({
+        type: "action",
+        call_id: callId,
+        method: "set",
+        args: [path, value],
+        kwargs: {},
+      });
+    });
+  }
+
+  /**
    * Ensure a path is fetched from Python if it is not already cached.
    *
    * @param path The state path to provide.

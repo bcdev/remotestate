@@ -103,7 +103,7 @@ export function useRemoteState<T = unknown>(
   path: string,
   initialValue?: T,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
-  const remoteState = useRemoteStateClient();
+  const store = useRemoteStore();
   const value = useRemoteStateValue<T>(path);
   const hasInitialized = useRef(false);
   const valueRef = useRef<T | undefined>(value);
@@ -121,13 +121,8 @@ export function useRemoteState<T = unknown>(
       return;
     }
     hasInitialized.current = true;
-    void remoteState.action(
-      "set",
-      [path, initialValue],
-      {},
-      { awaitInvalidate: true },
-    );
-  }, [remoteState, path, value, initialValue]);
+    void store.set(path, initialValue);
+  }, [store, path, value, initialValue]);
 
   const setValue = useCallback(
     async (next: SetStateValue<T>) => {
@@ -135,14 +130,9 @@ export function useRemoteState<T = unknown>(
         typeof next === "function"
           ? (next as (prev: T | undefined) => T)(valueRef.current)
           : next;
-      await remoteState.action(
-        "set",
-        [path, nextValue],
-        {},
-        { awaitInvalidate: true },
-      );
+      await store.set(path, nextValue);
     },
-    [remoteState, path],
+    [store, path],
   );
 
   return [value, setValue];
