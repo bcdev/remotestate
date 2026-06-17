@@ -161,7 +161,7 @@ const saveTask = useRemoteTask("save");
 const allTasks = useRemoteTasks();
 ```
 
-## Local Clients
+## Fallback Clients
 
 `createLocalRemoteStateClient<S>(options)` wraps local application state in a RemoteState-compatible client.
 
@@ -170,67 +170,10 @@ const allTasks = useRemoteTasks();
 - `tasks` can replace the default in-memory task store
 - `dispose` runs when the local client is released
 
-This is the main building block for `RemoteStateProvider` fallback mode.
+This is the main building block for `RemoteStateProvider` fallback mode, i.e., if the WebSocket
+URL was not provided to the `RemoteStateProvider`.
 
-```tsx
-import {
-  RemoteStateProvider,
-  createLocalRemoteStateClient,
-  getPathAt,
-  setPathAt,
-  type Path,
-  type RemoteStateClient,
-  type Store,
-} from "remotestate";
-
-type CounterService = {
-  increment(): Promise<void>;
-  compute(x: number): Promise<number>;
-};
-
-function createCounterClient(): RemoteStateClient<CounterService> {
-  let state = { count: 0 };
-  const listeners = new Set<() => void>();
-
-  const notify = () => {
-    listeners.forEach((listener) => listener());
-  };
-
-  const store: Store = {
-    get: (path: Path) => getPathAt(state, path),
-    set: async (path: Path, value: unknown) => {
-      const nextState = setPathAt(state, path, value) as typeof state;
-      if (nextState !== state) {
-        state = nextState;
-        notify();
-      }
-    },
-    provide: () => {},
-    subscribe: (_path: Path, listener: () => void) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    dispose: () => listeners.clear(),
-  };
-
-  return createLocalRemoteStateClient({
-    store,
-    actions: {
-      increment: async () => {
-        state = setPathAt(state, ["count"] as const, state.count + 1) as typeof state;
-        notify();
-      },
-    },
-    queries: {
-      compute: async (x: number) => x * state.count,
-    },
-  });
-}
-
-export function App() {
-  return <RemoteStateProvider fallback={createCounterClient}>{/* ... */}</RemoteStateProvider>;
-}
-```
+Find an example in the section **User Guide** below. 
 
 ## Path Helpers
 
@@ -257,6 +200,204 @@ RemoteState tracks long-running actions and queries as task snapshots.
 - `TaskStoreImpl` is the concrete store implementation
 - `useRemoteTaskStore()` and `useRemoteTasks()` let React components observe progress
 - `useRemoteTask(taskId)` is useful when you know the task identifier up front
+
+## User Guide
+
+### Direct Client
+
+Use `createRemoteStateClient(url)` when you want a standalone bridge object.
+The URL must be provided explicitly.
+
+```tsx
+import { createRemoteStateClient } from "remotestate";
+
+type CounterService = {
+  increment(): Promise<void>;
+  compute(x: number): Promise<number>;
+};
+
+const client = createRemoteStateClient<CounterService>(
+  "ws://localhost:9753/ws",
+);
+```
+
+`client` exposes `action()` and `query()` methods together with the reactive
+store and task store used by the React hooks.
+
+The low-level store can be observed by path:
+
+```typescript
+const unsubscribe = client.store.subscribe("items[1].label", () => {
+  console.log(client.store.get("items[1].label"));
+});
+```
+
+Subscriptions also react to related parent or child updates. For example, a
+listener on `"items"` fires when `"items[1].label"` changes.
+
+### Using a Remote State
+
+Use `RemoteStateProvider` when your app always expects a RemoteState backend.
+The hooks below bind React components to the Python-owned `"count"` state and
+the typed `increment` action.
+
+```tsx
+import {
+  RemoteStateProvider,
+  useRemoteStateClient,
+  useRemoteState,
+} from "remotestate";
+
+type CounterService = {
+  increment(): Promise<void>;
+  compute(x: number): Promise<number>;
+};
+
+function Counter() {
+  const client = useRemoteStateClient<CounterService>();
+  const [count, setCount] = useRemoteState<number>("count", 0);
+
+  return (
+    <div>
+      <p>Count: {count ?? "..."}</p>
+      <button onClick={() => void setCount((prev) => (prev ?? 0) + 1)}>
+        Set from React
+      </button>
+      <button onClick={() => void client.action("increment")}>
+        Run backend action
+      </button>
+    </div>
+  );
+}
+
+export function App() {
+  return (
+    <RemoteStateProvider url="ws://localhost:9753/ws">
+      <Counter />
+    </RemoteStateProvider>
+  );
+}
+```
+
+### Optional Remote State With Local State Fallback
+
+Some applications can run with or without a RemoteState backend. For example,
+an addon might use Python-owned state when a RemoteState URL is configured, but
+fall back to the app's existing local state store when no backend is available.
+The provider always exposes a client: it creates a remote client when `url` is a
+non-empty string, otherwise it calls `fallback`. If neither `url` nor
+`fallback` is provided, the provider throws.
+
+Fallback clients use the same `RemoteStateClient` shape as remote clients, so
+the standard hooks keep working and remain reactive. The example below adapts a
+[Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
+
+When you implement a fallback store, the store methods receive parsed,
+non-empty path segments. `getPathAt()` and `setPathAt()` are the shared path
+helpers to use for nested reads and writes. `setPathAt()` preserves the
+original identity when the target value is unchanged, which makes it easy to
+skip unnecessary Zustand updates and avoid extra renders.
+
+```tsx
+import type { ReactNode } from "react";
+import {
+  RemoteStateProvider,
+  createLocalRemoteStateClient,
+  getPathAt,
+  setPathAt,
+  type LocalActionHandlers,
+  type LocalQueryHandlers,
+  type Path,
+  type RemoteStateClient,
+  type Store,
+} from "remotestate";
+import { useCounterStore } from "./counterStore";
+
+type CounterService = {
+  increment(): Promise<void>;
+};
+
+type CounterActions = LocalActionHandlers<CounterService>;
+type CounterQueries = LocalQueryHandlers<CounterService>;
+
+function createLocalCounterClient(): RemoteStateClient<CounterService> {
+  const store: Store = {
+    // Read the current local value for one RemoteState path.
+    get: (path: Path): unknown => {
+      if (path.length === 1 && path[0] === "count") {
+        return getPathAt(useCounterStore.getState(), path);
+      }
+    },
+
+    // Write one RemoteState path; useRemoteState() setters call this method.
+    set: (path: Path, value: unknown): void => {
+      if (path.length === 1 && path[0] === "count") {
+        const currentState = useCounterStore.getState();
+        const nextState = setPathAt(currentState, pathSegments, value);
+        if (nextState !== currentState) {
+          useCounterStore.setState(nextState);
+        }
+      }
+    },
+
+    // Re-render hook consumers when the subscribed path changes.
+    subscribe: (path: Path, listener: () => void): (() => void) => {
+      if (path.length === 1 && path[0] === "count") {
+        return useCounterStore.subscribe(listener);
+      }
+      return () => {};
+    },
+
+    // Ensure a path is available; local stores are already available here.
+    provide: (_path: Path): void => {},
+
+    // Release local resources owned by this store, if any.
+    dispose: (): void => {},
+  };
+
+  const actions: CounterActions = {
+    // Implement local equivalents for client.action("increment").
+    increment: (): void => {
+      useCounterStore.getState().increment();
+    },
+  };
+
+  const queries: CounterQueries = {
+    // Add local equivalents for client.query(...) methods. Not used here.
+  };
+
+  return createLocalRemoteStateClient<CounterService>({
+    // Reactive store used by useRemoteStateValue() and useRemoteState().
+    store,
+
+    // Local service actions used by useRemoteStateClient().action(...).
+    actions,
+
+    // Local service queries used by useRemoteStateClient().query(...).
+    queries,
+  });
+}
+
+export function CounterStateProvider({
+  remoteUrl,
+  children,
+}: {
+  remoteUrl?: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <RemoteStateProvider url={remoteUrl} fallback={createLocalCounterClient}>
+      {children}
+    </RemoteStateProvider>
+  );
+}
+```
+
+Components can now use `useRemoteState()`, `useRemoteStateValue()`, and
+`useRemoteStateClient()` in both modes. When `url` changes between absent and
+present, the provider switches clients and disposes the client it created. It
+does not sync state between the fallback client and the remote client.
+
 
 ## More Docs
 

@@ -43,7 +43,7 @@ pixi add remotestate
 import remotestate as rs
 
 
-class Counter(rs.Service):
+class CounterService(rs.Service):
     def __init__(self) -> None:
         super().__init__(rs.Store({"count": 0, "user": {"name": "forman"}}))
 
@@ -57,7 +57,7 @@ class Counter(rs.Service):
         return x * self.store.get("count")
 
 
-rs.serve(Counter(), ui_dist="my-ui/dist")
+rs.serve(CounterService(), ui_dist="my-ui/dist")
 ```
 
 ## API Overview
@@ -109,13 +109,14 @@ assert store.get("user.city") == "Hamburg"
 assert store.get("items") == [{"label": "foo"}]
 ```
 
-`get()` never calls the default factory. Reads stay side-effect free, and missing values return `None` unless `require=True` is passed.
+`get()` never calls the default factory. Reads stay side-effect free, and missing 
+values return `None` unless `require=True` is passed.
 
 ## Actions and Queries
 
 Use `@action` for state-changing service methods and `@query` for read-only methods.
 
-- `@action` batches `store.set()` calls and flushes them as one `action_result`
+- `@action` batches `store.set()` calls and flushes them as one `action_result` message.
 - `@query` is read-only; mutating the store inside a query raises `PermissionError`
 - sync and async methods are both supported
 
@@ -140,15 +141,19 @@ class Counter(rs.Service):
 
 - `get(path)` reads a store value by path
 - `set(path, value)` writes a store value by path
-- `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages for tracked calls
+- `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages 
+  for tracked calls
 
-The reserved service method names are `get`, `set`, and `notify`. Do not reuse those names for custom actions or queries.
+The reserved service method names are `get`, `set`, and `notify`. Do not reuse those names 
+for custom actions or queries.
 
-`Service._init_app(app)` can be overridden to customize the FastAPI app when `serve()` creates one.
+`Service._init_app(app)` can be overridden to customize the FastAPI app when `serve()` 
+creates one.
 
 ## Serving
 
-`serve(service, *, ui_dist, mounts, app, open_browser, open_iframe, width, height, host, port, **uvicorn_settings)` starts the RemoteState server and connects it to a frontend bundle.
+`serve(service, *, ui_dist, mounts, app, open_browser, open_iframe, width, height, host, port, **uvicorn_settings)` 
+starts the RemoteState server and connects it to a frontend bundle.
 
 - `service` is a `Service` instance
 - `ui_dist` can be a local React build directory or an HTTP(S) URL
@@ -157,11 +162,13 @@ The reserved service method names are `get`, `set`, and `notify`. Do not reuse t
 - `open_browser` and `open_iframe` control how the UI is shown
 - `host` and `port` configure the backend server
 
-By default, RemoteState opens a browser outside Jupyter and renders an iframe inside Jupyter. Re-running the same notebook cell restarts the server automatically.
+By default, RemoteState opens a browser outside Jupyter and renders an iframe inside Jupyter. 
+Re-running the same notebook cell restarts the server automatically.
 
 ## Paths
 
-`remotestate.path` exposes the parsed path types used by `Store.default_factory` and other advanced integrations:
+`remotestate.path` exposes the parsed path types used by `Store.default_factory` and other 
+advanced integrations:
 
 - `Path`
 - `Property`
