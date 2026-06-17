@@ -116,12 +116,13 @@ skip unnecessary Zustand updates and avoid extra renders.
 ```tsx
 import type { ReactNode } from "react";
 import {
+  RemoteStateProvider,
   createLocalRemoteStateClient,
   getPathAt,
-  RemoteStateProvider,
   setPathAt,
   type LocalActionHandlers,
   type LocalQueryHandlers,
+  type Path,
   type RemoteStateClient,
   type Store,
 } from "remotestate";
@@ -137,14 +138,15 @@ type CounterQueries = LocalQueryHandlers<CounterService>;
 function createLocalCounterClient(): RemoteStateClient<CounterService> {
   const store: Store = {
     // Read the current local value for one RemoteState path.
-    get: (pathSegments): unknown =>
-      pathSegments.length === 1 && pathSegments[0] === "count"
-        ? getPathAt(useCounterStore.getState(), pathSegments)
-        : undefined,
+    get: (path: Path): unknown => {
+      if (path.length === 1 && path[0] === "count") {
+        return getPathAt(useCounterStore.getState(), path);
+      }
+    },
 
     // Write one RemoteState path; useRemoteState() setters call this method.
-    set: (pathSegments, value: unknown): void => {
-      if (pathSegments.length === 1 && pathSegments[0] === "count") {
+    set: (path: Path, value: unknown): void => {
+      if (path.length === 1 && path[0] === "count") {
         const currentState = useCounterStore.getState();
         const nextState = setPathAt(currentState, pathSegments, value);
         if (nextState !== currentState) {
@@ -153,16 +155,16 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
       }
     },
 
-    // Ensure a path is available; local stores are already available here.
-    provide: (_pathSegments): void => {},
-
     // Re-render hook consumers when the subscribed path changes.
-    subscribe: (pathSegments, listener: () => void): (() => void) => {
-      if (pathSegments.length !== 1 || pathSegments[0] !== "count") {
-        return () => {};
+    subscribe: (path: Path, listener: () => void): (() => void) => {
+      if (path.length === 1 && path[0] === "count") {
+        return useCounterStore.subscribe(listener);
       }
-      return useCounterStore.subscribe(listener);
+      return () => {};
     },
+
+    // Ensure a path is available; local stores are already available here.
+    provide: (_path: Path): void => {},
 
     // Release local resources owned by this store, if any.
     dispose: (): void => {},
