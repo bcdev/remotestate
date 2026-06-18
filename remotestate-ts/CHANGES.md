@@ -32,6 +32,13 @@
     paths update.
   - `Store.subscribe()` now takes a required path first:
     `subscribe(path, listener)`.
+- Improved TypeScript package build output:
+  - Split library, Node/Vite config, and ESLint TypeScript projects.
+  - Clean `dist` before rebuilding to prevent stale artifacts.
+  - Keep API docs in the bundled `.d.ts` file while stripping JSDoc blocks
+    from the bundled runtime JavaScript.
+  - Ensure the library bundle externalizes React peer dependencies and avoids
+    publishing test/dev-only artifacts.
 - Refactorings:
   - Renamed `RemoteState` to `RemoteStateClient`.
   - Renamed `RemoteStateOptions` to `RemoteStateClientOptions`.
