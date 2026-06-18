@@ -4,14 +4,49 @@
 export type PathSegment = string | number;
 
 /**
- * A non-empty parsed RemoteState path.
+ * A relative RemoteState path comprising property names or
+ * integer array indices.
+ */
+export type RelativePath = readonly PathSegment[];
+
+/**
+ * A non-empty parsed path.
  *
  * The first segment is always a string identifier; later segments may be
  * strings or numeric array indices. This is the form used by store
  * implementations and other low-level helpers that already operate on
  * segmented paths.
  */
-export type Path = readonly [string, ...PathSegment[]];
+export type Path = readonly [string, ...RelativePath];
+
+/**
+ * A value of type ``PathLike`` can be normalized into a value of type `Path`.
+ */
+export type PathLike = string | RelativePath | Path;
+
+/**
+ * Normalizes a path-like value into a validated RemoteState path.
+ *
+ * @param path A path-like value.
+ * @returns The validated RemoteState path.
+ */
+export function normalizePath(path: PathLike): Path {
+  let rawPath: readonly PathSegment[];
+  if (typeof path === "string") {
+    rawPath = parsePath(path);
+  } else {
+    rawPath = path;
+  }
+  if (rawPath.length === 0) {
+    throw new Error("RemoteState paths must be non-empty");
+  }
+  if (typeof rawPath[0] !== "string" || rawPath[0] === "") {
+    throw new Error(
+      "RemoteState paths must start with a non-empty property name",
+    );
+  }
+  return rawPath as unknown as Path;
+}
 
 /**
  * Parse a dotted/bracket path like `items[1].label` into path segments.
@@ -21,7 +56,7 @@ export type Path = readonly [string, ...PathSegment[]];
  * @param path The path string to parse.
  * @returns The parsed path segments.
  */
-export function parsePath(path: string): PathSegment[] {
+export function parsePath(path: string): RelativePath {
   const segments: PathSegment[] = [];
   const first = /^[a-zA-Z_][a-zA-Z0-9_]*/.exec(path);
   if (!first || first.index !== 0) {
@@ -72,10 +107,7 @@ export function formatPath(path: Path): string {
  * @param path The path segments to follow.
  * @returns The nested value, or `undefined` if any segment is missing.
  */
-export function getPathAt(
-  value: unknown,
-  path: readonly PathSegment[],
-): unknown {
+export function getPathAt(value: unknown, path: RelativePath): unknown {
   let current = value;
   for (const segment of path) {
     current = getChild(current, segment);
@@ -99,7 +131,7 @@ export function getPathAt(
  */
 export function setPathAt(
   value: unknown,
-  path: readonly PathSegment[],
+  path: RelativePath,
   childValue: unknown,
 ): unknown {
   if (path.length === 0) {
@@ -136,8 +168,8 @@ export function setPathAt(
  * @returns Whether `prefix` is the same path or an ancestor of `path`.
  */
 export function isPathPrefixSegments(
-  prefix: readonly PathSegment[],
-  path: readonly PathSegment[],
+  prefix: RelativePath,
+  path: RelativePath,
 ): boolean {
   if (prefix.length > path.length) {
     return false;
@@ -157,16 +189,16 @@ export function pathsOverlap(left: string, right: string): boolean {
 }
 
 /**
- * Drop a parsed prefix from a parsed path.
+ * Drop a prefix from a path.
  *
  * @param prefix The prefix to remove.
  * @param path The full parsed path.
- * @returns The remaining path segments after the prefix.
+ * @returns The remaining relative path after the prefix.
  */
 export function pathSegmentsAfter(
-  prefix: readonly PathSegment[],
-  path: readonly PathSegment[],
-): PathSegment[] {
+  prefix: RelativePath,
+  path: RelativePath,
+): RelativePath {
   return path.slice(prefix.length);
 }
 

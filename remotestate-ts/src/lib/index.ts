@@ -8,7 +8,7 @@ export type {
   LocalQueryHandlers,
   LocalStateClientOptions,
 } from "./local";
-export type { Path, PathSegment } from "./path";
+export type { Path, PathLike, PathSegment } from "./path";
 export type {
   IncomingMessage,
   OutgoingMessage,
