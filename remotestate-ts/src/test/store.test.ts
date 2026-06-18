@@ -173,6 +173,86 @@ describe("StoreImpl", () => {
     expect(store.get(["items"])).not.toBe(items);
   });
 
+  it("materializes a subscribed parent snapshot from a leaf action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe(["processRequests"], listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "processRequests.sleep_a_while.inputs.duration": 123 },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(store.get(["processRequests"])).toEqual({
+      sleep_a_while: { inputs: { duration: 123 } },
+    });
+  });
+
+  it("still fetches a parent path after materializing it from a leaf update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    store.subscribe(["processRequests"], vi.fn());
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "processRequests.sleep_a_while.inputs.duration": 123 },
+    });
+    transport.send.mockClear();
+
+    store.provide(["processRequests"]);
+
+    expect(transport.send).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "get", path: "processRequests" }),
+    );
+  });
+
+  it("materializes a subscribed child snapshot from a parent action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe(["processRequests", "sleep_a_while", "inputs"], listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: {
+        processRequests: {
+          sleep_a_while: { inputs: { duration: 123 }, outputs: {} },
+        },
+      },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(
+      store.get(["processRequests", "sleep_a_while", "inputs"]),
+    ).toEqual({ duration: 123 });
+  });
+
+  it("materializes a subscribed child snapshot from a parent fetch result", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe(["processRequests", "sleep_a_while", "inputs"], listener);
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "processRequests",
+      value: {
+        sleep_a_while: { inputs: { duration: 123 }, outputs: {} },
+      },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(
+      store.get(["processRequests", "sleep_a_while", "inputs"]),
+    ).toEqual({ duration: 123 });
+  });
+
   it("refreshes cached child values from a parent action update", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));

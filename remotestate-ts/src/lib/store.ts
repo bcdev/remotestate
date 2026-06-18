@@ -10,6 +10,7 @@ import {
   type Path,
 } from "./path";
 import type { Store, Transport } from "./types";
+import { DebugLog, getDebugLog } from "./debug";
 
 type StoreListener = () => void;
 type StoreSubscription = {
@@ -25,17 +26,26 @@ type StoreSubscription = {
  */
 export class StoreImpl implements Store {
   private cache: Map<string, unknown> = new Map();
+  // Paths that came directly from the backend may satisfy provide().
+  // Materialized ancestors are useful snapshots, but still need a full fetch.
+  private authoritativePaths: Set<string> = new Set();
   private listeners: Set<StoreSubscription> = new Set();
   private pendingFetches: Set<string> = new Set();
   private parsedPaths: Map<string, Path> = new Map();
   private readonly unsubscribeTransport: () => void;
+  private readonly debugLog: DebugLog;
 
   /**
    * Create a store cache bound to one transport.
    *
    * @param transport Transport used to request and receive state values.
+   * @param debug If true, outputs debugging info to the console.
    */
-  constructor(private readonly transport: Transport) {
+  constructor(
+    private readonly transport: Transport,
+    debug?: boolean,
+  ) {
+    this.debugLog = getDebugLog(!!debug);
     this.unsubscribeTransport = transport.subscribe((msg) => {
       if (msg.type === "get_result") {
         this._onGetResult(msg);
@@ -94,7 +104,10 @@ export class StoreImpl implements Store {
    */
   provide(path: Path): void {
     const pathKey = formatPath(path);
-    if (this.cache.has(pathKey) || this.pendingFetches.has(pathKey)) {
+    if (
+      this.authoritativePaths.has(pathKey) ||
+      this.pendingFetches.has(pathKey)
+    ) {
       return;
     }
     this.pendingFetches.add(pathKey);
@@ -127,11 +140,12 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport();
     this.listeners.clear();
     this.cache.clear();
+    this.authoritativePaths.clear();
     this.parsedPaths.clear();
   }
 
   private _onGetResult(msg: GetResultMessage): void {
-    this.cache.set(msg.path, msg.value);
+    this._applyUpdate(msg.path, msg.value);
     this.pendingFetches.delete(msg.path);
     this._notify([msg.path]);
   }
@@ -146,27 +160,36 @@ export class StoreImpl implements Store {
 
   private _applyUpdate(path: string, value: unknown): void {
     this.cache.set(path, value);
+    this.authoritativePaths.add(path);
     const parsedPath = this._getParsedPath(path);
     if (parsedPath.length === 0) {
       return;
     }
 
-    for (const [cachedPath, cachedValue] of [...this.cache.entries()]) {
-      if (cachedPath === path) {
+    for (const relatedPath of this._getRelatedPaths(path)) {
+      if (relatedPath === path) {
         continue;
       }
 
-      const cachedSegments = this._getParsedPath(cachedPath);
-      if (cachedSegments.length === 0) {
+      const relatedSegments = this._getParsedPath(relatedPath);
+      if (relatedSegments.length === 0) {
         continue;
       }
 
-      if (isPathPrefixSegments(cachedSegments, parsedPath)) {
-        const relativePath = pathSegmentsAfter(cachedSegments, parsedPath);
-        this.cache.set(cachedPath, setPathAt(cachedValue, relativePath, value));
-      } else if (isPathPrefixSegments(parsedPath, cachedSegments)) {
-        const relativePath = pathSegmentsAfter(parsedPath, cachedSegments);
-        this.cache.set(cachedPath, getPathAt(value, relativePath));
+      if (isPathPrefixSegments(relatedSegments, parsedPath)) {
+        // A subscribed/cached ancestor changed through a leaf update.
+        // Build or patch that parent snapshot so React sees a new value.
+        const relativePath = pathSegmentsAfter(relatedSegments, parsedPath);
+        this.cache.set(
+          relatedPath,
+          setPathAt(this.cache.get(relatedPath), relativePath, value),
+        );
+      } else if (isPathPrefixSegments(parsedPath, relatedSegments)) {
+        // A subscribed/cached descendant changed through a parent update.
+        // Its value is fully known because it is contained in this update.
+        const relativePath = pathSegmentsAfter(parsedPath, relatedSegments);
+        this.cache.set(relatedPath, getPathAt(value, relativePath));
+        this.authoritativePaths.add(relatedPath);
       }
     }
   }
@@ -176,6 +199,8 @@ export class StoreImpl implements Store {
     if (paths.length === 0) {
       return;
     }
+
+    this.debugLog("Values changed for paths:", paths);
 
     for (const { listener, path } of this.listeners) {
       if (paths.some((changedPath) => pathsOverlap(path, changedPath))) {
@@ -192,5 +217,22 @@ export class StoreImpl implements Store {
     const parsedPath = parsePath(path);
     this.parsedPaths.set(path, parsedPath);
     return parsedPath;
+  }
+
+  private _getRelatedPaths(path: string): Set<string> {
+    // Existing cache entries, active subscriptions, and pending fetches can all
+    // produce snapshots that useSyncExternalStore compares after notification.
+    const relatedPaths = new Set(this.cache.keys());
+    for (const { path: listenerPath } of this.listeners) {
+      if (pathsOverlap(path, listenerPath)) {
+        relatedPaths.add(listenerPath);
+      }
+    }
+    for (const pendingPath of this.pendingFetches) {
+      if (pathsOverlap(path, pendingPath)) {
+        relatedPaths.add(pendingPath);
+      }
+    }
+    return relatedPaths;
   }
 }

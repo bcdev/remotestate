@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -55,6 +55,32 @@ def test_configure_app_called(server):
     service = server.service
     assert hasattr(service, "the_app")
     assert isinstance(service.the_app, FastAPI)
+
+
+def test_external_store_set_broadcasts_update(server):
+    server._transport.send_nowait = MagicMock()
+
+    server._store.set("count", 7)
+
+    server._transport.send_nowait.assert_called_once()
+    sent = server._transport.send_nowait.call_args[0][0]
+    assert isinstance(sent, ActionResultMessage)
+    assert sent.call_id == "store_update"
+    assert sent.updates == {"count": 7}
+
+
+@pytest.mark.asyncio
+async def test_action_store_set_does_not_broadcast_duplicate_update(server):
+    server._transport.send = AsyncMock()
+    server._transport.send_nowait = MagicMock()
+
+    await server._dispatch(
+        ActionMessage(
+            call_id="abc", task_id="abc", method="increment", args=[], kwargs={}
+        )
+    )
+
+    server._transport.send_nowait.assert_not_called()
 
 
 # --- WebSocketTransport ---
