@@ -1,21 +1,50 @@
-import { describe, expect, it } from "vitest";
-import { formatPath, getPathAt, parsePath, setPathAt } from "../lib";
+import { describe, expect, it, expectTypeOf } from "vitest";
+import {
+  formatPath,
+  getPathAt,
+  normalizePath,
+  parsePath,
+  setPathAt,
+  type Path,
+  type PathLike,
+} from "../lib";
 
 describe("parsePath", () => {
   it("parses dotted and indexed paths", () => {
     expect(parsePath("items[1].label")).toEqual(["items", 1, "label"]);
+    expectTypeOf(parsePath("items[1].label")).toEqualTypeOf<Path>();
+  });
+
+  it("parses bracketed string keys", () => {
+    expect(parsePath('user["display name"]')).toEqual(["user", "display name"]);
+    expect(parsePath("user['display name']")).toEqual(["user", "display name"]);
+    expect(parsePath('user["0"]')).toEqual(["user", "0"]);
+    expect(parsePath("user['0']")).toEqual(["user", "0"]);
+    expect(parsePath('items[""].label')).toEqual(["items", "", "label"]);
+    expect(parsePath('user["weird.key"].value')).toEqual([
+      "user",
+      "weird.key",
+      "value",
+    ]);
+    expect(parsePath('user[""]')).toEqual(["user", ""]);
   });
 
   it("parses a single root segment", () => {
     expect(parsePath("count")).toEqual(["count"]);
   });
 
-  it("returns the parsed prefix for invalid trailing input", () => {
-    expect(parsePath("items..label")).toEqual(["items"]);
+  it("throws on invalid trailing input", () => {
+    expect(() => parsePath("items..label")).toThrow(SyntaxError);
   });
 
-  it("returns an empty path for invalid roots", () => {
-    expect(parsePath("1items")).toEqual([]);
+  it("throws on invalid roots", () => {
+    expect(() => parsePath("1items")).toThrow(SyntaxError);
+    expect(() => parsePath('["root"]')).toThrow(SyntaxError);
+    expect(() => parsePath("[0]")).toThrow(SyntaxError);
+  });
+
+  it("throws on non-canonical integer syntax", () => {
+    expect(() => parsePath("items[01]")).toThrow(SyntaxError);
   });
 });
 
@@ -24,8 +53,64 @@ describe("formatPath", () => {
     expect(formatPath(["items", 1, "label"])).toBe("items[1].label");
   });
 
+  it("formats bracketed string keys canonically", () => {
+    expect(formatPath(["user", "display name"])).toBe('user["display name"]');
+    expect(formatPath(["user", "0"])).toBe('user["0"]');
+    expect(formatPath(["items", "", "label"])).toBe('items[""].label');
+    expect(formatPath(["user", "weird.key", "value"])).toBe(
+      'user["weird.key"].value',
+    );
+    expect(formatPath(["items", ""])).toBe('items[""]');
+  });
+
   it("formats a single root segment", () => {
     expect(formatPath(["count"])).toBe("count");
+  });
+});
+
+describe("normalizePath", () => {
+  it("normalizes dotted strings into parsed paths", () => {
+    const normalized = normalizePath("items[1].label");
+
+    expect(normalized).toEqual(["items", 1, "label"]);
+    expectTypeOf(normalized).toEqualTypeOf<Path>();
+  });
+
+  it("accepts an already parsed PathLike value without cloning", () => {
+    const path = ["items", 1, "label"] as const satisfies PathLike;
+
+    expect(normalizePath(path)).toBe(path);
+  });
+
+  it("accepts parsed relative paths", () => {
+    const parsed = parsePath("items[1].label");
+
+    expect(normalizePath(parsed)).toEqual(["items", 1, "label"]);
+  });
+
+  it("accepts string keys in array form", () => {
+    expect(normalizePath(["items", "display name"])).toEqual([
+      "items",
+      "display name",
+    ]);
+    expect(normalizePath(["items", ""])).toEqual(["items", ""]);
+  });
+
+  it("rejects empty paths", () => {
+    expect(() => normalizePath([])).toThrow(SyntaxError);
+    expect(() => normalizePath("")).toThrow(SyntaxError);
+  });
+
+  it("rejects paths that do not start with a non-empty property name", () => {
+    expect(() => normalizePath([1, "label"])).toThrow(SyntaxError);
+    expect(() => normalizePath(["", "label"])).toThrow(SyntaxError);
+    expect(() => normalizePath(["items", 1.5])).toThrow(SyntaxError);
+    expect(() => normalizePath(["items", -1, "label"])).toThrow(SyntaxError);
+  });
+
+  it("rejects invalid string syntax", () => {
+    expect(() => normalizePath("items..label")).toThrow(SyntaxError);
+    expect(() => normalizePath("items[01]")).toThrow(SyntaxError);
   });
 });
 

@@ -1,6 +1,12 @@
 export { createRemoteStateClient } from "./remote";
 export { createLocalStateClient } from "./local";
-export { formatPath, getPathAt, parsePath, setPathAt } from "./path";
+export {
+  formatPath,
+  getPathAt,
+  normalizePath,
+  parsePath,
+  setPathAt,
+} from "./path";
 export { createRemoteTaskStore, TaskStoreImpl } from "./tasks";
 export type { RemoteStateClient, RemoteStateClientOptions } from "./client";
 export type {

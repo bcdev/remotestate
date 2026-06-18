@@ -143,9 +143,5 @@ function createLocalSetAction(
 }
 
 function toPath(path: string): Path {
-  const segments = parsePath(path);
-  if (segments.length === 0) {
-    throw new Error("Local set action requires a non-empty path");
-  }
-  return segments as unknown as Path;
+  return parsePath(path);
 }

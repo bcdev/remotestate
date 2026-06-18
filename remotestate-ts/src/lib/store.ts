@@ -6,7 +6,6 @@ import {
   pathSegmentsAfter,
   pathsOverlap,
   setPathAt,
-  type PathSegment,
   isPathPrefixSegments,
   type Path,
 } from "./path";
@@ -28,7 +27,7 @@ export class StoreImpl implements Store {
   private cache: Map<string, unknown> = new Map();
   private listeners: Set<StoreSubscription> = new Set();
   private pendingFetches: Set<string> = new Set();
-  private parsedPaths: Map<string, readonly PathSegment[]> = new Map();
+  private parsedPaths: Map<string, Path> = new Map();
   private readonly unsubscribeTransport: () => void;
 
   /**
@@ -185,13 +184,13 @@ export class StoreImpl implements Store {
     }
   }
 
-  private _getParsedPath(path: string): readonly PathSegment[] {
+  private _getParsedPath(path: string): Path {
     const cached = this.parsedPaths.get(path);
     if (cached) {
       return cached;
     }
-    const parsed = parsePath(path);
-    this.parsedPaths.set(path, parsed);
-    return parsed;
+    const parsedPath = parsePath(path);
+    this.parsedPaths.set(path, parsedPath);
+    return parsedPath;
   }
 }

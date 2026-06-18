@@ -11,8 +11,8 @@ from .path import (
     Path,
     PathSegment,
     Property,
+    format_path,
     parse_path,
-    path_to_str,
 )
 
 type PendingUpdates = dict[str, Any]
@@ -107,7 +107,7 @@ class Store:
         )
 
         pending = _batch_context.get()
-        update_path = path_to_str(parsed)
+        update_path = format_path(parsed)
         update_value = _serialize(_get_at(self._state, parsed, require=False))
         if pending is not None:
             pending[update_path] = update_value

@@ -87,6 +87,7 @@ The public TypeScript API is exported from `remotestate`:
 - `useRemoteTasks`
 - `createRemoteTaskStore`
 - `TaskStoreImpl`
+- `normalizePath`
 - `parsePath`
 - `formatPath`
 - `getPathAt`
@@ -175,17 +176,35 @@ Find an example in the section **User Guide** below.
 
 ## Path Helpers
 
-The path helpers are useful when you need to work with nested state outside the React hooks.
+The path helpers are useful when you need to work with nested state outside 
+the React hooks. 
+They use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
+form without the `$.` prefix: a root identifier, followed by dotted 
+identifiers, bracketed integer indices, or bracketed JSON string keys.
+Bracketed string keys may use either single or double quotes; canonical output
+always uses double quotes.
 
-- `parsePath(path)` turns a string path into parsed segments
-- `formatPath(path)` turns parsed segments back into a string path
+| Example                | Valid? | Notes                                                 |
+| ---------------------- | ------ | ----------------------------------------------------- |
+| `user`                 | yes    | root identifier only                                  |
+| `items[0].label`       | yes    | dotted identifier plus integer index                  |
+| `user["display name"]` | yes    | bracketed string key                                  |
+| `$.user`               | no     | `$.` prefix is not part of the syntax                 |
+| `["root"]`             | no     | root must be an identifier                            |
+| `items[01]`            | no     | indices are canonical integers without leading zeroes |
+
+- `normalizePath(path)` validates a path-like value and returns a `Path`
+- `parsePath(path)` turns a strict string path into a `Path` and throws `SyntaxError` on malformed input
+- `formatPath(path)` turns parsed segments back into canonical path syntax
 - `getPathAt(value, path)` reads a nested value
 - `setPathAt(value, path, nextValue)` writes a nested value without mutating when nothing changes
 
 ```ts
-import { getPathAt, parsePath, setPathAt } from "remotestate";
+import { getPathAt, normalizePath, parsePath, setPathAt } from "remotestate";
 
 const path = parsePath("items[0].label");
+const labelPath = parsePath('user["display name"]');
+const safePath = normalizePath(["items", 0, "label"]);
 const current = getPathAt(state, path);
 const next = setPathAt(state, path, "updated");
 ```
