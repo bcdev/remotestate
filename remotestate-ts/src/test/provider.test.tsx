@@ -36,10 +36,8 @@ afterEach(() => {
 
 function createFallbackClient(): RemoteStateClient {
   const store: Store = {
-    get: (pathSegments) =>
-      pathSegments.length === 1 && pathSegments[0] === "source"
-        ? "fallback"
-        : undefined,
+    get: (path) =>
+      path.length === 1 && path[0] === "source" ? "fallback" : undefined,
     set: vi.fn(),
     provide: vi.fn(),
     subscribe: vi.fn(() => vi.fn()),

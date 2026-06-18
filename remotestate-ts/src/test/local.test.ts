@@ -49,13 +49,13 @@ describe("createLocalStateClient", () => {
     expect(set).toHaveBeenCalledWith(["count"], 7);
   });
 
-  it("rejects built-in set action without a string path", async () => {
+  it("rejects built-in set action without a string/array path", async () => {
     const client = createLocalStateClient({
       store: createStore(),
     });
 
     await expect(client.action("set", [7, "count"])).rejects.toThrow(
-      "Local set action requires a string path",
+      "RemoteState path must be a string or array, but got number",
     );
   });
 

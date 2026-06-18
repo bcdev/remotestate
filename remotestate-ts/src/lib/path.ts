@@ -4,49 +4,113 @@
 export type PathSegment = string | number;
 
 /**
- * A non-empty parsed RemoteState path.
+ * A relative RemoteState path comprising property names, string keys, or
+ * integer array indices.
+ */
+export type RelativePath = readonly PathSegment[];
+
+/**
+ * A non-empty parsed path.
  *
  * The first segment is always a string identifier; later segments may be
  * strings or numeric array indices. This is the form used by store
  * implementations and other low-level helpers that already operate on
  * segmented paths.
  */
-export type Path = readonly [string, ...PathSegment[]];
+export type Path = readonly [string, ...RelativePath];
 
 /**
- * Parse a dotted/bracket path like `items[1].label` into path segments.
+ * A value of type ``PathLike`` can be normalized into a value of type `Path`.
+ */
+export type PathLike = string | RelativePath | Path;
+
+const PATH_SEGMENT_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const INVALID_PATH_MESSAGE =
+  "RemoteState paths must be valid simplified JSONPath paths";
+
+/**
+ * Normalizes a path-like value into a validated RemoteState path.
  *
- * The parser returns the parsed prefix if it encounters invalid trailing input.
+ * A valid path starts with a root identifier and may continue with dotted
+ * identifiers, bracketed integer indices, or bracketed JSON string keys.
+ *
+ * @param path A path-like value.
+ * @returns The validated RemoteState path.
+ * @throws A `SyntaxError` if the path is empty or malformed.
+ */
+export function normalizePath(path: PathLike): Path {
+  let rawPath: readonly PathSegment[];
+  if (typeof path === "string") {
+    rawPath = parsePath(path);
+  } else if (Array.isArray(path)) {
+    rawPath = path;
+  } else {
+    throw new TypeError(
+      `RemoteState path must be a string or array, but got ${typeof path}`,
+    );
+  }
+  validatePathSegments(rawPath);
+  return rawPath;
+}
+
+/**
+ * Parse a dotted/bracket path like `items[1].label` into a validated path.
+ *
+ * RemoteState paths use a strict subset of JSONPath without the `$.` prefix:
+ *
+ * - the root segment must be an identifier
+ * - later segments may be dotted identifiers, bracketed integer indices,
+ *   or bracketed JSON string keys
+ * - identifiers must match ``[a-zA-Z_][a-zA-Z0-9_]*``
+ * - integer indices must be non-negative integers without leading zeroes
+ * - string keys use JSON string literal syntax
+ * - the whole string must match the grammar; prefix parsing is not allowed
+ *
+ * Examples:
+ *
+ * - ``user``
+ * - ``items[0].label``
+ * - ``user["display name"]``
  *
  * @param path The path string to parse.
- * @returns The parsed path segments.
+ * @returns The parsed RemoteState path.
+ * @throws A `SyntaxError` if the input is not a strict dotted/bracket path.
  */
-export function parsePath(path: string): PathSegment[] {
+export function parsePath(path: string): Path {
   const segments: PathSegment[] = [];
-  const first = /^[a-zA-Z_][a-zA-Z0-9_]*/.exec(path);
-  if (!first || first.index !== 0) {
-    return segments;
+  const first = readIdentifier(path, 0);
+  if (!first) {
+    throw new SyntaxError(INVALID_PATH_MESSAGE);
   }
-  segments.push(first[0]);
+  segments.push(first.value);
 
-  const segmentPattern = /\.([a-zA-Z_][a-zA-Z0-9_]*)|\[(\d+)\]/g;
-  segmentPattern.lastIndex = first[0].length;
-  let position = first[0].length;
-  let match: RegExpExecArray | null;
-  while ((match = segmentPattern.exec(path)) !== null) {
-    if (match.index !== position) {
-      return segments;
+  let position = first.nextIndex;
+  while (position < path.length) {
+    const next = path[position];
+    if (next === ".") {
+      position += 1;
+      const identifier = readIdentifier(path, position);
+      if (!identifier) {
+        throw new SyntaxError(INVALID_PATH_MESSAGE);
+      }
+      segments.push(identifier.value);
+      position = identifier.nextIndex;
+      continue;
     }
-    const token = match[0];
-    if (token.startsWith(".")) {
-      segments.push(token.slice(1));
-    } else {
-      segments.push(Number(token.slice(1, -1)));
+    if (next === "[") {
+      const bracketSegment = readBracketSegment(path, position);
+      if (!bracketSegment) {
+        throw new SyntaxError(INVALID_PATH_MESSAGE);
+      }
+      segments.push(bracketSegment.value);
+      position = bracketSegment.nextIndex;
+      continue;
     }
-    position = segmentPattern.lastIndex;
+    throw new SyntaxError(INVALID_PATH_MESSAGE);
   }
 
-  return position === path.length ? segments : [];
+  validatePathSegments(segments);
+  return segments;
 }
 
 /**
@@ -56,11 +120,17 @@ export function parsePath(path: string): PathSegment[] {
  * @returns The canonical string form used by the transport and cache keys.
  */
 export function formatPath(path: Path): string {
+  validatePathSegments(path);
   let result = path[0];
   for (let index = 1; index < path.length; index += 1) {
     const segment = path[index];
-    result +=
-      typeof segment === "number" ? "[" + String(segment) + "]" : "." + segment;
+    if (typeof segment === "number") {
+      result += "[" + String(segment) + "]";
+    } else if (PATH_SEGMENT_PATTERN.test(segment)) {
+      result += "." + segment;
+    } else {
+      result += "[" + JSON.stringify(segment) + "]";
+    }
   }
   return result;
 }
@@ -72,10 +142,7 @@ export function formatPath(path: Path): string {
  * @param path The path segments to follow.
  * @returns The nested value, or `undefined` if any segment is missing.
  */
-export function getPathAt(
-  value: unknown,
-  path: readonly PathSegment[],
-): unknown {
+export function getPathAt(value: unknown, path: RelativePath): unknown {
   let current = value;
   for (const segment of path) {
     current = getChild(current, segment);
@@ -99,7 +166,7 @@ export function getPathAt(
  */
 export function setPathAt(
   value: unknown,
-  path: readonly PathSegment[],
+  path: RelativePath,
   childValue: unknown,
 ): unknown {
   if (path.length === 0) {
@@ -136,8 +203,8 @@ export function setPathAt(
  * @returns Whether `prefix` is the same path or an ancestor of `path`.
  */
 export function isPathPrefixSegments(
-  prefix: readonly PathSegment[],
-  path: readonly PathSegment[],
+  prefix: RelativePath,
+  path: RelativePath,
 ): boolean {
   if (prefix.length > path.length) {
     return false;
@@ -157,18 +224,20 @@ export function pathsOverlap(left: string, right: string): boolean {
 }
 
 /**
- * Drop a parsed prefix from a parsed path.
+ * Drop a prefix from a path.
  *
  * @param prefix The prefix to remove.
  * @param path The full parsed path.
- * @returns The remaining path segments after the prefix.
+ * @returns The remaining relative path after the prefix.
  */
 export function pathSegmentsAfter(
-  prefix: readonly PathSegment[],
-  path: readonly PathSegment[],
-): PathSegment[] {
+  prefix: RelativePath,
+  path: RelativePath,
+): RelativePath {
   return path.slice(prefix.length);
 }
+
+// --- Implementation helpers
 
 function cloneContainer(
   value: unknown,
@@ -219,4 +288,207 @@ function isPathPrefix(prefix: string, path: string): boolean {
   }
   const next = path[prefix.length];
   return path.startsWith(prefix) && (next === "." || next === "[");
+}
+
+function validatePathSegments(
+  path: readonly PathSegment[],
+): asserts path is Path {
+  if (path.length === 0) {
+    throw new SyntaxError(INVALID_PATH_MESSAGE);
+  }
+  if (typeof path[0] !== "string" || !PATH_SEGMENT_PATTERN.test(path[0])) {
+    throw new SyntaxError(INVALID_PATH_MESSAGE);
+  }
+  for (let index = 1; index < path.length; index += 1) {
+    const segment = path[index];
+    if (typeof segment === "number") {
+      if (!Number.isInteger(segment) || segment < 0) {
+        throw new SyntaxError(INVALID_PATH_MESSAGE);
+      }
+    } else if (typeof segment !== "string") {
+      throw new SyntaxError(INVALID_PATH_MESSAGE);
+    }
+  }
+}
+
+function readIdentifier(
+  path: string,
+  start: number,
+): { value: string; nextIndex: number } | null {
+  if (start >= path.length) {
+    return null;
+  }
+  const first = path[start];
+  if (!isIdentifierStart(first)) {
+    return null;
+  }
+  let index = start + 1;
+  while (index < path.length && isIdentifierPart(path[index])) {
+    index += 1;
+  }
+  return { value: path.slice(start, index), nextIndex: index };
+}
+
+function isIdentifierStart(char: string): boolean {
+  return /[a-zA-Z_]/.test(char);
+}
+
+function isIdentifierPart(char: string): boolean {
+  return /[a-zA-Z0-9_]/.test(char);
+}
+
+function readBracketSegment(
+  path: string,
+  start: number,
+): { value: PathSegment; nextIndex: number } | null {
+  if (path[start] !== "[") {
+    return null;
+  }
+  const first: string | undefined = path[start + 1];
+  if (first === '"' || first === "'") {
+    const stringSegment = readQuotedStringLiteral(path, start + 1);
+    if (!stringSegment || path[stringSegment.nextIndex] !== "]") {
+      return null;
+    }
+    return {
+      value: stringSegment.value,
+      nextIndex: stringSegment.nextIndex + 1,
+    };
+  }
+  if (!isDigit(first)) {
+    return null;
+  }
+  let index = start + 1;
+  while (index < path.length && isDigit(path[index])) {
+    index += 1;
+  }
+  const digits = path.slice(start + 1, index);
+  if (digits.length > 1 && digits.startsWith("0")) {
+    return null;
+  }
+  if (index >= path.length || path[index] !== "]") {
+    return null;
+  }
+  return {
+    value: Number(digits),
+    nextIndex: index + 1,
+  };
+}
+
+function readQuotedStringLiteral(
+  path: string,
+  start: number,
+): { value: string; nextIndex: number } | null {
+  const quote = path[start];
+  if (quote !== '"' && quote !== "'") {
+    return null;
+  }
+  let index = start + 1;
+  let value = "";
+  while (index < path.length) {
+    const char = path[index];
+    if (char === quote) {
+      return { value, nextIndex: index + 1 };
+    }
+    if (char !== "\\") {
+      if (char.charCodeAt(0) < 0x20) {
+        return null;
+      }
+      value += char;
+      index += 1;
+      continue;
+    }
+    index += 1;
+    if (index >= path.length) {
+      return null;
+    }
+    const escape = path[index];
+    if (escape === quote) {
+      value += quote;
+      index += 1;
+      continue;
+    }
+    switch (escape) {
+      case "\\":
+        value += "\\";
+        index += 1;
+        continue;
+      case "/":
+        value += "/";
+        index += 1;
+        continue;
+      case "b":
+        value += "\b";
+        index += 1;
+        continue;
+      case "f":
+        value += "\f";
+        index += 1;
+        continue;
+      case "n":
+        value += "\n";
+        index += 1;
+        continue;
+      case "r":
+        value += "\r";
+        index += 1;
+        continue;
+      case "t":
+        value += "\t";
+        index += 1;
+        continue;
+      case "u": {
+        const unicode = readUnicodeCodeUnit(path, index + 1);
+        if (!unicode) {
+          return null;
+        }
+        if (unicode.codeUnit >= 0xd800 && unicode.codeUnit <= 0xdbff) {
+          if (
+            path[unicode.nextIndex] !== "\\" ||
+            path[unicode.nextIndex + 1] !== "u"
+          ) {
+            return null;
+          }
+          const low = readUnicodeCodeUnit(path, unicode.nextIndex + 2);
+          if (!low || low.codeUnit < 0xdc00 || low.codeUnit > 0xdfff) {
+            return null;
+          }
+          value += String.fromCodePoint(
+            ((unicode.codeUnit - 0xd800) << 10) +
+              (low.codeUnit - 0xdc00) +
+              0x10000,
+          );
+          index = low.nextIndex;
+          continue;
+        }
+        if (unicode.codeUnit >= 0xdc00 && unicode.codeUnit <= 0xdfff) {
+          return null;
+        }
+        value += String.fromCharCode(unicode.codeUnit);
+        index = unicode.nextIndex;
+        continue;
+      }
+      default:
+        return null;
+    }
+  }
+  return null;
+}
+
+function readUnicodeCodeUnit(
+  path: string,
+  start: number,
+): { codeUnit: number; nextIndex: number } | null {
+  if (start + 4 > path.length) {
+    return null;
+  }
+  const hex = path.slice(start, start + 4);
+  if (!/^[0-9a-fA-F]{4}$/.test(hex)) {
+    return null;
+  }
+  return { codeUnit: Number.parseInt(hex, 16), nextIndex: start + 4 };
+}
+
+function isDigit(char: string): boolean {
+  return char >= "0" && char <= "9";
 }

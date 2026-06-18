@@ -6,7 +6,6 @@ import {
   pathSegmentsAfter,
   pathsOverlap,
   setPathAt,
-  type PathSegment,
   isPathPrefixSegments,
   type Path,
 } from "./path";
@@ -28,7 +27,7 @@ export class StoreImpl implements Store {
   private cache: Map<string, unknown> = new Map();
   private listeners: Set<StoreSubscription> = new Set();
   private pendingFetches: Set<string> = new Set();
-  private parsedPaths: Map<string, readonly PathSegment[]> = new Map();
+  private parsedPaths: Map<string, Path> = new Map();
   private readonly unsubscribeTransport: () => void;
 
   /**
@@ -49,7 +48,7 @@ export class StoreImpl implements Store {
   /**
    * Get the current cached value for a path.
    *
-   * @param pathSegments The parsed non-empty state path to read.
+   * @param path The parsed non-empty state path to read.
    * @returns The cached value, or `undefined` if the path is not cached.
    */
   get(path: Path): unknown {
@@ -59,7 +58,7 @@ export class StoreImpl implements Store {
   /**
    * Set a state value through the backend's built-in `set` action.
    *
-   * @param pathSegments The parsed non-empty state path to write.
+   * @param path The parsed non-empty state path to write.
    * @param value The value to assign.
    * @returns A promise that resolves after the action result is applied.
    */
@@ -91,7 +90,7 @@ export class StoreImpl implements Store {
   /**
    * Ensure a path is fetched from Python if it is not already cached.
    *
-   * @param pathSegments The parsed non-empty state path to provide.
+   * @param path The parsed non-empty state path to provide.
    */
   provide(path: Path): void {
     const pathKey = formatPath(path);
@@ -109,7 +108,7 @@ export class StoreImpl implements Store {
   /**
    * Register a listener for changes related to one path.
    *
-   * @param pathSegments The parsed non-empty state path to subscribe to.
+   * @param path The parsed non-empty state path to subscribe to.
    * @param listener Listener called when the path or a related path changes.
    * @returns A function that unregisters the listener.
    */
@@ -147,8 +146,8 @@ export class StoreImpl implements Store {
 
   private _applyUpdate(path: string, value: unknown): void {
     this.cache.set(path, value);
-    const pathSegments = this._getParsedPath(path);
-    if (pathSegments.length === 0) {
+    const parsedPath = this._getParsedPath(path);
+    if (parsedPath.length === 0) {
       return;
     }
 
@@ -162,11 +161,11 @@ export class StoreImpl implements Store {
         continue;
       }
 
-      if (isPathPrefixSegments(cachedSegments, pathSegments)) {
-        const relativePath = pathSegmentsAfter(cachedSegments, pathSegments);
+      if (isPathPrefixSegments(cachedSegments, parsedPath)) {
+        const relativePath = pathSegmentsAfter(cachedSegments, parsedPath);
         this.cache.set(cachedPath, setPathAt(cachedValue, relativePath, value));
-      } else if (isPathPrefixSegments(pathSegments, cachedSegments)) {
-        const relativePath = pathSegmentsAfter(pathSegments, cachedSegments);
+      } else if (isPathPrefixSegments(parsedPath, cachedSegments)) {
+        const relativePath = pathSegmentsAfter(parsedPath, cachedSegments);
         this.cache.set(cachedPath, getPathAt(value, relativePath));
       }
     }
@@ -185,13 +184,13 @@ export class StoreImpl implements Store {
     }
   }
 
-  private _getParsedPath(path: string): readonly PathSegment[] {
+  private _getParsedPath(path: string): Path {
     const cached = this.parsedPaths.get(path);
     if (cached) {
       return cached;
     }
-    const parsed = parsePath(path);
-    this.parsedPaths.set(path, parsed);
-    return parsed;
+    const parsedPath = parsePath(path);
+    this.parsedPaths.set(path, parsedPath);
+    return parsedPath;
   }
 }

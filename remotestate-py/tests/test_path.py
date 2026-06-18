@@ -5,8 +5,8 @@ from remotestate.path import (
     Index,
     Property,
     from_jsonpath,
+    format_path,
     parse_path,
-    path_to_str,
     prefixes,
     to_jsonpath,
 )
@@ -24,6 +24,24 @@ def test_nested_properties():
 
 def test_index():
     assert parse_path("items[3]") == (Property("items"), Index(3))
+
+
+def test_string_key():
+    assert parse_path('user["display name"]') == (
+        Property("user"),
+        Property("display name"),
+    )
+    assert parse_path("user['display name']") == (
+        Property("user"),
+        Property("display name"),
+    )
+    assert parse_path('user["0"]') == (Property("user"), Property("0"))
+    assert parse_path("user['0']") == (Property("user"), Property("0"))
+    assert parse_path('items[""].label') == (
+        Property("items"),
+        Property(""),
+        Property("label"),
+    )
 
 
 def test_nested_after_index():
@@ -62,6 +80,11 @@ def test_invalid_starts_with_index():
         parse_path("[0].name")
 
 
+def test_invalid_starts_with_string_key():
+    with pytest.raises(ValueError):
+        parse_path('["root"]')
+
+
 def test_invalid_empty():
     with pytest.raises(ValueError):
         parse_path("")
@@ -82,6 +105,11 @@ def test_invalid_non_integer_index():
         parse_path("items[foo]")
 
 
+def test_invalid_leading_zero_index():
+    with pytest.raises(ValueError):
+        parse_path("items[01]")
+
+
 def test_invalid_jsonpath_wildcard():
     with pytest.raises(ValueError):
         parse_path("items[*]")
@@ -92,13 +120,13 @@ def test_invalid_jsonpath_wildcard():
 
 def test_prefixes_simple():
     path = parse_path("user.name")
-    result = [path_to_str(p) for p in prefixes(path)]
+    result = [format_path(p) for p in prefixes(path)]
     assert result == ["user", "user.name"]
 
 
 def test_prefixes_with_index():
     path = parse_path("items[3].name")
-    result = [path_to_str(p) for p in prefixes(path)]
+    result = [format_path(p) for p in prefixes(path)]
     assert result == ["items", "items[3]", "items[3].name"]
 
 
@@ -108,20 +136,32 @@ def test_prefixes_single():
     assert len(result) == 1
 
 
-# --- path_to_str ---
+# --- format_path ---
 
 
 def test_roundtrip_simple():
-    assert path_to_str(parse_path("user.name")) == "user.name"
+    assert format_path(parse_path("user.name")) == "user.name"
 
 
 def test_roundtrip_index():
-    assert path_to_str(parse_path("items[3].name")) == "items[3].name"
+    assert format_path(parse_path("items[3].name")) == "items[3].name"
+
+
+def test_roundtrip_string_key():
+    assert format_path(parse_path('user["display name"]')) == 'user["display name"]'
+    assert format_path(parse_path("user['display name']")) == 'user["display name"]'
+    assert format_path(parse_path('user["0"]')) == 'user["0"]'
+    assert format_path(parse_path("user['0']")) == 'user["0"]'
+    assert format_path(parse_path('items[""].label')) == 'items[""].label'
 
 
 def test_roundtrip_deep():
     s = "a.b[0].c[1].d"
-    assert path_to_str(parse_path(s)) == s
+    assert format_path(parse_path(s)) == s
+
+
+def test_roundtrip_empty_string_key():
+    assert format_path(parse_path('user[""]')) == 'user[""]'
 
 
 # --- jsonpath ---

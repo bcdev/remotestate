@@ -52,7 +52,9 @@ export interface RemoteStateProviderProps<
  * @returns A React context provider element.
  * @throws If no `url`, `fallback`, or non-null `client` is provided.
  */
-export function RemoteStateProvider<S = unknown>(props: RemoteStateProviderProps<S>) {
+export function RemoteStateProvider<S = unknown>(
+  props: RemoteStateProviderProps<S>,
+) {
   const { client: providedClient, fallback, url, taskStore, children } = props;
   const hasProvidedClient = Object.hasOwn(props, "client");
   const client: RemoteStateClient<S> = useMemo(() => {

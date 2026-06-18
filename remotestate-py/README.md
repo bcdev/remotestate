@@ -75,6 +75,7 @@ The public Python API is exported from `remotestate`:
 
 `Store(initial, *, default_factory=None)` holds the Python-side application state.
 
+- the root state is a mapping
 - nested dicts, lists, Pydantic models, and dataclasses are all supported
 - `default_factory` receives the missing prefix as a `rs.path.Path` tuple
 
@@ -167,14 +168,31 @@ Re-running the same notebook cell restarts the server automatically.
 
 ## Paths
 
-`remotestate.path` exposes the parsed path types used by `Store.default_factory` and other 
+`remotestate.path` exposes the parsed path types used by `Store.default_factory` and other
 advanced integrations:
 
 - `Path`
 - `Property`
 - `Index`
 
-Use them when you need to inspect or construct missing-path prefixes in a factory.
+RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
+subset without the `"$."` prefix:
+
+- the root segment is an identifier
+- later segments may be dotted identifiers, bracketed integer indices, or bracketed JSON string keys
+- bracketed string keys may use either single or double quotes; canonical output uses double quotes
+- the whole string must match the grammar; prefix parsing is not allowed
+
+| Example                | Valid? | Notes                                                 |
+|------------------------|--------|-------------------------------------------------------|
+| `user`                 | yes    | root identifier only                                  |
+| `items[0].label`       | yes    | dotted identifier plus integer index                  |
+| `user["display name"]` | yes    | bracketed string key                                  |
+| `$.user`               | no     | `"$."` prefix is not part of the syntax               |
+| `["root"]`             | no     | root must be an identifier                            |
+| `items[01]`            | no     | indices are canonical integers without leading zeroes |
+
+Use `parse_path()` and `format_path()` when you need to inspect, validate, or construct paths.
 
 ## More Docs
 

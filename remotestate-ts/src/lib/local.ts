@@ -1,5 +1,5 @@
 import type { RemoteStateClient } from "./client";
-import { parsePath, type Path } from "./path";
+import { normalizePath, PathLike } from "./path";
 import { createRemoteTaskStore, type WritableTaskStore } from "./tasks";
 import {
   type ActionMethod,
@@ -131,21 +131,9 @@ export function createLocalStateClient<S = unknown>(
   };
 }
 
-function createLocalSetAction(
-  store: Store,
-): (path: unknown, value: unknown) => Promise<void> {
-  return async (path, value) => {
-    if (typeof path !== "string") {
-      throw new Error("Local set action requires a string path");
-    }
-    await store.set(toPath(path), value);
+function createLocalSetAction(store: Store) {
+  const set = async (path: PathLike, value: unknown) => {
+    await store.set(normalizePath(path), value);
   };
-}
-
-function toPath(path: string): Path {
-  const segments = parsePath(path);
-  if (segments.length === 0) {
-    throw new Error("Local set action requires a non-empty path");
-  }
-  return segments as unknown as Path;
+  return set as (...args: unknown[]) => Awaitable<unknown>;
 }

@@ -1,5 +1,17 @@
 ## Version 0.2.0 (in development)
 
+- Tightened the shared path grammar to a strict JSONPath subset without the
+  `$.` prefix:
+  - Root paths must start with an identifier.
+  - Later segments may use dotted identifiers, bracketed integer indices, or
+    bracketed string keys.
+  - Bracketed string keys may use either single or double quotes; formatting
+    stays canonical with double quotes.
+  - Invalid paths now fail explicitly instead of silently returning a parsed
+    prefix.
+- Added `normalizePath()` as the public path validator/normalizer.
+- Updated parser docstrings, README examples, and path tests to match the
+  shared grammar.
 - Supporting optional remote backend with local state fallback:
   - Added `fallback?: () => RemoteStateClient` to `RemoteStateProvider`.
   - Added `client?: RemoteStateClient` support to `RemoteStateProvider`.
