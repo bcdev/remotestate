@@ -368,7 +368,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
       return () => {};
     },
 
-    // Ensure a path is available; local stores are already available here.
+    // Ensure a path is available; local tasks are already available here.
     provide: (_path: Path): void => {},
 
     // Release local resources owned by this store, if any.

@@ -100,7 +100,7 @@ export interface TaskStore {
 /**
  * Mutable task store API used by the built-in controller.
  *
- * Custom stores can implement this interface to keep task state in another
+ * Custom tasks can implement this interface to keep task state in another
  * state container such as Zustand.
  */
 export interface WritableTaskStore extends TaskStore {
