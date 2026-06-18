@@ -27,6 +27,8 @@
   - The factory now receives a parsed `Path` tuple instead of a path string.
 - Changed store update notifications to emit only the exact paths written by
   `Store.set()`, instead of also including all parent prefixes.
+- Broadcast Python-side `Store.set()` updates to connected WebSocket clients
+  even when the mutation did not originate from a JavaScript action.
 - Changed signature and behavior of `serve()` function:
   - Renamed `iframe_heigh` argument into `height`, and added `width`.
   - It is no longer using FastAPI/Uvicorn default

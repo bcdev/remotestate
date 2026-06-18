@@ -18,7 +18,7 @@ export function createRemoteStateClient<S = unknown>(
   options: RemoteStateClientOptions = {},
 ): RemoteStateClient<S> {
   const transport = new TransportImpl(coerceUrl(url), options.debug);
-  const store = new StoreImpl(transport);
+  const store = new StoreImpl(transport, options.debug);
   const tasks = options.tasks ?? createRemoteTaskStore();
   const ownsTasks = options.tasks === undefined;
   const taskController = new TaskController(tasks, transport);
