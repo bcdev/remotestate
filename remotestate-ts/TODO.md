@@ -39,3 +39,11 @@
 
 - [x] `url` passed to `createRemoteStateClient` may be a WebSocket endpoint or server
       base HTTP-URL. `createRemoteStateClient` derives the WebSocket URL when needed.
+
+## Issues with the current UI
+
+In the dev console:
+
+- [ ] Regular `[Violation] 'setTimeout' handler took <N>ms` with N being 50 to 100 ms
+- [ ] Once `<p> cannot contain a nested <div>.`
+- [ ] Once `<button> cannot contain a nested <button>.`

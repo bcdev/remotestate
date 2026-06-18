@@ -66,12 +66,17 @@ export interface RemoteStateClient<S = unknown> {
 /**
  * Optional Remote State client integrations.
  *
- * Supplying `taskStore` lets applications keep task state in a custom store
+ * Supplying `tasks` lets applications keep task state in a custom store
  * instead of the built-in in-memory implementation.
  */
 export interface RemoteStateClientOptions {
   /**
    * Optional task store used instead of the default in-memory task store.
    */
-  taskStore?: WritableTaskStore;
+  tasks?: WritableTaskStore;
+
+  /**
+   * Whether to log debugging information to the console.
+   */
+  debug?: boolean;
 }
