@@ -1,7 +1,19 @@
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 import react from "@vitejs/plugin-react";
-import { resolve } from "path";
+
+function stripJsDocComments() {
+  return {
+    name: "strip-jsdoc-comments",
+    apply: "build" as const,
+    renderChunk(code: string) {
+      return {
+        code: code.replace(/\/\*\*[\s\S]*?\*\//g, ""),
+        map: null,
+      };
+    },
+  };
+}
 
 export default defineConfig({
   define: {
@@ -9,14 +21,16 @@ export default defineConfig({
   },
   plugins: [
     dts({
+      tsconfigPath: "./tsconfig.lib.json",
       include: ["src/lib/**/*"],
       bundleTypes: true,
     }),
     react(),
+    stripJsDocComments(),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "src/lib/index.ts"),
+      entry: "src/lib/index.ts",
       name: "remotestate",
       fileName: "remotestate",
       formats: ["es"],
