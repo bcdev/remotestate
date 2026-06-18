@@ -42,8 +42,12 @@ export function normalizePath(path: PathLike): Path {
   let rawPath: readonly PathSegment[];
   if (typeof path === "string") {
     rawPath = parsePath(path);
-  } else {
+  } else if (Array.isArray(path)) {
     rawPath = path;
+  } else {
+    throw new TypeError(
+      `RemoteState path must be a string or array, but got ${typeof path}`,
+    );
   }
   validatePathSegments(rawPath);
   return rawPath;

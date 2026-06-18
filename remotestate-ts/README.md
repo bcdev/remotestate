@@ -176,10 +176,10 @@ Find an example in the section **User Guide** below.
 
 ## Path Helpers
 
-The path helpers are useful when you need to work with nested state outside 
-the React hooks. 
-They use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
-form without the `$.` prefix: a root identifier, followed by dotted 
+The path helpers are useful when you need to work with nested state outside
+the React hooks.
+They use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/)
+form without the `$.` prefix: a root identifier, followed by dotted
 identifiers, bracketed integer indices, or bracketed JSON string keys.
 Bracketed string keys may use either single or double quotes; canonical output
 always uses double quotes.

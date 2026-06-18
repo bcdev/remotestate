@@ -135,10 +135,6 @@ def format_path(path: Path) -> str:
     return "".join(parts)
 
 
-# Backward-compatible alias for existing callers.
-path_to_str = format_path
-
-
 def to_jsonpath(path: str) -> str:
     """Convert a RemoteState path to a simple JSONPath string.
 
