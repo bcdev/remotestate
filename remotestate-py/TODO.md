@@ -2,14 +2,6 @@
 
 ## New Features
 
-- [x] Allow serving the UI app from the known URL when running the HTTP dev server
-  serving the Reaact/TypeScript dev app. 
-    - `ui_dist` passed to `serve()` can be a URL.
-    - Include WebSocket URL as query parameter `ws` in opened IFRAME / browser tab.
-
-- [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
-  adding an extra REST API. 
-
 - [ ] We currently require a user's `Service` query and action methods to 
   accept and return JSON data only. Since we use Pydantic, `pydantic.BaseClass`
   arguments and return values should be handled by default. Allow for custom
@@ -24,10 +16,13 @@
   Care: If an action calls actions or queries or a query calls queries the 
   original method must be called, not the wrapped, reactive version.
 
-## Bugs
+- [x] Allow serving the UI app from the known URL when running the HTTP dev server
+  serving the Reaact/TypeScript dev app. 
+    - `ui_dist` passed to `serve()` can be a URL.
+    - Include WebSocket URL as query parameter `ws` in opened IFRAME / browser tab.
 
-- [x] If `ui_dist` passed to `serve()` is a URL, the UI won't work although the 
-  correct WebSocket URL is passed as query parameter `ws` in opened IFRAME.
+- [x] Allow enhancing the FastAPI apps by new (HTTP) routes, e.g., to allow for
+  adding an extra REST API. 
 
 ## Refactorings
 
@@ -46,12 +41,17 @@
 - [ ] Visit all critical paths: log or raise or both?
 - [ ] Include traceback in `ErrorMessage`
 
+## Improve security 
+
+- [ ] Configure security checks for `ruff check`
+
 ## State equality
 
-- [ ] Only include values in TaskUpdateMessage that changed. Use `==` by default. 
-      Ensure `InvalidatetMessage` is always sent, even if there are no updates.
+- [ ] Only include values in `ActionResultMessage` that actually changed. 
+  Use `==` by default. Ensure `"action_result"` message is always sent, 
+  even if there are no updates.
 - [ ] Allow passing custom equality checks, register `f(a, b): bool` 
-      using state path as key.
+  using state path as key.
 
 ## State serialization
 
@@ -67,10 +67,10 @@
 - [ ] Check code for obvious optimization options
 - [ ] Check code for potential performance limitation issues
 - [ ] Check if we can compress request/response sizes, e.g., 
-      have a special binary format for (numpy-like) array data 
-      and (pandas-like) data frames.  
-- [ ] Maybe throttle number emitted TaskUpdateMessage / time
-- [ ] Was using WebSockets + JSON the right decision?
+  have a special binary format for (numpy-like) array data 
+  and (pandas-like) data frames.  
+- [ ] Maybe throttle number emitted `TaskUpdateMessage` / time
+- [ ] Check: was using WebSockets + JSON the right decision?
 
 ## CI
 
@@ -82,10 +82,10 @@
 ## Add-on project: TS interface generation
 
 - [ ] A CLI tool to generate a typescript interface and service factory 
-      from a given Python `Service` implementation. The service factory creates
-      a 1:1 TS version of the Python service.
+  from a given Python `Service` implementation. The service factory creates
+  a 1:1 TS version of the Python service.
 
 ## Add-on project: UI generation
 
 - [ ] Allow for UI generation from OpenAPI/JSON schema. 
-      FieldFactory interface: Neutral w.r.t. UI lib
+  FieldFactory interface: Neutral w.r.t. UI lib
