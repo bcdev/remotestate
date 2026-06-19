@@ -66,6 +66,7 @@ The public Python API is exported from `remotestate`:
 
 - `Store`
 - `Service`
+- `ServeResult`
 - `action`
 - `query`
 - `serve`
@@ -153,18 +154,28 @@ creates one.
 
 ## Serving
 
-`serve(service, *, ui_dist, mounts, app, open_browser, open_iframe, width, height, host, port, **uvicorn_settings)` 
+`serve(service, *, ui_dist, mounts, app, display, width, height, host, port, **uvicorn_settings)` 
 starts the RemoteState server and connects it to a frontend bundle.
 
 - `service` is a `Service` instance
 - `ui_dist` can be a local React build directory or an HTTP(S) URL
 - `mounts` adds additional static paths
 - `app` lets you supply your own FastAPI app
-- `open_browser` and `open_iframe` control how the UI is shown
+- `display` controls how the UI is shown: `"auto"`, `"browser"`, `"notebook"`, `"none"`, or a callback
 - `host` and `port` configure the backend server
 
-By default, RemoteState opens a browser outside Jupyter and renders an iframe inside Jupyter. 
-Re-running the same notebook cell restarts the server automatically.
+By default, RemoteState chooses a free port, opens a browser outside notebooks, and renders inline
+inside notebooks. Re-running the same notebook cell restarts the server automatically.
+
+`serve()` returns a `ServeResult` with the resolved URLs and server handles:
+
+```python
+result = rs.serve(CounterService(), ui_dist="my-ui/dist", display="none")
+
+print("Server URL:    ", result.server_url)
+print("WebSocket URL: ", result.ws_url)
+print("UI Base URL:   ", result.ui_base_url)
+```
 
 ## Paths
 
