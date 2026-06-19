@@ -30,6 +30,9 @@
     instead of requiring redundant parent-prefix payloads.
   - Cached parent and child snapshots are reconciled locally when related
     paths update.
+  - Subscribed parent and child snapshots are now materialized from related
+    exact-path updates so `useRemoteStateValue()` rerenders for subpath
+    changes.
   - `Store.subscribe()` now takes a required path first:
     `subscribe(path, listener)`.
 - Improved TypeScript package build output:

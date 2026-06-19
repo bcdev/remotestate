@@ -14,7 +14,7 @@ describe("TaskStoreImpl", () => {
     expect(store.getAllTasks()).toEqual([]);
   });
 
-  it("stores tasks and notifies listeners", () => {
+  it("tasks tasks and notifies listeners", () => {
     const store = createRemoteTaskStore();
     const listener = vi.fn();
     store.subscribe(listener);

@@ -17,16 +17,16 @@ export function createRemoteStateClient<S = unknown>(
   url: string,
   options: RemoteStateClientOptions = {},
 ): RemoteStateClient<S> {
-  const transport = new TransportImpl(coerceUrl(url));
-  const store = new StoreImpl(transport);
-  const taskStore = options.taskStore ?? createRemoteTaskStore();
-  const ownsTaskStore = options.taskStore === undefined;
-  const taskController = new TaskController(taskStore, transport);
+  const transport = new TransportImpl(coerceUrl(url), options.debug);
+  const store = new StoreImpl(transport, options.debug);
+  const tasks = options.tasks ?? createRemoteTaskStore();
+  const ownsTasks = options.tasks === undefined;
+  const taskController = new TaskController(tasks, transport);
   const service = new ServiceImpl(transport, taskController);
 
   return {
     store,
-    tasks: taskStore,
+    tasks,
 
     action: (method, args = [] as never, kwargs = {}, options = {}) =>
       service.action(method as string, args, kwargs, options),
@@ -44,8 +44,8 @@ export function createRemoteStateClient<S = unknown>(
     dispose: () => {
       store.dispose();
       taskController.dispose();
-      if (ownsTaskStore && taskStore.dispose) {
-        taskStore.dispose();
+      if (ownsTasks && tasks.dispose) {
+        tasks.dispose();
       }
       transport.close();
     },

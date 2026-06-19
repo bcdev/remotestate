@@ -1,5 +1,6 @@
 import type { IncomingMessage, OutgoingMessage } from "./protocol";
 import type { Transport } from "./types";
+import { DebugLog, getDebugLog } from "./debug";
 
 type MessageHandler = (msg: OutgoingMessage) => void;
 
@@ -15,25 +16,31 @@ export class TransportImpl implements Transport {
   private pendingRequests: IncomingMessage[] = [];
   private reconnectDelay = RECONNECT_DELAY_MS;
   private closed = false;
+  private readonly debugLog: DebugLog;
 
   /**
    * Create a WebSocket transport.
    *
    * @param url WebSocket endpoint URL.
+   * @param debug If true, outputs debugging info to the console.
    */
-  constructor(private readonly url: string) {
+  constructor(
+    private readonly url: string,
+    debug?: boolean,
+  ) {
+    this.debugLog = getDebugLog(!!debug);
     this.connect();
   }
 
   private connect(): void {
-    console.debug(`Connecting to ${this.url}...`);
+    this.debugLog(`Connecting to ${this.url}...`);
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
       if (!this.ws) {
         return;
       }
-      console.debug(`Connection to ${this.url} opened`);
+      this.debugLog(`Connection to ${this.url} opened.`);
       this.reconnectDelay = RECONNECT_DELAY_MS;
       // flush pending requests
       for (const msg of this.pendingRequests) {
@@ -55,9 +62,8 @@ export class TransportImpl implements Transport {
       if (this.closed) {
         return;
       }
-      console.debug(
-        `Connection to ${this.url} closed. Reconnecting in ${this.reconnectDelay.toString()} ms`,
-      );
+      this.debugLog(`Connection to ${this.url} unintentionally closed.`);
+      this.debugLog(`Reconnecting in ${this.reconnectDelay.toString()} ms.`);
       setTimeout(() => {
         this.connect();
       }, this.reconnectDelay);
@@ -69,7 +75,7 @@ export class TransportImpl implements Transport {
 
     this.ws.onerror = () => {
       if (this.ws) {
-        console.debug(`Connection to ${this.url} failed.`);
+        this.debugLog(`Connection to ${this.url} failed.`);
         // onclose fires automatically after onerror — reconnect runs there.
         this.ws.close();
       }
@@ -108,6 +114,7 @@ export class TransportImpl implements Transport {
    * Close the socket and disable reconnect attempts.
    */
   close(): void {
+    this.debugLog(`Closing connection to ${this.url}.`);
     this.closed = true;
     this.ws?.close();
   }

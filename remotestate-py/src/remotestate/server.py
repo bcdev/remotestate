@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Coroutine
 from typing import Any
 
@@ -20,7 +21,9 @@ from .protocol import (
     QueryResultMessage,
     TaskUpdateMessage,
 )
+from .context import _call_context
 from .service import Service
+from .store import PendingUpdates
 from .transport import Transport
 from .log import LOG
 
@@ -41,6 +44,7 @@ class Server:
         self._store = service.store
         self._service = service
         self._transport = WebSocketTransport()
+        self._unsubscribe_store = self._store.subscribe(self._broadcast_store_update)
         self._app = app if app is not None else FastAPI()
         self._init_app(mounts)
         if app is None:
@@ -77,6 +81,16 @@ class Server:
             await self._transport.send(msg)
 
         return sender
+
+    def _broadcast_store_update(self, updates: PendingUpdates) -> None:
+        # Action dispatch already returns the batched updates as an
+        # ActionResultMessage. This subscription is for Python-side store.set()
+        # calls that happen outside a dispatched service action.
+        if _call_context.get() is not None:
+            return
+        self._transport.send_nowait(
+            ActionResultMessage(call_id="store_update", updates=updates)
+        )
 
     # noinspection PyProtectedMember
     async def _dispatch(self, msg: IncomingMessage) -> None:
@@ -147,6 +161,7 @@ class WebSocketTransport(Transport):
 
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     async def send(self, msg: OutgoingMessage) -> None:
         data = msg.model_dump_json(by_alias=True)
@@ -164,12 +179,27 @@ class WebSocketTransport(Transport):
             await ws.close()
         self._connections.clear()
 
+    def send_nowait(self, msg: OutgoingMessage) -> None:
+        """Schedule a message broadcast from sync Python code."""
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            return
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+        if running_loop is loop:
+            loop.create_task(self.send(msg))
+        else:
+            asyncio.run_coroutine_threadsafe(self.send(msg), loop)
+
     async def _handle_ws(
         self,
         websocket: WebSocket,
         handler: Callable[[IncomingMessage], Awaitable[None]],
     ) -> None:
         await websocket.accept()
+        self._loop = asyncio.get_running_loop()
         self._connections.add(websocket)
         try:
             while True:
