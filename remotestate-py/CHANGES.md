@@ -30,6 +30,10 @@
 - Broadcast Python-side `Store.set()` updates to connected WebSocket clients
   even when the mutation did not originate from a JavaScript action.
 - Changed signature and behavior of `serve()` function:
+  - Replaced `open_browser` and `open_iframe` with a generic `display`
+    parameter.
+  - `serve()` now returns a `ServeResult` with resolved server, WebSocket,
+    and UI URLs.
   - Renamed `iframe_heigh` argument into `height`, and added `width`.
   - It is no longer using FastAPI/Uvicorn default
     logging. Instead, all server logs are written to `server.log` 
