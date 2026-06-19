@@ -11,6 +11,7 @@ import pytest
 from remotestate.serve import (
     _add_ui_url_params,
     _get_cell_id,
+    _get_display_mode,
     _in_jupyter,
     _wait_for_port_free,
 )
@@ -70,8 +71,7 @@ def test_add_ui_url_params_preserves_existing_query_and_fragment():
     with patch("remotestate.serve.time.time", return_value=123.9):
         url = _add_ui_url_params(
             "http://localhost:5173/app?mode=dev#view",
-            host="localhost",
-            port=9753,
+            ws_url="ws://localhost:9753/ws",
         )
 
     url_parts = urlsplit(url)
@@ -88,8 +88,7 @@ def test_add_ui_url_params_replaces_existing_runtime_params():
     with patch("remotestate.serve.time.time", return_value=456.1):
         url = _add_ui_url_params(
             "http://localhost:5173/?t=old&ws=old&mode=dev",
-            host="127.0.0.1",
-            port=9754,
+            ws_url="ws://127.0.0.1:9754/ws",
         )
 
     assert parse_qs(urlsplit(url).query) == {
@@ -97,6 +96,25 @@ def test_add_ui_url_params_replaces_existing_runtime_params():
         "t": ["456"],
         "ws": ["ws://127.0.0.1:9754/ws"],
     }
+
+
+# --- _get_display_mode ---
+
+
+def test_get_display_mode_auto_uses_notebook_in_jupyter():
+    with patch("remotestate.serve._get_ipython", return_value=MagicMock()):
+        assert _get_display_mode("auto") == "notebook"
+
+
+def test_get_display_mode_auto_uses_browser_outside_jupyter():
+    with patch("remotestate.serve._get_ipython", return_value=None):
+        assert _get_display_mode("auto") == "browser"
+
+
+def test_get_display_mode_explicit_modes():
+    assert _get_display_mode("browser") == "browser"
+    assert _get_display_mode("notebook") == "notebook"
+    assert _get_display_mode("none") == "none"
 
 
 # --- _wait_for_port_free ---

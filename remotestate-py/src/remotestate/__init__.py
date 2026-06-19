@@ -4,7 +4,7 @@ from importlib.metadata import version
 
 from . import path
 from .service import Service, action, query
-from .serve import serve
+from .serve import ServeResult, serve
 from .store import Store
 
 __version__ = version("remotestate")
@@ -12,6 +12,7 @@ __version__ = version("remotestate")
 __all__ = [
     "Store",
     "Service",
+    "ServeResult",
     "action",
     "query",
     "serve",

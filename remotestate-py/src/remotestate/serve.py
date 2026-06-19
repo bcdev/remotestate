@@ -4,7 +4,9 @@ import socket
 import threading
 import time
 import webbrowser
-from typing import Any
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any, Literal, TypeGuard
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import uvicorn
@@ -18,7 +20,7 @@ from .service import Service
 from .log import LOG
 
 
-# Imported at module level so tests can patch remotestate.show._get_ipython.
+# Imported at module level so tests can patch remotestate.serve._get_ipython.
 try:
     # noinspection PyProtectedMember
     from IPython import get_ipython as _get_ipython
@@ -27,11 +29,44 @@ except ImportError:
 
 
 DEFAULT_HOST = "localhost"
-DEFAULT_PORT = 9753
-DEFAULT_IFRAME_WIDTH = "100%"
-DEFAULT_IFRAME_HEIGHT = 400
+DEFAULT_NOTEBOOK_WIDTH = "100%"
+DEFAULT_NOTEBOOK_HEIGHT = 400
 
-_servers: dict[str, uvicorn.Server] = {}
+_servers: dict[str, _RunningServer] = {}
+
+DisplayMode = Literal["auto", "browser", "notebook", "none"]
+
+
+@dataclass
+class ServeResult:
+    """Result of starting a ``remotestate`` server."""
+
+    host: str
+    port: int
+    server_url: str
+    ws_url: str
+    ui_base_url: str
+    ui_url: str
+    app: FastAPI
+    server: uvicorn.Server
+    thread: threading.Thread
+    registry_key: str = field(repr=False)
+
+    def stop(self, *, timeout: float = 5.0) -> None:
+        """Stop the underlying server and wait until its port is free."""
+        _stop_server(self.server)
+        _wait_for_port_free(self.host, self.port, timeout=timeout)
+        _servers.pop(self.registry_key, None)
+
+
+Display = DisplayMode | Callable[[ServeResult], None]
+
+
+@dataclass
+class _RunningServer:
+    host: str
+    port: int
+    server: uvicorn.Server
 
 
 def serve(
@@ -40,15 +75,14 @@ def serve(
     ui_dist: PathLike | StaticFiles | None = None,
     mounts: dict[str, PathLike | StaticFiles] | None = None,
     app: FastAPI | None = None,
-    open_browser: bool | None = None,
-    open_iframe: bool | None = None,
-    width: int | str = DEFAULT_IFRAME_WIDTH,
-    height: int | str = DEFAULT_IFRAME_HEIGHT,
+    display: Display = "auto",
+    width: int | str = DEFAULT_NOTEBOOK_WIDTH,
+    height: int | str = DEFAULT_NOTEBOOK_HEIGHT,
     # --- Uvicorn
     host: str = DEFAULT_HOST,
-    port: int = DEFAULT_PORT,
+    port: int | None = None,
     **uvicorn_settings: Any,
-) -> None:
+) -> ServeResult:
     """Start the ``remotestate`` web server and display the UI.
 
     Args:
@@ -62,42 +96,38 @@ def serve(
         app: A FastAPI instance to use. If not provided,
             a new instance is created and passed to `Service._init_app(app)`
             so that it can be initialized by the user.
-        open_browser: Open the UI in the default browser after starting.
-            Defaults to True when not running in Jupyter.
-        open_iframe: Render the UI as an IFrame in the Jupyter notebook.
-            Defaults to True when running in Jupyter.
-        width: Width of the IFrame.
-        height: Height of the IFrame.
+        display: Controls how the UI is shown after the server starts.
+            Use "auto" to render inline in notebooks and open a browser
+            otherwise, "browser", "notebook", "none", or a callback that accepts
+            the returned `ServeResult`.
+        width: Width of the notebook display.
+        height: Height of the notebook display.
         host: Host to bind the server to.
-        port: Port to bind the server to.
+        port: Port to bind the server to. Use 0 or None to choose a free port.
         uvicorn_settings: Additional uvicorn settings
             to pass to the underlying
             [uvicorn server](https://uvicorn.dev/#config-and-server-instances).
 
     Returns:
-        None.
+        A `ServeResult` with the server URL, WebSocket URL, UI URL, and
+        underlying server handles.
     """
-    in_jupyter = _in_jupyter()
-    should_open_browser = open_browser if open_browser is not None else not in_jupyter
-    should_open_iframe = open_iframe if open_iframe is not None else in_jupyter
-
+    port = _find_free_port(host) if port is None or port == 0 else port
     registry_key = _get_cell_id() or str(port)
 
     if registry_key in _servers:
-        _stop_server(_servers[registry_key])
-        _wait_for_port_free(host, port)
+        previous = _servers[registry_key]
+        _stop_server(previous.server)
+        _wait_for_port_free(previous.host, previous.port)
 
     # noinspection HttpUrlsUsage
-    ui_dist_url_default = f"http://{host}:{port}"
-    ui_dist_url: str | None = None
-    mounts_ = dict(mounts) if mounts else {}
-    if isinstance(ui_dist, StaticFiles):
-        mounts_["/"] = ui_dist
-    elif isinstance(ui_dist, str):
-        if ui_dist.startswith("http://") or ui_dist.startswith("https://"):
-            ui_dist_url = ui_dist
-        else:
-            mounts_["/"] = StaticFiles(directory=ui_dist, html=True)
+    server_url = f"http://{host}:{port}"
+    ws_url = f"ws://{host}:{port}/ws"
+    mounts_, ui_base_url = _resolve_ui_dist(
+        ui_dist,
+        mounts=mounts,
+        server_url=server_url,
+    )
 
     rs_server = Server(service=service, mounts=mounts_, app=app)
 
@@ -108,7 +138,7 @@ def serve(
 
     uvicorn_config = uvicorn.Config(rs_server.app, **uvicorn_settings)
     uvicorn_server = uvicorn.Server(uvicorn_config)
-    _servers[registry_key] = uvicorn_server
+    _servers[registry_key] = _RunningServer(host, port, uvicorn_server)
 
     thread = threading.Thread(target=uvicorn_server.run, daemon=True)
     thread.start()
@@ -117,21 +147,76 @@ def serve(
     while not uvicorn_server.started:
         time.sleep(0.05)
 
-    if ui_dist_url is None:
-        ui_dist_url = ui_dist_url_default
-        LOG.info(f"Serving UI from {ui_dist_url}")
+    if ui_base_url == server_url:
+        LOG.info(f"Serving UI from {ui_base_url}")
     else:
-        LOG.info(f"UI is coming from {ui_dist_url}")
-    assert ui_dist_url is not None
+        LOG.info(f"UI is coming from {ui_base_url}")
 
-    ui_dist_url = _add_ui_url_params(ui_dist_url, host=host, port=port)
+    ui_url = _add_ui_url_params(ui_base_url, ws_url=ws_url)
+    result = ServeResult(
+        host=host,
+        port=port,
+        server_url=server_url,
+        ws_url=ws_url,
+        ui_base_url=ui_base_url,
+        ui_url=ui_url,
+        app=rs_server.app,
+        server=uvicorn_server,
+        thread=thread,
+        registry_key=registry_key,
+    )
 
-    if should_open_iframe:
-        from IPython.display import IFrame, display
+    _display_result(
+        result,
+        display=display,
+        width=width,
+        height=height,
+    )
+    return result
 
-        display(IFrame(src=ui_dist_url, width=width, height=height))
-    elif should_open_browser:
-        webbrowser.open(ui_dist_url)
+
+def _resolve_ui_dist(
+    ui_dist: PathLike | StaticFiles | None,
+    *,
+    mounts: dict[str, PathLike | StaticFiles] | None,
+    server_url: str,
+) -> tuple[dict[str, PathLike | StaticFiles], str]:
+    mounts_ = dict(mounts) if mounts else {}
+    ui_base_url = server_url
+    if isinstance(ui_dist, StaticFiles):
+        mounts_["/"] = ui_dist
+    elif _is_http_url(ui_dist):
+        ui_base_url = ui_dist
+    elif ui_dist is not None:
+        mounts_["/"] = StaticFiles(directory=ui_dist, html=True)
+    return mounts_, ui_base_url
+
+
+def _display_result(
+    result: ServeResult,
+    *,
+    display: Display,
+    width: int | str,
+    height: int | str,
+) -> None:
+    if callable(display):
+        display(result)
+        return
+
+    display_mode = _get_display_mode(display)
+
+    if display_mode == "notebook":
+        from IPython.display import IFrame, display as ipython_display
+
+        ipython_display(IFrame(src=result.ui_url, width=width, height=height))
+    elif display_mode == "browser":
+        webbrowser.open(result.ui_url)
+
+
+def _get_display_mode(display: DisplayMode) -> Literal["browser", "notebook", "none"]:
+    if display == "auto":
+        return "notebook" if _in_jupyter() else "browser"
+    return display
 
 
 def _get_cell_id() -> str | None:
@@ -154,7 +239,11 @@ def _in_jupyter() -> bool:
         return False
 
 
-def _add_ui_url_params(ui_dist_url: str, *, host: str, port: int) -> str:
+def _add_ui_url_params(
+    ui_dist_url: str,
+    *,
+    ws_url: str,
+) -> str:
     """Add remotestate runtime parameters without breaking query or fragment parts."""
     url_parts = urlsplit(ui_dist_url)
     query = [
@@ -165,11 +254,23 @@ def _add_ui_url_params(ui_dist_url: str, *, host: str, port: int) -> str:
     query.extend(
         [
             ("t", str(int(time.time()))),
-            ("ws", f"ws://{host}:{port}/ws"),
+            ("ws", ws_url),
         ]
     )
     # noinspection PyTypeChecker
     return urlunsplit(url_parts._replace(query=urlencode(query)))
+
+
+def _find_free_port(host: str = DEFAULT_HOST) -> int:
+    with socket.socket() as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
+def _is_http_url(value: object) -> TypeGuard[str]:
+    return isinstance(value, str) and (
+        value.startswith("http://") or value.startswith("https://")
+    )
 
 
 def _stop_server(server: uvicorn.Server) -> None:

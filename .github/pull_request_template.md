@@ -1,18 +1,20 @@
 # Summary
 
-Describe the change in a few sentences.
+_Describe the change in a few sentences._
 
-## Related issue
-
-- Fixes #
-- Related to #
+Closes #
+See also #
 
 ## Changes made
 
 - 
 - 
 
-## Verification
+## Notes
+
+_Add any follow-up work, known limitations, or implementation details here._
+
+## Checklists
 
 ### Python package
 
@@ -20,6 +22,7 @@ Describe the change in a few sentences.
 - [ ] `pixi run lint`
 - [ ] `pixi run mypy`
 - [ ] `pixi run tests`
+- [ ] Updated `remotestate-py/CHANGES.md`
 
 ### TypeScript library
 
@@ -27,12 +30,10 @@ Describe the change in a few sentences.
 - [ ] `npm run checks`
 - [ ] `npm run tests`
 - [ ] `npm run build`
+- [ ] Updated `remotestate-ts/CHANGES.md`
 
 ### Demo app
 
 - [ ] `npm run checks`
 - [ ] `npm run build`
-
-## Notes
-
-Add any follow-up work, known limitations, or implementation details here.
+- [ ] Updated `remotestate-demo/CHANGES.md`
