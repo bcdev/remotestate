@@ -17,7 +17,23 @@ class GetMessage(BaseModel):
     """An internal get-ID."""
 
     path: str
-    """The modification path using a simplified JSON-Path format."""
+    """Path into store's state using a simplified JSON-Path format."""
+
+
+class SetMessage(BaseModel):
+    """Set one store value by path."""
+
+    type: Literal["set"] = "set"
+    """Message type."""
+
+    call_id: str
+    """An internal set-ID."""
+
+    path: str
+    """Path into store's state using a simplified JSON-Path format."""
+
+    value: Any
+    """New value to assign at ``path``."""
 
 
 class ActionMessage(BaseModel):
@@ -99,10 +115,23 @@ class ActionResultMessage(BaseModel):
     """Message type."""
 
     call_id: str
-    """An internal action- or query-ID."""
+    """An internal action-ID."""
 
     updates: dict[str, Any]
     """Mapping from state paths to changed state values. May be empty."""
+
+
+class SetResultMessage(BaseModel):
+    """Return the batched store updates produced by a previous ``SetMessage``."""
+
+    type: Literal["set_result"] = "set_result"
+    """Message type."""
+
+    call_id: str
+    """An internal set-ID."""
+
+    updates: dict[str, Any]
+    """Mapping from state paths to changed state values."""
 
 
 class QueryResultMessage(BaseModel):
@@ -153,13 +182,13 @@ class TaskUpdateMessage(BaseModel):
 
 
 class ErrorMessage(BaseModel):
-    """Return an error for a previous action, query, or parse failure."""
+    """Return an error for a previous request or parse failure."""
 
     type: Literal["error"] = "error"
     """Message type."""
 
     call_id: str
-    """An internal action- or query-ID."""
+    """An internal request ID."""
 
     message: str
     """Error message text."""
@@ -170,13 +199,14 @@ class ErrorMessage(BaseModel):
 # ----------------------------------------------------
 
 IncomingMessage = Annotated[
-    GetMessage | ActionMessage | QueryMessage,
+    GetMessage | SetMessage | ActionMessage | QueryMessage,
     Field(discriminator="type"),
 ]
 """Any message that can be sent from JavaScript to Python."""
 
 OutgoingMessage = Annotated[
     GetResultMessage
+    | SetResultMessage
     | QueryResultMessage
     | TaskUpdateMessage
     | ActionResultMessage

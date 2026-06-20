@@ -147,15 +147,14 @@ class Counter(rs.Service):
 
 ## Service Helpers
 
-`Service` also provides built-in methods that power the generic TypeScript bridge:
+`Service` exposes the store and progress helper used by actions and queries:
 
-- `get(path="")` reads a store value by path
-- `set(path, value)` writes a store value by path
 - `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages 
   for tracked calls
 
-The reserved service method names are `get`, `set`, and `notify`. Do not reuse those names 
-for custom actions or queries.
+The reserved service method name is `notify`. Store reads and writes use
+`service.store.get(...)` and `service.store.set(...)`; `get` and `set` remain
+available for custom actions or queries.
 
 `Service._init_app(app)` can be overridden to customize the FastAPI app when `serve()` 
 creates one.

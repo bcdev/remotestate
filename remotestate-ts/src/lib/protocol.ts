@@ -23,6 +23,31 @@ export interface GetMessage {
 }
 
 /**
+ * Write one value at a store path.
+ */
+export interface SetMessage {
+  /**
+   * Protocol discriminator for store set requests.
+   */
+  type: "set";
+
+  /**
+   * Internal call ID used to correlate the response.
+   */
+  call_id: string;
+
+  /**
+   * State path to write.
+   */
+  path: string;
+
+  /**
+   * Value to assign at the path.
+   */
+  value: unknown;
+}
+
+/**
  * Invoke a state-mutating service method.
  */
 export interface ActionMessage {
@@ -142,6 +167,26 @@ export interface ActionResultMessage {
 }
 
 /**
+ * Return the batched store updates produced by a store set request.
+ */
+export interface SetResultMessage {
+  /**
+   * Protocol discriminator for store set results.
+   */
+  type: "set_result";
+
+  /**
+   * Internal call ID from the request.
+   */
+  call_id: string;
+
+  /**
+   * Mapping from changed state paths to their latest values.
+   */
+  updates: Record<string, unknown>;
+}
+
+/**
  * Return the result of a previous `QueryMessage`.
  */
 export interface QueryResultMessage {
@@ -238,13 +283,18 @@ export interface ErrorMessage {
 /**
  * Any message the Remote State bridge can send to Python.
  */
-export type IncomingMessage = GetMessage | ActionMessage | QueryMessage;
+export type IncomingMessage =
+  | GetMessage
+  | SetMessage
+  | ActionMessage
+  | QueryMessage;
 
 /**
  * Any message Python can send back to the Remote State bridge.
  */
 export type OutgoingMessage =
   | GetResultMessage
+  | SetResultMessage
   | ActionResultMessage
   | QueryResultMessage
   | TaskUpdateMessage

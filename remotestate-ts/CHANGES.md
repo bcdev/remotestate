@@ -9,6 +9,8 @@
   segment-array type.
 - `Store.get()` and `useRemoteStateValue()` now default to the root state value
   when no path is passed.
+- `Store.set()` now uses a dedicated store `set` protocol message and receives
+  `set_result` updates instead of dispatching a service action named `set`.
 - Updated the transport-backed store cache so root subscriptions overlap all
   descendant updates, root updates materialize cached descendants, and leaf
   updates can patch cached root snapshots.

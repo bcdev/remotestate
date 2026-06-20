@@ -1,4 +1,8 @@
-import type { ActionResultMessage, GetResultMessage } from "./protocol";
+import type {
+  ActionResultMessage,
+  GetResultMessage,
+  SetResultMessage,
+} from "./protocol";
 import {
   getPathAt,
   formatPath,
@@ -51,8 +55,8 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport = transport.subscribe((msg) => {
       if (msg.type === "get_result") {
         this._onGetResult(msg);
-      } else if (msg.type === "action_result") {
-        this._onActionResult(msg);
+      } else if (msg.type === "action_result" || msg.type === "set_result") {
+        this._onUpdateResult(msg);
       }
     });
   }
@@ -69,11 +73,11 @@ export class StoreImpl implements Store {
   }
 
   /**
-   * Set a state value through the backend's built-in `set` action.
+   * Set a state value through the backend store protocol.
    *
    * @param path The parsed state path to write.
    * @param value The value to assign.
-   * @returns A promise that resolves after the action result is applied.
+   * @returns A promise that resolves after the set result is applied.
    */
   set(path: Path, value: unknown): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -83,7 +87,7 @@ export class StoreImpl implements Store {
           return;
         }
         unsubscribe();
-        if (msg.type === "action_result") {
+        if (msg.type === "set_result") {
           resolve();
         } else if (msg.type === "error") {
           reject(new Error(msg.message));
@@ -91,11 +95,10 @@ export class StoreImpl implements Store {
       });
 
       this.transport.send({
-        type: "action",
+        type: "set",
         call_id: callId,
-        method: "set",
-        args: [formatPath(path), value],
-        kwargs: {},
+        path: formatPath(path),
+        value,
       });
     });
   }
@@ -153,7 +156,7 @@ export class StoreImpl implements Store {
     this._notify([msg.path]);
   }
 
-  private _onActionResult(msg: ActionResultMessage): void {
+  private _onUpdateResult(msg: ActionResultMessage | SetResultMessage): void {
     const changedPaths = Object.keys(msg.updates);
     for (const [path, value] of Object.entries(msg.updates)) {
       this._applyUpdate(path, value);

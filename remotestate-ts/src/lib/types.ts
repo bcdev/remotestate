@@ -98,9 +98,9 @@ export interface Store {
   /**
    * Set the value at a parsed state path.
    *
-   * Remote tasks dispatch the built-in backend `set` action and resolve after
-   * the resulting update is applied. Local tasks should update their backing
-   * state container and notify subscribers.
+   * Remote stores dispatch a store `set` message and resolve after the
+   * resulting update is applied. Local stores should update their backing state
+   * container and notify subscribers.
    *
    * @param path The parsed state path to write. An empty path replaces the
    * root state value.
