@@ -82,8 +82,8 @@ The public Python API is exported from `remotestate`:
 - `default_factory` receives the missing prefix as a `rs.path.Path` tuple
 
 - `state` returns the current root state value
-- `get(path, require=False)` reads a value from a path such as ``, `user.name`,
-  `[0].label`, or `items[0].label`
+- `get(path=(), require=False)` reads a value from a path such as ``, `user.name`,
+  `[0].label`, or `items[0].label`; omit `path` to read the root state value
 - `set(path, value)` writes a value and notifies subscribers
 - `store[path]` and `store[path] = value` are notebook-friendly aliases for
   `get()` and `set()`
@@ -114,6 +114,7 @@ store.set("items[0].label", "foo")
 store["items", 0, "label"] = "bar"
 
 assert store.get("user.city") == "Hamburg"
+assert store.get() is store.state
 assert store["items"] == [{"label": "bar"}]
 assert store[()] is store.state
 ```
@@ -148,7 +149,7 @@ class Counter(rs.Service):
 
 `Service` also provides built-in methods that power the generic TypeScript bridge:
 
-- `get(path)` reads a store value by path
+- `get(path="")` reads a store value by path
 - `set(path, value)` writes a store value by path
 - `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages 
   for tracked calls

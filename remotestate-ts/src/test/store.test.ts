@@ -35,6 +35,7 @@ describe("StoreImpl", () => {
     });
 
     expect(store.get([])).toBe(value);
+    expect(store.get()).toBe(value);
   });
 
   it("updates cache from ActionResultMessage", () => {

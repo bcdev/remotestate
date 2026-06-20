@@ -44,7 +44,9 @@ def parse_path(path: str) -> Path:
     RemoteState paths use a strict subset of JSONPath without the ``"$."``
     prefix:
 
-    - the root segment must be an identifier
+    - an empty path addresses the root state value
+    - the first segment may be an identifier, bracketed integer index, or
+      bracketed JSON string key
     - later segments may be dotted identifiers, bracketed integer indices, or
       bracketed JSON string keys
     - identifiers must match ``[a-zA-Z_][a-zA-Z0-9_]*``
@@ -55,8 +57,11 @@ def parse_path(path: str) -> Path:
 
     Examples:
 
+    - ``""``
     - ``"user"``
+    - ``"[0].label"``
     - ``"items[0].label"``
+    - ``"[\"display name\"]"``
     - ``"user[\"display name\"]"``
 
     Args:
@@ -69,12 +74,21 @@ def parse_path(path: str) -> Path:
     Raises:
         ValueError: If ``path`` is not a valid RemoteState path.
     """
-    first = _read_identifier(path, 0)
-    if first is None:
-        raise _invalid_path(path)
+    if path == "":
+        return ()
 
-    segments: list[PathSegment] = [Property(first[0])]
-    pos = first[1]
+    first = _read_identifier(path, 0)
+    if first is not None:
+        segments: list[PathSegment] = [Property(first[0])]
+        pos = first[1]
+    elif path[0] == "[":
+        bracket = _read_bracket_segment(path, 0)
+        if bracket is None:
+            raise _invalid_path(path)
+        segments = [bracket[0]]
+        pos = bracket[1]
+    else:
+        raise _invalid_path(path)
 
     while pos < len(path):
         match path[pos]:
@@ -98,13 +112,14 @@ def parse_path(path: str) -> Path:
 
 
 def prefixes(path: Path) -> list[Path]:
-    """Return all non-empty prefixes of a parsed path.
+    """Return all non-root prefixes of a parsed path.
 
     Args:
         path: Parsed path.
 
     Returns:
-        Prefix paths ordered from shortest to longest.
+        Prefix paths ordered from shortest to longest. The root path ``()`` has
+        no non-root prefixes.
     """
     return [path[:i] for i in range(1, len(path) + 1)]
 
@@ -119,12 +134,14 @@ def format_path(path: Path) -> str:
         String representation of ``path``.
     """
     _validate_path(path)
+    if len(path) == 0:
+        return ""
 
     parts: list[str] = []
     for index, seg in enumerate(path):
         match seg:
             case Property(key):
-                if index == 0:
+                if index == 0 and _IDENTIFIER_RE.fullmatch(key):
                     parts.append(key)
                 elif _IDENTIFIER_RE.fullmatch(key):
                     parts.append(f".{key}")
@@ -144,6 +161,10 @@ def to_jsonpath(path: str) -> str:
     Returns:
         JSONPath string for the same location.
     """
+    if path == "":
+        return "$"
+    if path.startswith("["):
+        return f"${path}"
     return f"$.{path}"
 
 
@@ -151,25 +172,26 @@ def from_jsonpath(path: str) -> str:
     """Convert a simple JSONPath string to a RemoteState path.
 
     Args:
-        path: JSONPath string that starts with ``"$."``.
+        path: JSONPath string that is ``"$"``, starts with ``"$."``, or starts
+            with ``"$["``.
 
     Returns:
         RemoteState path string.
 
     Raises:
-        ValueError: If ``path`` does not start with ``"$."``.
+        ValueError: If ``path`` is not a supported simple JSONPath string.
     """
+    if path == "$":
+        return ""
+    if path.startswith("$["):
+        return path[1:]
     if not path.startswith("$."):
         raise ValueError(f"Not a JSONPath: {path!r}")
     return path[2:]
 
 
 def _validate_path(path: Path) -> None:
-    if len(path) == 0:
-        raise ValueError(_INVALID_PATH_MESSAGE)
-    if not isinstance(path[0], Property) or not _IDENTIFIER_RE.fullmatch(path[0].key):
-        raise ValueError(_INVALID_PATH_MESSAGE)
-    for segment in path[1:]:
+    for segment in path:
         match segment:
             case Property(key):
                 if not isinstance(key, str):
@@ -177,6 +199,8 @@ def _validate_path(path: Path) -> None:
             case Index(i):
                 if not isinstance(i, int) or i < 0:
                     raise ValueError(_INVALID_PATH_MESSAGE)
+            case _:
+                raise ValueError(_INVALID_PATH_MESSAGE)
 
 
 def _read_identifier(path: str, start: int) -> tuple[str, int] | None:

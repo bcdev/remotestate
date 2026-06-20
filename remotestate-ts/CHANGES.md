@@ -7,6 +7,8 @@
   `[]` represents the root state value.
 - Removed the redundant `RelativePath` export; `Path` is now the single parsed
   segment-array type.
+- `Store.get()` and `useRemoteStateValue()` now default to the root state value
+  when no path is passed.
 - Updated the transport-backed store cache so root subscriptions overlap all
   descendant updates, root updates materialize cached descendants, and leaf
   updates can patch cached root snapshots.

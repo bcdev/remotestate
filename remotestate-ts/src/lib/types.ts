@@ -89,11 +89,11 @@ export interface Store {
   /**
    * Get the current value snapshot for the given path segments.
    *
-   * @param path The parsed path into the state. An empty path addresses the
-   * root state value.
+   * @param path The parsed path into the state. If omitted or empty, the root
+   * state value is read.
    * @returns The cached value, or `undefined` if the value is not cached.
    */
-  get(path: Path): unknown;
+  get(path?: Path): unknown;
 
   /**
    * Set the value at a parsed state path.

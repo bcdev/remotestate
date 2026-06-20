@@ -18,12 +18,20 @@ def test_simple_property():
     assert parse_path("user") == (Property("user"),)
 
 
+def test_empty_path_is_root():
+    assert parse_path("") == ()
+
+
 def test_nested_properties():
     assert parse_path("user.name") == (Property("user"), Property("name"))
 
 
 def test_index():
     assert parse_path("items[3]") == (Property("items"), Index(3))
+
+
+def test_root_index():
+    assert parse_path("[3].name") == (Index(3), Property("name"))
 
 
 def test_string_key():
@@ -41,6 +49,14 @@ def test_string_key():
         Property("items"),
         Property(""),
         Property("label"),
+    )
+
+
+def test_root_string_key():
+    assert parse_path('["root"]') == (Property("root"),)
+    assert parse_path('["display name"].value') == (
+        Property("display name"),
+        Property("value"),
     )
 
 
@@ -75,19 +91,16 @@ def test_invalid_starts_with_dot():
         parse_path(".user")
 
 
-def test_invalid_starts_with_index():
-    with pytest.raises(ValueError):
-        parse_path("[0].name")
+def test_allows_root_index():
+    assert parse_path("[0].name") == (Index(0), Property("name"))
 
 
-def test_invalid_starts_with_string_key():
-    with pytest.raises(ValueError):
-        parse_path('["root"]')
+def test_allows_root_string_key():
+    assert parse_path('["root"]') == (Property("root"),)
 
 
-def test_invalid_empty():
-    with pytest.raises(ValueError):
-        parse_path("")
+def test_allows_empty_root():
+    assert parse_path("") == ()
 
 
 def test_invalid_trailing_dot():
@@ -136,6 +149,10 @@ def test_prefixes_single():
     assert len(result) == 1
 
 
+def test_prefixes_root():
+    assert prefixes(parse_path("")) == []
+
+
 # --- format_path ---
 
 
@@ -143,8 +160,13 @@ def test_roundtrip_simple():
     assert format_path(parse_path("user.name")) == "user.name"
 
 
+def test_roundtrip_root():
+    assert format_path(parse_path("")) == ""
+
+
 def test_roundtrip_index():
     assert format_path(parse_path("items[3].name")) == "items[3].name"
+    assert format_path(parse_path("[3].name")) == "[3].name"
 
 
 def test_roundtrip_string_key():
@@ -153,6 +175,9 @@ def test_roundtrip_string_key():
     assert format_path(parse_path('user["0"]')) == 'user["0"]'
     assert format_path(parse_path("user['0']")) == 'user["0"]'
     assert format_path(parse_path('items[""].label')) == 'items[""].label'
+    assert format_path(parse_path('["display name"].value')) == (
+        '["display name"].value'
+    )
 
 
 def test_roundtrip_deep():
@@ -169,10 +194,14 @@ def test_roundtrip_empty_string_key():
 
 def test_to_jsonpath():
     assert to_jsonpath("user.name") == "$.user.name"
+    assert to_jsonpath("") == "$"
+    assert to_jsonpath("[0].name") == "$[0].name"
 
 
 def test_from_jsonpath():
     assert from_jsonpath("$.user.name") == "user.name"
+    assert from_jsonpath("$") == ""
+    assert from_jsonpath("$[0].name") == "[0].name"
 
 
 def test_from_jsonpath_invalid():

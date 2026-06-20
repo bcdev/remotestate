@@ -147,7 +147,8 @@ Hook overview:
 - `useRemoteStateClient<S>()` returns the nearest typed client
 - `useRemoteStore()` returns the reactive value store behind the hooks
 - `useRemoteTaskStore()` returns the task store behind the progress hooks
-- `useRemoteStateValue(path)` subscribes to one path and returns the cached value or `undefined`
+- `useRemoteStateValue(path?)` subscribes to one path and returns the cached value or `undefined`;
+  omit `path` to subscribe to the root state value
 - `useRemoteState(path, initialValue?)` behaves like React `useState` for one remote path
 - `useRemoteTask(taskId)` returns one tracked task snapshot
 - `useRemoteTasks()` returns all tracked task snapshots
@@ -254,6 +255,7 @@ const path = parsePath("items[1].label");
 const unsubscribe = client.store.subscribe(path, () => {
   console.log(client.store.get(path));
 });
+console.log(client.store.get()); // root state value
 ```
 
 Subscriptions also react to related parent or child updates. For example, a
@@ -350,7 +352,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
 
   const store: Store = {
     // Read the current local value for one RemoteState path.
-    get: (path: Path): unknown => {
+    get: (path: Path = []): unknown => {
       if (isCountProperty(path)) {
         return getPathAt(useCounterStore.getState(), path);
       }

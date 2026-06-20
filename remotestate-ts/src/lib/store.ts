@@ -12,6 +12,8 @@ import {
 import type { Store, Transport } from "./types";
 import { DebugLog, getDebugLog } from "./debug";
 
+const ROOT_PATH: Path = [];
+
 type StoreListener = () => void;
 type StoreSubscription = {
   path: string;
@@ -58,10 +60,11 @@ export class StoreImpl implements Store {
   /**
    * Get the current cached value for a path.
    *
-   * @param path The parsed state path to read.
+   * @param path The parsed state path to read. If omitted or empty, reads the
+   * root state value.
    * @returns The cached value, or `undefined` if the path is not cached.
    */
-  get(path: Path): unknown {
+  get(path: Path = ROOT_PATH): unknown {
     return this.cache.get(formatPath(path));
   }
 

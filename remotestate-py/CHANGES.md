@@ -2,6 +2,8 @@
 
 - `Store` now accepts any root state value, exposes it through the typed
   `state` property, and supports root reads/writes with the empty path.
+- `Store.get()` and the built-in `Service.get()` query now default to the root
+  state value when no path is passed.
 - Added notebook-friendly `Store.__getitem__()` and `Store.__setitem__()`
   aliases:
   - `store["items[0].label"]` uses RemoteState string path syntax.

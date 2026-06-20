@@ -4,6 +4,8 @@ import {
   createLocalStateClient,
   RemoteStateProvider,
   useRemoteStateClient,
+  useRemoteStateValue,
+  type PathLike,
   type RemoteStateClient,
   type Store,
 } from "../lib";
@@ -36,7 +38,7 @@ afterEach(() => {
 
 function createFallbackClient(): RemoteStateClient {
   const store: Store = {
-    get: (path) =>
+    get: (path = []) =>
       path.length === 1 && path[0] === "source" ? "fallback" : undefined,
     set: vi.fn(),
     provide: vi.fn(),
@@ -56,6 +58,12 @@ function RequiredClientStatus() {
 }
 
 describe("RemoteStateProvider", () => {
+  it("allows useRemoteStateValue to omit the path", () => {
+    const readRoot: (path?: PathLike) => unknown = useRemoteStateValue;
+
+    expect(readRoot).toBe(useRemoteStateValue);
+  });
+
   it("creates a remote client when URL is provided", () => {
     const html = renderToString(
       <RemoteStateProvider url="ws://localhost:9753/ws">
