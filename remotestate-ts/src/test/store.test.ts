@@ -381,7 +381,7 @@ describe("StoreImpl", () => {
     );
   });
 
-  it("sets a path through the built-in set action", () => {
+  it("sets a path through the store set message", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
@@ -389,15 +389,14 @@ describe("StoreImpl", () => {
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "action",
-        method: "set",
-        args: ["count", 3],
-        kwargs: {},
+        type: "set",
+        path: "count",
+        value: 3,
       }),
     );
   });
 
-  it("sets the root path through the built-in set action", () => {
+  it("sets the root path through the store set message", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
@@ -405,15 +404,14 @@ describe("StoreImpl", () => {
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "action",
-        method: "set",
-        args: ["", { count: 3 }],
-        kwargs: {},
+        type: "set",
+        path: "",
+        value: { count: 3 },
       }),
     );
   });
 
-  it("resolves set after matching action result", async () => {
+  it("resolves set after matching set result", async () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
@@ -421,7 +419,7 @@ describe("StoreImpl", () => {
     const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
     transport._triggerMessage({
-      type: "action_result",
+      type: "set_result",
       call_id: sentMsg.call_id,
       updates: { count: 3 },
     });

@@ -29,3 +29,8 @@ _call_context: ContextVar[_CallContext | None] = ContextVar(
     "_call_context", default=None
 )
 """Task-local context for the currently executing action or query."""
+
+_suppress_store_broadcast: ContextVar[bool] = ContextVar(
+    "_suppress_store_broadcast", default=False
+)
+"""Whether store subscribers should skip external transport broadcasts."""

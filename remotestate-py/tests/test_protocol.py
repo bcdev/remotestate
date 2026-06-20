@@ -5,6 +5,8 @@ from pydantic import TypeAdapter
 from remotestate.protocol import (
     IncomingMessage,
     GetMessage,
+    SetMessage,
+    SetResultMessage,
     OutgoingMessage,
     ActionMessage,
 )
@@ -21,6 +23,18 @@ def test_get():
     assert _incoming_adapter.validate_json(
         to_json(type="get", call_id="x", path="y")
     ) == GetMessage(call_id="x", path="y")
+
+
+def test_set():
+    assert _incoming_adapter.validate_json(
+        to_json(type="set", call_id="x", path="count", value=7)
+    ) == SetMessage(call_id="x", path="count", value=7)
+
+
+def test_set_result():
+    assert _outgoing_adapter.validate_python(
+        {"type": "set_result", "call_id": "x", "updates": {"count": 7}}
+    ) == SetResultMessage(call_id="x", updates={"count": 7})
 
 
 def test_action():

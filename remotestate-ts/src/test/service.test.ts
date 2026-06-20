@@ -166,6 +166,40 @@ describe("ServiceImpl", () => {
       await expect(promise).resolves.toBe(15.0);
     });
 
+    it("ignores progress updates before query_result", async () => {
+      const transport = mockTransportWithHandler();
+      const taskStore = new TaskStoreImpl();
+      const taskController = new TaskController(
+        taskStore,
+        asTransport(transport),
+      );
+      const service = new ServiceImpl(asTransport(transport), taskController);
+
+      const promise = service.query(
+        "compute",
+        [5.0],
+        {},
+        { taskId: "compute-task" },
+      );
+      const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
+
+      transport._triggerMessage({
+        type: "update_task",
+        call_id: sentMsg.call_id,
+        task_id: "compute-task",
+        method: "compute",
+        status: "running",
+        progress: 50,
+      });
+      transport._triggerMessage({
+        type: "query_result",
+        call_id: sentMsg.call_id,
+        value: 15.0,
+      });
+
+      await expect(promise).resolves.toBe(15.0);
+    });
+
     it("rejects on error message", async () => {
       const transport = mockTransportWithHandler();
       const service = new ServiceImpl(asTransport(transport));
