@@ -18,6 +18,9 @@
   `[0].label` or `["display name"].value`.
 - Updated JSONPath conversion helpers so `""` maps to `$` and `[0]` maps to
   `$[0]`.
+- Added public `PathInput` and `PathSegmentInput` aliases plus
+  `normalize_path()` and `normalize_path_segment()` helpers under
+  `remotestate.path`.
 
 
 ## Version 0.2.0

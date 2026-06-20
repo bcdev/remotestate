@@ -6,6 +6,8 @@ from remotestate.path import (
     Property,
     from_jsonpath,
     format_path,
+    normalize_path,
+    normalize_path_segment,
     parse_path,
     prefixes,
     to_jsonpath,
@@ -126,6 +128,39 @@ def test_invalid_leading_zero_index():
 def test_invalid_jsonpath_wildcard():
     with pytest.raises(ValueError):
         parse_path("items[*]")
+
+
+# --- normalize_path ---
+
+
+def test_normalize_path_accepts_strings():
+    assert normalize_path("items[0].label") == (
+        Property("items"),
+        Index(0),
+        Property("label"),
+    )
+
+
+def test_normalize_path_accepts_segment_sequences():
+    assert normalize_path(("items", 0, "label")) == (
+        Property("items"),
+        Index(0),
+        Property("label"),
+    )
+
+
+def test_normalize_path_accepts_bare_root_index():
+    assert normalize_path(0) == (Index(0),)
+
+
+def test_normalize_path_segment_accepts_raw_segments():
+    assert normalize_path_segment("items") == Property("items")
+    assert normalize_path_segment(0) == Index(0)
+
+
+def test_normalize_path_rejects_invalid_segments():
+    with pytest.raises(ValueError):
+        normalize_path(("items", -1))
 
 
 # --- prefixes ---

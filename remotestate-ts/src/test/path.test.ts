@@ -6,7 +6,8 @@ import {
   parsePath,
   setPathAt,
   type Path,
-  type PathLike,
+  type PathInput,
+  type PathSegmentInput,
 } from "../lib";
 import { pathsOverlap } from "../lib/path";
 
@@ -98,8 +99,8 @@ describe("normalizePath", () => {
     expectTypeOf(normalized).toEqualTypeOf<Path>();
   });
 
-  it("accepts an already parsed PathLike value without cloning", () => {
-    const path = ["items", 1, "label"] as const satisfies PathLike;
+  it("accepts an already parsed PathInput value without cloning", () => {
+    const path = ["items", 1, "label"] as const satisfies PathInput;
 
     expect(normalizePath(path)).toBe(path);
   });
@@ -126,6 +127,12 @@ describe("normalizePath", () => {
   it("accepts root index and string-key paths", () => {
     expect(normalizePath([1, "label"])).toEqual([1, "label"]);
     expect(normalizePath(["", "label"])).toEqual(["", "label"]);
+  });
+
+  it("exports a PathSegmentInput type for raw segment values", () => {
+    const segment = 1 satisfies PathSegmentInput;
+
+    expect(segment).toBe(1);
   });
 
   it("rejects invalid array-form path segments", () => {

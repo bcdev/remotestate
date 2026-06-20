@@ -14,6 +14,8 @@
 - Updated the transport-backed store cache so root subscriptions overlap all
   descendant updates, root updates materialize cached descendants, and leaf
   updates can patch cached root snapshots.
+- Renamed the public path input alias from `PathLike` to `PathInput`, and added
+  `PathSegmentInput` for raw segment values.
 
 
 ## Version 0.2.0

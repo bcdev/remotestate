@@ -14,9 +14,14 @@ export type PathSegment = string | number;
 export type Path = readonly PathSegment[];
 
 /**
- * A value of type ``PathLike`` can be normalized into a value of type `Path`.
+ * A raw value accepted as one path segment.
  */
-export type PathLike = string | Path;
+export type PathSegmentInput = string | number | PathSegment;
+
+/**
+ * A raw value accepted anywhere a RemoteState path is needed.
+ */
+export type PathInput = string | readonly PathSegmentInput[] | Path;
 
 const PATH_SEGMENT_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const INVALID_PATH_MESSAGE =
@@ -34,18 +39,18 @@ const STRING_ESCAPES: Readonly<Partial<Record<string, string>>> = {
 };
 
 /**
- * Normalizes a path-like value into a validated RemoteState path.
+ * Normalizes a path input value into a validated RemoteState path.
  *
  * A valid path may be empty to address the root value. Otherwise it starts
  * with an identifier or bracketed segment and may continue with dotted
  * identifiers, bracketed integer indices, or bracketed JSON string keys.
  *
- * @param path A path-like value.
+ * @param path A path input value.
  * @returns The validated RemoteState path.
  * @throws A `SyntaxError` if the path is malformed.
  */
-export function normalizePath(path: PathLike): Path {
-  let rawPath: readonly PathSegment[];
+export function normalizePath(path: PathInput): Path {
+  let rawPath: readonly PathSegmentInput[];
   if (typeof path === "string") {
     rawPath = parsePath(path);
   } else if (Array.isArray(path)) {

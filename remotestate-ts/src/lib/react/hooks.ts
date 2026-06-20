@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { type RemoteStateClient } from "../client";
-import { normalizePath, type Path, PathLike } from "../path";
+import { normalizePath, type Path, type PathInput } from "../path";
 import { RemoteStateContext } from "./context";
 import type { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
@@ -66,7 +66,7 @@ export function useRemoteTaskStore(): TaskStore {
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useRemoteStateValue<T = unknown>(
-  path: PathLike = ROOT_PATH,
+  path: PathInput = ROOT_PATH,
 ): T | undefined {
   const parsedPath = useNormalizedPath(path);
   const store = useRemoteStore();
@@ -99,14 +99,14 @@ export function useRemoteStateValue<T = unknown>(
  * @returns A tuple containing the current value and an async setter.
  */
 export function useRemoteState<T = unknown>(
-  path: PathLike,
+  path: PathInput,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>];
 export function useRemoteState<T = unknown>(
-  path: PathLike,
+  path: PathInput,
   initialValue: T,
 ): [T, (next: SetStateValue<T>) => Promise<void>];
 export function useRemoteState<T = unknown>(
-  path: PathLike,
+  path: PathInput,
   initialValue?: T,
 ): [T | undefined, (next: SetStateValue<T>) => Promise<void>] {
   const parsedPath = useNormalizedPath(path);
@@ -188,6 +188,6 @@ export function useRemoteTasks(): readonly TaskState[] {
 
 // --- Helper hooks
 
-export function useNormalizedPath(path: PathLike = ROOT_PATH): Path {
+export function useNormalizedPath(path: PathInput = ROOT_PATH): Path {
   return useMemo(() => normalizePath(path), [path]);
 }

@@ -1,6 +1,7 @@
 import functools
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 
@@ -31,6 +32,12 @@ type PathSegment = Property | Index
 
 # A parsed RemoteState path.
 type Path = tuple[PathSegment, ...]
+
+# A raw value accepted as one path segment.
+type PathSegmentInput = str | int | PathSegment
+
+# A raw value accepted anywhere a RemoteState path is needed.
+type PathInput = str | int | Sequence[PathSegmentInput] | Path
 
 _IDENTIFIER_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 _INTEGER_RE = re.compile(r"0|[1-9][0-9]*")
@@ -109,6 +116,58 @@ def parse_path(path: str) -> Path:
                 raise _invalid_path(path, pos)
 
     return tuple(segments)
+
+
+def normalize_path(path: PathInput) -> Path:
+    """Normalize a path input value into a parsed RemoteState path.
+
+    Args:
+        path: RemoteState path string, root array index, or a sequence of path
+            segment inputs such as ``("items", 0, "label")``.
+
+    Returns:
+        Parsed path.
+
+    Raises:
+        TypeError: If ``path`` is not a supported path input value.
+        ValueError: If ``path`` contains an invalid segment.
+    """
+    if isinstance(path, str):
+        return parse_path(path)
+    if isinstance(path, int):
+        return (normalize_path_segment(path),)
+    if isinstance(path, Sequence):
+        return tuple(normalize_path_segment(segment) for segment in path)
+    raise TypeError(
+        "RemoteState path must be a string, integer, or sequence of path segments"
+    )
+
+
+def normalize_path_segment(segment: PathSegmentInput) -> PathSegment:
+    """Normalize one path segment input value into a parsed path segment.
+
+    Args:
+        segment: A string property name, integer index, ``Property``, or
+            ``Index``.
+
+    Returns:
+        Parsed path segment.
+
+    Raises:
+        TypeError: If ``segment`` is not a supported path segment input value.
+        ValueError: If an integer index is negative.
+    """
+    if isinstance(segment, Property):
+        return segment
+    if isinstance(segment, Index):
+        return _normalize_index(segment.i)
+    if isinstance(segment, bool):
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    if isinstance(segment, int):
+        return _normalize_index(segment)
+    if isinstance(segment, str):
+        return Property(segment)
+    raise TypeError("RemoteState path segments must be strings or integers")
 
 
 def prefixes(path: Path) -> list[Path]:
@@ -201,6 +260,12 @@ def _validate_path(path: Path) -> None:
                     raise ValueError(_INVALID_PATH_MESSAGE)
             case _:
                 raise ValueError(_INVALID_PATH_MESSAGE)
+
+
+def _normalize_index(index: int) -> Index:
+    if isinstance(index, bool) or index < 0:
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    return Index(index)
 
 
 def _read_identifier(path: str, start: int) -> tuple[str, int] | None:
