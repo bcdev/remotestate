@@ -1,5 +1,20 @@
 ## Version 0.3.0 (in development)
 
+- `Store` now accepts any root state value, exposes it through the typed
+  `state` property, and supports root reads/writes with the empty path.
+- `Store.get()` and the built-in `Service.get()` query now default to the root
+  state value when no path is passed.
+- Added notebook-friendly `Store.__getitem__()` and `Store.__setitem__()`
+  aliases:
+  - `store["items[0].label"]` uses RemoteState string path syntax.
+  - `store["items", 0, "label"]` uses tuple path segments.
+  - `store[()]` addresses the root state value.
+- Relaxed the path grammar so the empty string addresses the root value and
+  paths may start with a bracketed array index or string key, such as
+  `[0].label` or `["display name"].value`.
+- Updated JSONPath conversion helpers so `""` maps to `$` and `[0]` maps to
+  `$[0]`.
+
 
 ## Version 0.2.0
 

@@ -76,12 +76,17 @@ The public Python API is exported from `remotestate`:
 
 `Store(initial, *, default_factory=None)` holds the Python-side application state.
 
-- the root state is a mapping
+- the root state may be any JSON-serializable value, including a mapping, list,
+  scalar, Pydantic model, or dataclass
 - nested dicts, lists, Pydantic models, and dataclasses are all supported
 - `default_factory` receives the missing prefix as a `rs.path.Path` tuple
 
-- `get(path, require=False)` reads a value from a path such as `user.name` or `items[0].label`
+- `state` returns the current root state value
+- `get(path=(), require=False)` reads a value from a path such as ``, `user.name`,
+  `[0].label`, or `items[0].label`; omit `path` to read the root state value
 - `set(path, value)` writes a value and notifies subscribers
+- `store[path]` and `store[path] = value` are notebook-friendly aliases for
+  `get()` and `set()`
 - `subscribe(callback)` receives batched path-to-value updates after changes flush
 - `default_factory` can materialize missing parents while setting nested values
 
@@ -106,9 +111,12 @@ def defaults(path: rs.path.Path):
 store = rs.Store({}, default_factory=defaults)
 store.set("user.city", "Hamburg")
 store.set("items[0].label", "foo")
+store["items", 0, "label"] = "bar"
 
 assert store.get("user.city") == "Hamburg"
-assert store.get("items") == [{"label": "foo"}]
+assert store.get() is store.state
+assert store["items"] == [{"label": "bar"}]
+assert store[()] is store.state
 ```
 
 `get()` never calls the default factory. Reads stay side-effect free, and missing 
@@ -141,7 +149,7 @@ class Counter(rs.Service):
 
 `Service` also provides built-in methods that power the generic TypeScript bridge:
 
-- `get(path)` reads a store value by path
+- `get(path="")` reads a store value by path
 - `set(path, value)` writes a store value by path
 - `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages 
   for tracked calls
@@ -189,19 +197,23 @@ advanced integrations:
 RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
 subset without the `"$."` prefix:
 
-- the root segment is an identifier
+- the empty string addresses the root state value
+- the first segment may be an identifier, bracketed integer index, or bracketed
+  JSON string key
 - later segments may be dotted identifiers, bracketed integer indices, or bracketed JSON string keys
 - bracketed string keys may use either single or double quotes; canonical output uses double quotes
 - the whole string must match the grammar; prefix parsing is not allowed
 
-| Example                | Valid? | Notes                                                 |
-|------------------------|--------|-------------------------------------------------------|
-| `user`                 | yes    | root identifier only                                  |
-| `items[0].label`       | yes    | dotted identifier plus integer index                  |
-| `user["display name"]` | yes    | bracketed string key                                  |
-| `$.user`               | no     | `"$."` prefix is not part of the syntax               |
-| `["root"]`             | no     | root must be an identifier                            |
-| `items[01]`            | no     | indices are canonical integers without leading zeroes |
+| Example                   | Valid? | Notes                                                 |
+|---------------------------|--------|-------------------------------------------------------|
+| empty string              | yes    | root state value                                      |
+| `user`                    | yes    | root property shorthand                               |
+| `[0].label`               | yes    | array root plus child property                        |
+| `items[0].label`          | yes    | dotted identifier plus integer index                  |
+| `["display name"].value`  | yes    | bracketed string key at the root                      |
+| `user["display name"]`    | yes    | bracketed string key                                  |
+| `$.user`                  | no     | `"$."` prefix is not part of the syntax               |
+| `items[01]`               | no     | indices are canonical integers without leading zeroes |
 
 Use `parse_path()` and `format_path()` when you need to inspect, validate, or construct paths.
 

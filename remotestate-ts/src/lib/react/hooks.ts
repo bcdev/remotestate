@@ -12,6 +12,8 @@ import { RemoteStateContext } from "./context";
 import type { Store } from "../types";
 import type { TaskState, TaskStore } from "../tasks";
 
+const ROOT_PATH: Path = [];
+
 /**
  * Functional-update shape accepted by `useRemoteState`.
  *
@@ -58,12 +60,13 @@ export function useRemoteTaskStore(): TaskStore {
  * Subscribe to one store path and return its current cached value.
  *
  * @typeParam T The expected value type at the path.
- * @param path The state path to read and subscribe to.
+ * @param path The state path to read and subscribe to. If omitted, subscribes
+ *   to the root state value.
  * @returns The cached value, or `undefined` until it is available.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function useRemoteStateValue<T = unknown>(
-  path: PathLike,
+  path: PathLike = ROOT_PATH,
 ): T | undefined {
   const parsedPath = useNormalizedPath(path);
   const store = useRemoteStore();
@@ -185,6 +188,6 @@ export function useRemoteTasks(): readonly TaskState[] {
 
 // --- Helper hooks
 
-export function useNormalizedPath(path: PathLike): Path {
+export function useNormalizedPath(path: PathLike = ROOT_PATH): Path {
   return useMemo(() => normalizePath(path), [path]);
 }

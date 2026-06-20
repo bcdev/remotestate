@@ -128,6 +128,14 @@ async def test_builtin_get_query_works_on_base_service(store):
 
 
 @pytest.mark.asyncio
+async def test_builtin_get_query_defaults_to_root(store):
+    service = Service(store)
+    coro, _ = invoke_query(service, "get")
+    result = await coro
+    assert result is store.state
+
+
+@pytest.mark.asyncio
 async def test_builtin_set_action_works_on_base_service(store):
     service = Service(store)
     coro, _ = invoke_action(service, "set", args=["count", 7])

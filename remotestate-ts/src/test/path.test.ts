@@ -8,6 +8,7 @@ import {
   type Path,
   type PathLike,
 } from "../lib";
+import { pathsOverlap } from "../lib/path";
 
 describe("parsePath", () => {
   it("parses dotted and indexed paths", () => {
@@ -33,14 +34,24 @@ describe("parsePath", () => {
     expect(parsePath("count")).toEqual(["count"]);
   });
 
+  it("parses the empty root path", () => {
+    expect(parsePath("")).toEqual([]);
+  });
+
+  it("parses root bracket segments", () => {
+    expect(parsePath("[0].label")).toEqual([0, "label"]);
+    expect(parsePath('["display name"].value')).toEqual([
+      "display name",
+      "value",
+    ]);
+  });
+
   it("throws on invalid trailing input", () => {
     expect(() => parsePath("items..label")).toThrow(SyntaxError);
   });
 
-  it("throws on invalid roots", () => {
+  it("throws on invalid path starts", () => {
     expect(() => parsePath("1items")).toThrow(SyntaxError);
-    expect(() => parsePath('["root"]')).toThrow(SyntaxError);
-    expect(() => parsePath("[0]")).toThrow(SyntaxError);
   });
 
   it("throws on non-canonical integer syntax", () => {
@@ -65,6 +76,17 @@ describe("formatPath", () => {
 
   it("formats a single root segment", () => {
     expect(formatPath(["count"])).toBe("count");
+  });
+
+  it("formats the empty root path", () => {
+    expect(formatPath([])).toBe("");
+  });
+
+  it("formats root bracket segments", () => {
+    expect(formatPath([0, "label"])).toBe("[0].label");
+    expect(formatPath(["display name", "value"])).toBe(
+      '["display name"].value',
+    );
   });
 });
 
@@ -96,14 +118,17 @@ describe("normalizePath", () => {
     expect(normalizePath(["items", ""])).toEqual(["items", ""]);
   });
 
-  it("rejects empty paths", () => {
-    expect(() => normalizePath([])).toThrow(SyntaxError);
-    expect(() => normalizePath("")).toThrow(SyntaxError);
+  it("accepts empty root paths", () => {
+    expect(normalizePath([])).toEqual([]);
+    expect(normalizePath("")).toEqual([]);
   });
 
-  it("rejects paths that do not start with a non-empty property name", () => {
-    expect(() => normalizePath([1, "label"])).toThrow(SyntaxError);
-    expect(() => normalizePath(["", "label"])).toThrow(SyntaxError);
+  it("accepts root index and string-key paths", () => {
+    expect(normalizePath([1, "label"])).toEqual([1, "label"]);
+    expect(normalizePath(["", "label"])).toEqual(["", "label"]);
+  });
+
+  it("rejects invalid array-form path segments", () => {
     expect(() => normalizePath(["items", 1.5])).toThrow(SyntaxError);
     expect(() => normalizePath(["items", -1, "label"])).toThrow(SyntaxError);
   });
@@ -171,5 +196,12 @@ describe("setPathAt", () => {
 
     expect(setPathAt(value, ["items", 0, "label"], "alpha")).toBe(value);
     expect(setPathAt(value, [], value)).toBe(value);
+  });
+});
+
+describe("pathsOverlap", () => {
+  it("treats the root path as overlapping every path", () => {
+    expect(pathsOverlap("", "items[0].label")).toBe(true);
+    expect(pathsOverlap("items[0].label", "")).toBe(true);
   });
 });

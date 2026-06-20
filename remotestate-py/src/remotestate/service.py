@@ -154,14 +154,15 @@ class Service:
         return self._store
 
     @query
-    def get(self, path: str) -> Any:
+    def get(self, path: str = "") -> Any:
         """Built-in query that returns a store value by path.
 
         This is the read side of the generic bridge used by the TypeScript
         ``useRemoteState()`` hook and related helpers.
 
         Args:
-            path: RemoteState path to read.
+            path: RemoteState path to read. If omitted, reads the root state
+                value.
 
         Returns:
             The value at ``path``, or ``None`` when the path is missing.

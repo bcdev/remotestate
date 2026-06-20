@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
 from .path import (
@@ -17,9 +17,12 @@ from .path import (
 
 type PendingUpdates = dict[str, Any]
 type DefaultFactory = Callable[[Path], Any]
+type PathKeySegment = str | int | PathSegment
+type PathKey = str | int | tuple[PathKeySegment, ...]
+T = TypeVar("T")
 
 
-class Store:
+class Store(Generic[T]):
     """Reactive Python-side state container addressed by ``remotestate`` paths.
 
     Values live here as the single source of truth. Actions and queries read
@@ -28,14 +31,15 @@ class Store:
 
     def __init__(
         self,
-        initial: dict[str, Any],
+        initial: T,
         *,
         default_factory: DefaultFactory | None = None,
     ) -> None:
         """Create a store.
 
         Args:
-            initial: Initial application state.
+            initial: Initial application state. Any JSON-serializable Python
+                value is supported, including mappings, lists, and scalars.
             default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
                 missing prefix path as a ``Path`` tuple, such as one
@@ -47,7 +51,28 @@ class Store:
         self._default_factory = default_factory
         self._subscribers: list[Callable[[PendingUpdates], None]] = []
 
-    def get(self, path: str, *, require: bool = False) -> Any:
+    @property
+    def state(self) -> T:
+        """The current root state value."""
+        return self._state
+
+    def __getitem__(self, path: PathKey) -> Any:
+        """Return the value at ``path``.
+
+        ``path`` may be a RemoteState path string, an integer root index, or a
+        tuple of path segments such as ``("items", 0, "label")``. The empty
+        tuple ``()`` addresses the root state value.
+        """
+        return self.get(path)
+
+    def __setitem__(self, path: PathKey, value: Any) -> None:
+        """Set ``value`` at ``path``.
+
+        ``path`` follows the same rules as ``__getitem__``.
+        """
+        self.set(path, value)
+
+    def get(self, path: PathKey = (), *, require: bool = False) -> Any:
         """Return the value at ``path``.
 
         Missing values return ``None`` by default. Pass ``require=True`` to
@@ -55,8 +80,9 @@ class Store:
         calls the default factory.
 
         Args:
-            path: RemoteState path to read, such as ``"user.name"`` or
-                ``"items[0].label"``.
+            path: RemoteState path to read, such as ``""``, ``"user.name"``,
+                ``"[0].label"``, or ``("items", 0, "label")``. If omitted,
+                the root state value is returned.
             require: If true, raise when the path is missing instead of
                 returning ``None``.
 
@@ -70,10 +96,10 @@ class Store:
             IndexError: If a required list index is missing.
             AttributeError: If a required object attribute is missing.
         """
-        parsed = parse_path(path)
+        parsed = _normalize_path(path)
         return _get_at(self._state, parsed, require)
 
-    def set(self, path: str, value: Any) -> None:
+    def set(self, path: PathKey, value: Any) -> None:
         """Set ``value`` at ``path`` and notify subscribers.
 
         If this store has a default factory, missing intermediate path
@@ -82,8 +108,8 @@ class Store:
         ``IndexError``.
 
         Args:
-            path: RemoteState path to write, such as ``"user.name"`` or
-                ``"items[0].label"``.
+            path: RemoteState path to write, such as ``""``, ``"user.name"``,
+                ``"[0].label"``, or ``("items", 0, "label")``.
             value: New value to assign at ``path``.
 
         Raises:
@@ -98,12 +124,15 @@ class Store:
         if ctx is not None and ctx.readonly:
             raise PermissionError("query methods cannot mutate store")
 
-        parsed = parse_path(path)
-        _set_at(
-            self._state,
-            parsed,
-            value,
-            default_factory=self._default_factory,
+        parsed = _normalize_path(path)
+        self._state = cast(
+            T,
+            _set_at(
+                self._state,
+                parsed,
+                value,
+                default_factory=self._default_factory,
+            ),
         )
 
         pending = _batch_context.get()
@@ -174,7 +203,7 @@ def _get_segment(obj: Any, segment: PathSegment, require: bool) -> Any:
         case Index(i):
             try:
                 return obj[i]
-            except IndexError:
+            except (IndexError, KeyError, TypeError):
                 if require:
                     raise
                 return None
@@ -205,7 +234,10 @@ def _set_at(
     path: Path,
     value: Any,
     default_factory: DefaultFactory | None = None,
-) -> None:
+) -> Any:
+    if len(path) == 0:
+        return value
+
     obj = root
     for i, segment in enumerate(path[:-1], start=1):
         try:
@@ -234,6 +266,7 @@ def _set_at(
         if default_factory is None:
             raise
         _set_or_append_segment(obj, path[-1], value, require_appendable=True)
+    return root
 
 
 def _serialize(value: Any) -> Any:
@@ -263,3 +296,35 @@ class _batch_pending_updates:
 _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
     "_batch_context", default=None
 )
+
+
+def _normalize_path(path: PathKey) -> Path:
+    if isinstance(path, str):
+        return parse_path(path)
+    if isinstance(path, int):
+        return (_normalize_index(path),)
+    if isinstance(path, tuple):
+        return tuple(_normalize_path_segment(segment) for segment in path)
+    raise TypeError(
+        "RemoteState path must be a string, integer, or tuple of path segments"
+    )
+
+
+def _normalize_path_segment(segment: PathKeySegment) -> PathSegment:
+    if isinstance(segment, Property):
+        return segment
+    if isinstance(segment, Index):
+        return _normalize_index(segment.i)
+    if isinstance(segment, bool):
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    if isinstance(segment, int):
+        return _normalize_index(segment)
+    if isinstance(segment, str):
+        return Property(segment)
+    raise TypeError("RemoteState path tuple segments must be strings or integers")
+
+
+def _normalize_index(index: int) -> Index:
+    if isinstance(index, bool) or index < 0:
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    return Index(index)
