@@ -1,3 +1,6 @@
+## Version 0.3.0 (in development)
+
+
 ## Version 0.2.0
 
 - Tightened the shared path grammar to a strict JSONPath subset without the
