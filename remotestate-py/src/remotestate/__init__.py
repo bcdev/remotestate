@@ -3,8 +3,8 @@
 from importlib.metadata import version
 
 from . import path
-from .service import Service, action, query
 from .serve import ServeResult, serve
+from .service import Service, action, query
 from .store import Store
 
 __version__ = version("remotestate")

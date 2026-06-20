@@ -17,7 +17,6 @@
 - Renamed the public path input alias from `PathLike` to `PathInput`, and added
   `PathSegmentInput` for raw segment values.
 
-
 ## Version 0.2.0
 
 - Tightened the shared path grammar to a strict JSONPath subset without the

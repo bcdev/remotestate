@@ -227,10 +227,7 @@ export function setPathAt(
  * @param path The full path to compare against.
  * @returns Whether `prefix` is the same path or an ancestor of `path`.
  */
-export function isPathPrefixSegments(
-  prefix: Path,
-  path: Path,
-): boolean {
+export function isPathPrefixSegments(prefix: Path, path: Path): boolean {
   if (prefix.length > path.length) {
     return false;
   }
@@ -255,10 +252,7 @@ export function pathsOverlap(left: string, right: string): boolean {
  * @param path The full parsed path.
  * @returns The remaining path segments after the prefix.
  */
-export function pathSegmentsAfter(
-  prefix: Path,
-  path: Path,
-): Path {
+export function pathSegmentsAfter(prefix: Path, path: Path): Path {
   return path.slice(prefix.length);
 }
 
