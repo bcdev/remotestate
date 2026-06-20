@@ -1,5 +1,16 @@
 ## Version 0.3.0 (in development)
 
+- Relaxed the shared path grammar so the empty string addresses the root value
+  and paths may start with a bracketed array index or string key, such as
+  `[0].label` or `["display name"].value`.
+- Changed `Path` from a non-empty tuple type to a general segment array so
+  `[]` represents the root state value.
+- Removed the redundant `RelativePath` export; `Path` is now the single parsed
+  segment-array type.
+- Updated the transport-backed store cache so root subscriptions overlap all
+  descendant updates, root updates materialize cached descendants, and leaf
+  updates can patch cached root snapshots.
+
 
 ## Version 0.2.0
 

@@ -58,7 +58,7 @@ export class StoreImpl implements Store {
   /**
    * Get the current cached value for a path.
    *
-   * @param path The parsed non-empty state path to read.
+   * @param path The parsed state path to read.
    * @returns The cached value, or `undefined` if the path is not cached.
    */
   get(path: Path): unknown {
@@ -68,7 +68,7 @@ export class StoreImpl implements Store {
   /**
    * Set a state value through the backend's built-in `set` action.
    *
-   * @param path The parsed non-empty state path to write.
+   * @param path The parsed state path to write.
    * @param value The value to assign.
    * @returns A promise that resolves after the action result is applied.
    */
@@ -100,7 +100,7 @@ export class StoreImpl implements Store {
   /**
    * Ensure a path is fetched from Python if it is not already cached.
    *
-   * @param path The parsed non-empty state path to provide.
+   * @param path The parsed state path to provide.
    */
   provide(path: Path): void {
     const pathKey = formatPath(path);
@@ -121,7 +121,7 @@ export class StoreImpl implements Store {
   /**
    * Register a listener for changes related to one path.
    *
-   * @param path The parsed non-empty state path to subscribe to.
+   * @param path The parsed state path to subscribe to.
    * @param listener Listener called when the path or a related path changes.
    * @returns A function that unregisters the listener.
    */
@@ -162,9 +162,6 @@ export class StoreImpl implements Store {
     this.cache.set(path, value);
     this.authoritativePaths.add(path);
     const parsedPath = this._getParsedPath(path);
-    if (parsedPath.length === 0) {
-      return;
-    }
 
     for (const relatedPath of this._getRelatedPaths(path)) {
       if (relatedPath === path) {
@@ -172,9 +169,6 @@ export class StoreImpl implements Store {
       }
 
       const relatedSegments = this._getParsedPath(relatedPath);
-      if (relatedSegments.length === 0) {
-        continue;
-      }
 
       if (isPathPrefixSegments(relatedSegments, parsedPath)) {
         // A subscribed/cached ancestor changed through a leaf update.
