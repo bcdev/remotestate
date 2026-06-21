@@ -31,6 +31,26 @@ describe("parsePath", () => {
     expect(parsePath('user[""]')).toEqual(["user", ""]);
   });
 
+  it("parses bracketed string key escapes", () => {
+    expect(parsePath('user["line\\nbreak"]')).toEqual(["user", "line\nbreak"]);
+    expect(parsePath('user["tab\\tseparated"]')).toEqual([
+      "user",
+      "tab\tseparated",
+    ]);
+    expect(parsePath('user["quote\\"slash\\\\"]')).toEqual([
+      "user",
+      'quote"slash\\',
+    ]);
+    expect(parsePath("user['double\\\"quote']")).toEqual([
+      "user",
+      'double"quote',
+    ]);
+    expect(parsePath('user["emoji \\uD83D\\uDE00"]')).toEqual([
+      "user",
+      "emoji " + String.fromCodePoint(0x1f600),
+    ]);
+  });
+
   it("parses a single root segment", () => {
     expect(parsePath("count")).toEqual(["count"]);
   });
@@ -53,6 +73,7 @@ describe("parsePath", () => {
 
   it("throws on invalid path starts", () => {
     expect(() => parsePath("1items")).toThrow(SyntaxError);
+    expect(() => parsePath(".items")).toThrow(SyntaxError);
   });
 
   it("throws on non-canonical integer syntax", () => {

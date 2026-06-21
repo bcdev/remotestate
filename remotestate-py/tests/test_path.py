@@ -54,6 +54,29 @@ def test_string_key():
     )
 
 
+def test_string_key_escapes():
+    assert parse_path('user["line\\nbreak"]') == (
+        Property("user"),
+        Property("line\nbreak"),
+    )
+    assert parse_path('user["tab\\tseparated"]') == (
+        Property("user"),
+        Property("tab\tseparated"),
+    )
+    assert parse_path('user["quote\\"slash\\\\"]') == (
+        Property("user"),
+        Property('quote"slash\\'),
+    )
+    assert parse_path("user['double\\\"quote']") == (
+        Property("user"),
+        Property('double"quote'),
+    )
+    assert parse_path('user["emoji \\uD83D\\uDE00"]') == (
+        Property("user"),
+        Property("emoji " + chr(0x1F600)),
+    )
+
+
 def test_root_string_key():
     assert parse_path('["root"]') == (Property("root"),)
     assert parse_path('["display name"].value') == (

@@ -6,7 +6,7 @@ export type PathSegment = string | number;
 /**
  * A parsed RemoteState path.
  *
- * An empty path addresses the root state value. Otherwise segments may be
+ * An empty path addresses the root state value. Otherwise, segments may be
  * strings or numeric array indices. This is the form used by store
  * implementations and other low-level helpers that already operate on
  * segmented paths.
@@ -23,7 +23,7 @@ export type PathSegmentInput = string | number | PathSegment;
  */
 export type PathInput = string | readonly PathSegmentInput[] | Path;
 
-const PATH_SEGMENT_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const INVALID_PATH_MESSAGE =
   "RemoteState paths must be valid simplified JSONPath paths";
 const STRING_ESCAPES: Readonly<Partial<Record<string, string>>> = {
@@ -41,7 +41,7 @@ const STRING_ESCAPES: Readonly<Partial<Record<string, string>>> = {
 /**
  * Normalizes a path input value into a validated RemoteState path.
  *
- * A valid path may be empty to address the root value. Otherwise it starts
+ * A valid path may be empty to address the root value. Otherwise, it starts
  * with an identifier or bracketed segment and may continue with dotted
  * identifiers, bracketed integer indices, or bracketed JSON string keys.
  *
@@ -97,8 +97,23 @@ export function parsePath(path: string): Path {
     return [];
   }
 
-  const segments: PathSegment[] = [];
-  let position = 0;
+  const first = readIdentifier(path, 0);
+  let segments: PathSegment[];
+  let position: number;
+
+  if (first) {
+    segments = [first.value];
+    position = first.nextIndex;
+  } else if (path[0] === "[") {
+    const bracketSegment = readBracketSegment(path, 0);
+    if (!bracketSegment) {
+      throw new SyntaxError(INVALID_PATH_MESSAGE);
+    }
+    segments = [bracketSegment.value];
+    position = bracketSegment.nextIndex;
+  } else {
+    throw new SyntaxError(INVALID_PATH_MESSAGE);
+  }
 
   while (position < path.length) {
     const next = path[position];
@@ -121,14 +136,6 @@ export function parsePath(path: string): Path {
       position = bracketSegment.nextIndex;
       continue;
     }
-    if (position === 0) {
-      const identifier = readIdentifier(path, position);
-      if (identifier) {
-        segments.push(identifier.value);
-        position = identifier.nextIndex;
-        continue;
-      }
-    }
     throw new SyntaxError(INVALID_PATH_MESSAGE);
   }
 
@@ -149,9 +156,9 @@ export function formatPath(path: Path): string {
     const segment = path[index];
     if (typeof segment === "number") {
       result += "[" + String(segment) + "]";
-    } else if (index === 0 && PATH_SEGMENT_PATTERN.test(segment)) {
+    } else if (index === 0 && IDENTIFIER_RE.test(segment)) {
       result += segment;
-    } else if (PATH_SEGMENT_PATTERN.test(segment)) {
+    } else if (IDENTIFIER_RE.test(segment)) {
       result += "." + segment;
     } else {
       result += "[" + JSON.stringify(segment) + "]";
@@ -345,11 +352,16 @@ function readIdentifier(
 }
 
 function isIdentifierStart(char: string): boolean {
-  return /[a-zA-Z_]/.test(char);
+  const code = char.charCodeAt(0);
+  return (
+    char === "_" ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a)
+  );
 }
 
 function isIdentifierPart(char: string): boolean {
-  return /[a-zA-Z0-9_]/.test(char);
+  return isIdentifierStart(char) || isDigit(char);
 }
 
 function readBracketSegment(
@@ -473,12 +485,23 @@ function readUnicodeCodeUnit(
     return null;
   }
   const hex = path.slice(start, start + 4);
-  if (!/^[0-9a-fA-F]{4}$/.test(hex)) {
-    return null;
+  for (let index = 0; index < hex.length; index += 1) {
+    if (!isHexDigit(hex[index])) {
+      return null;
+    }
   }
   return { codeUnit: Number.parseInt(hex, 16), nextIndex: start + 4 };
 }
 
-function isDigit(char: string): boolean {
-  return char >= "0" && char <= "9";
+function isDigit(char: string | undefined): boolean {
+  return char !== undefined && char >= "0" && char <= "9";
+}
+
+function isHexDigit(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x46) ||
+    (code >= 0x61 && code <= 0x66)
+  );
 }
