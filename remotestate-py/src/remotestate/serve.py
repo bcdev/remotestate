@@ -11,14 +11,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import uvicorn
 from fastapi import FastAPI
-
 from fastapi.staticfiles import StaticFiles
 from starlette.staticfiles import PathLike
 
+from .log import LOG
 from .server import Server
 from .service import Service
-from .log import LOG
-
 
 # Imported at module level so tests can patch remotestate.serve._get_ipython.
 try:
@@ -206,7 +204,8 @@ def _display_result(
     display_mode = _get_display_mode(display)
 
     if display_mode == "notebook":
-        from IPython.display import IFrame, display as ipython_display
+        from IPython.display import IFrame
+        from IPython.display import display as ipython_display
 
         ipython_display(IFrame(src=result.ui_url, width=width, height=height))
     elif display_mode == "browser":

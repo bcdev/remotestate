@@ -198,7 +198,7 @@ always uses double quotes.
 | `$.user`                 | no     | `$.` prefix is not part of the syntax                 |
 | `items[01]`              | no     | indices are canonical integers without leading zeroes |
 
-- `normalizePath(path)` validates a path-like value and returns a `Path`
+- `normalizePath(path)` validates a `PathInput` value and returns a `Path`
 - `parsePath(path)` turns a strict string path into a `Path` and throws `SyntaxError` on malformed input
 - `formatPath(path)` turns parsed segments back into canonical path syntax
 - `getPathAt(value, path)` reads a nested value

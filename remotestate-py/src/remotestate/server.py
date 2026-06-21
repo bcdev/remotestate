@@ -6,29 +6,28 @@ from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from starlette.staticfiles import PathLike
 from pydantic import TypeAdapter
+from starlette.staticfiles import PathLike
 
+from .context import _suppress_store_broadcast
+from .log import LOG
 from .protocol import (
     ActionMessage,
+    ActionResultMessage,
     ErrorMessage,
     GetMessage,
     GetResultMessage,
     IncomingMessage,
-    SetMessage,
-    SetResultMessage,
-    ActionResultMessage,
     OutgoingMessage,
     QueryMessage,
     QueryResultMessage,
+    SetMessage,
+    SetResultMessage,
     TaskUpdateMessage,
 )
-from .context import _suppress_store_broadcast
 from .service import Service
 from .store import PendingUpdates, _batch_pending_updates
 from .transport import Transport
-from .log import LOG
-
 
 _IncomingAdapter: TypeAdapter[IncomingMessage] = TypeAdapter(IncomingMessage)
 

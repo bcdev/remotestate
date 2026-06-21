@@ -280,9 +280,9 @@ describe("StoreImpl", () => {
     });
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(
-      store.get(["processRequests", "sleep_a_while", "inputs"]),
-    ).toEqual({ duration: 123 });
+    expect(store.get(["processRequests", "sleep_a_while", "inputs"])).toEqual({
+      duration: 123,
+    });
   });
 
   it("materializes a subscribed child snapshot from a root action update", () => {
@@ -317,9 +317,9 @@ describe("StoreImpl", () => {
     });
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(
-      store.get(["processRequests", "sleep_a_while", "inputs"]),
-    ).toEqual({ duration: 123 });
+    expect(store.get(["processRequests", "sleep_a_while", "inputs"])).toEqual({
+      duration: 123,
+    });
   });
 
   it("refreshes cached child values from a parent action update", () => {

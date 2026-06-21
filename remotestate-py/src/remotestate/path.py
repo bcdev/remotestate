@@ -1,6 +1,7 @@
 import functools
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 
@@ -32,9 +33,25 @@ type PathSegment = Property | Index
 # A parsed RemoteState path.
 type Path = tuple[PathSegment, ...]
 
+# A raw value accepted as one path segment.
+type PathSegmentInput = str | int | PathSegment
+
+# A raw value accepted anywhere a RemoteState path is needed.
+type PathInput = str | int | Sequence[PathSegmentInput] | Path
+
 _IDENTIFIER_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
-_INTEGER_RE = re.compile(r"0|[1-9][0-9]*")
 _INVALID_PATH_MESSAGE = "RemoteState paths must be valid simplified JSONPath paths"
+_STRING_ESCAPES = {
+    '"': '"',
+    "'": "'",
+    "\\": "\\",
+    "/": "/",
+    "b": "\b",
+    "f": "\f",
+    "n": "\n",
+    "r": "\r",
+    "t": "\t",
+}
 
 
 @functools.cache
@@ -109,6 +126,58 @@ def parse_path(path: str) -> Path:
                 raise _invalid_path(path, pos)
 
     return tuple(segments)
+
+
+def normalize_path(path: PathInput) -> Path:
+    """Normalize a path input value into a parsed RemoteState path.
+
+    Args:
+        path: RemoteState path string, root array index, or a sequence of path
+            segment inputs such as ``("items", 0, "label")``.
+
+    Returns:
+        Parsed path.
+
+    Raises:
+        TypeError: If ``path`` is not a supported path input value.
+        ValueError: If ``path`` contains an invalid segment.
+    """
+    if isinstance(path, str):
+        return parse_path(path)
+    if isinstance(path, int):
+        return (normalize_path_segment(path),)
+    if isinstance(path, Sequence):
+        return tuple(normalize_path_segment(segment) for segment in path)
+    raise TypeError(
+        "RemoteState path must be a string, integer, or sequence of path segments"
+    )
+
+
+def normalize_path_segment(segment: PathSegmentInput) -> PathSegment:
+    """Normalize one path segment input value into a parsed path segment.
+
+    Args:
+        segment: A string property name, integer index, ``Property``, or
+            ``Index``.
+
+    Returns:
+        Parsed path segment.
+
+    Raises:
+        TypeError: If ``segment`` is not a supported path segment input value.
+        ValueError: If an integer index is negative.
+    """
+    if isinstance(segment, Property):
+        return segment
+    if isinstance(segment, Index):
+        return _normalize_index(segment.i)
+    if isinstance(segment, bool):
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    if isinstance(segment, int):
+        return _normalize_index(segment)
+    if isinstance(segment, str):
+        return Property(segment)
+    raise TypeError("RemoteState path segments must be strings or integers")
 
 
 def prefixes(path: Path) -> list[Path]:
@@ -203,6 +272,12 @@ def _validate_path(path: Path) -> None:
                 raise ValueError(_INVALID_PATH_MESSAGE)
 
 
+def _normalize_index(index: int) -> Index:
+    if isinstance(index, bool) or index < 0:
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    return Index(index)
+
+
 def _read_identifier(path: str, start: int) -> tuple[str, int] | None:
     if start >= len(path):
         return None
@@ -222,7 +297,7 @@ def _read_bracket_segment(path: str, start: int) -> tuple[PathSegment, int] | No
 
     next_char = path[start + 1]
     if next_char in {'"', "'"}:
-        parsed = _read_quoted_string(path, start + 1)
+        parsed = _read_quoted_string_literal(path, start + 1)
         if parsed is None:
             return None
         key, pos = parsed
@@ -230,23 +305,21 @@ def _read_bracket_segment(path: str, start: int) -> tuple[PathSegment, int] | No
             return None
         return Property(key), pos + 1
 
-    if not next_char.isdigit():
+    if not _is_digit(next_char):
         return None
 
     pos = start + 1
-    while pos < len(path) and path[pos].isdigit():
+    while pos < len(path) and _is_digit(path[pos]):
         pos += 1
     digits = path[start + 1 : pos]
     if len(digits) > 1 and digits.startswith("0"):
-        return None
-    if not _INTEGER_RE.fullmatch(digits):
         return None
     if pos >= len(path) or path[pos] != "]":
         return None
     return Index(int(digits)), pos + 1
 
 
-def _read_quoted_string(path: str, start: int) -> tuple[str, int] | None:
+def _read_quoted_string_literal(path: str, start: int) -> tuple[str, int] | None:
     if start >= len(path) or path[start] not in {'"', "'"}:
         return None
 
@@ -267,64 +340,35 @@ def _read_quoted_string(path: str, start: int) -> tuple[str, int] | None:
         if pos >= len(path):
             return None
         escape = path[pos]
-        if escape == quote:
-            value.append(quote)
+        escaped = _STRING_ESCAPES.get(escape)
+        if escaped is not None:
+            value.append(escaped)
             pos += 1
             continue
-        match escape:
-            case "\\":
-                value.append("\\")
-                pos += 1
-                continue
-            case "/":
-                value.append("/")
-                pos += 1
-                continue
-            case "b":
-                value.append("\b")
-                pos += 1
-                continue
-            case "f":
-                value.append("\f")
-                pos += 1
-                continue
-            case "n":
-                value.append("\n")
-                pos += 1
-                continue
-            case "r":
-                value.append("\r")
-                pos += 1
-                continue
-            case "t":
-                value.append("\t")
-                pos += 1
-                continue
-            case "u":
-                parsed = _read_unicode_code_unit(path, pos + 1)
-                if parsed is None:
-                    return None
-                code_unit, pos = parsed
-                if 0xD800 <= code_unit <= 0xDBFF:
-                    if pos + 6 > len(path) or path[pos] != "\\" or path[pos + 1] != "u":
-                        return None
-                    low = _read_unicode_code_unit(path, pos + 2)
-                    if low is None:
-                        return None
-                    low_unit, pos = low
-                    if not 0xDC00 <= low_unit <= 0xDFFF:
-                        return None
-                    code_point = (
-                        0x10000 + ((code_unit - 0xD800) << 10) + (low_unit - 0xDC00)
-                    )
-                    value.append(chr(code_point))
-                    continue
-                if 0xDC00 <= code_unit <= 0xDFFF:
-                    return None
-                value.append(chr(code_unit))
-                continue
-            case _:
+        if escape == "u":
+            parsed = _read_unicode_code_unit(path, pos + 1)
+            if parsed is None:
                 return None
+            code_unit, pos = parsed
+            if 0xD800 <= code_unit <= 0xDBFF:
+                if pos + 6 > len(path) or path[pos] != "\\" or path[pos + 1] != "u":
+                    return None
+                low = _read_unicode_code_unit(path, pos + 2)
+                if low is None:
+                    return None
+                low_unit, pos = low
+                if not 0xDC00 <= low_unit <= 0xDFFF:
+                    return None
+                code_point = (
+                    0x10000 + ((code_unit - 0xD800) << 10) + (low_unit - 0xDC00)
+                )
+                value.append(chr(code_point))
+                continue
+            if 0xDC00 <= code_unit <= 0xDFFF:
+                return None
+            value.append(chr(code_unit))
+            continue
+        return None
     return None
 
 
@@ -332,17 +376,27 @@ def _read_unicode_code_unit(path: str, start: int) -> tuple[int, int] | None:
     if start + 4 > len(path):
         return None
     hex_digits = path[start : start + 4]
-    if not re.fullmatch(r"[0-9a-fA-F]{4}", hex_digits):
+    if not all(_is_hex_digit(char) for char in hex_digits):
         return None
     return int(hex_digits, 16), start + 4
 
 
 def _is_identifier_start(char: str) -> bool:
-    return bool(re.fullmatch(r"[a-zA-Z_]", char))
+    code = ord(char)
+    return char == "_" or 0x41 <= code <= 0x5A or 0x61 <= code <= 0x7A
 
 
 def _is_identifier_part(char: str) -> bool:
-    return bool(re.fullmatch(r"[a-zA-Z0-9_]", char))
+    return _is_identifier_start(char) or _is_digit(char)
+
+
+def _is_digit(char: str) -> bool:
+    return "0" <= char <= "9"
+
+
+def _is_hex_digit(char: str) -> bool:
+    code = ord(char)
+    return 0x30 <= code <= 0x39 or 0x41 <= code <= 0x46 or 0x61 <= code <= 0x66
 
 
 def _invalid_path(path: str, pos: int | None = None) -> ValueError:

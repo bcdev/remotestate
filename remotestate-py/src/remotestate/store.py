@@ -9,16 +9,15 @@ from .context import _call_context
 from .path import (
     Index,
     Path,
+    PathInput,
     PathSegment,
     Property,
     format_path,
-    parse_path,
+    normalize_path,
 )
 
 type PendingUpdates = dict[str, Any]
 type DefaultFactory = Callable[[Path], Any]
-type PathKeySegment = str | int | PathSegment
-type PathKey = str | int | tuple[PathKeySegment, ...]
 T = TypeVar("T")
 
 
@@ -56,7 +55,7 @@ class Store(Generic[T]):
         """The current root state value."""
         return self._state
 
-    def __getitem__(self, path: PathKey) -> Any:
+    def __getitem__(self, path: PathInput) -> Any:
         """Return the value at ``path``.
 
         ``path`` may be a RemoteState path string, an integer root index, or a
@@ -65,14 +64,14 @@ class Store(Generic[T]):
         """
         return self.get(path)
 
-    def __setitem__(self, path: PathKey, value: Any) -> None:
+    def __setitem__(self, path: PathInput, value: Any) -> None:
         """Set ``value`` at ``path``.
 
         ``path`` follows the same rules as ``__getitem__``.
         """
         self.set(path, value)
 
-    def get(self, path: PathKey = (), *, require: bool = False) -> Any:
+    def get(self, path: PathInput = (), *, require: bool = False) -> Any:
         """Return the value at ``path``.
 
         Missing values return ``None`` by default. Pass ``require=True`` to
@@ -96,10 +95,10 @@ class Store(Generic[T]):
             IndexError: If a required list index is missing.
             AttributeError: If a required object attribute is missing.
         """
-        parsed = _normalize_path(path)
+        parsed = normalize_path(path)
         return _get_at(self._state, parsed, require)
 
-    def set(self, path: PathKey, value: Any) -> None:
+    def set(self, path: PathInput, value: Any) -> None:
         """Set ``value`` at ``path`` and notify subscribers.
 
         If this store has a default factory, missing intermediate path
@@ -124,7 +123,7 @@ class Store(Generic[T]):
         if ctx is not None and ctx.readonly:
             raise PermissionError("query methods cannot mutate store")
 
-        parsed = _normalize_path(path)
+        parsed = normalize_path(path)
         self._state = cast(
             T,
             _set_at(
@@ -296,35 +295,3 @@ class _batch_pending_updates:
 _batch_context: ContextVar[PendingUpdates | None] = ContextVar(
     "_batch_context", default=None
 )
-
-
-def _normalize_path(path: PathKey) -> Path:
-    if isinstance(path, str):
-        return parse_path(path)
-    if isinstance(path, int):
-        return (_normalize_index(path),)
-    if isinstance(path, tuple):
-        return tuple(_normalize_path_segment(segment) for segment in path)
-    raise TypeError(
-        "RemoteState path must be a string, integer, or tuple of path segments"
-    )
-
-
-def _normalize_path_segment(segment: PathKeySegment) -> PathSegment:
-    if isinstance(segment, Property):
-        return segment
-    if isinstance(segment, Index):
-        return _normalize_index(segment.i)
-    if isinstance(segment, bool):
-        raise ValueError("RemoteState path indices must be non-negative integers")
-    if isinstance(segment, int):
-        return _normalize_index(segment)
-    if isinstance(segment, str):
-        return Property(segment)
-    raise TypeError("RemoteState path tuple segments must be strings or integers")
-
-
-def _normalize_index(index: int) -> Index:
-    if isinstance(index, bool) or index < 0:
-        raise ValueError("RemoteState path indices must be non-negative integers")
-    return Index(index)

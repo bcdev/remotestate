@@ -5,7 +5,7 @@ import {
   RemoteStateProvider,
   useRemoteStateClient,
   useRemoteStateValue,
-  type PathLike,
+  type PathInput,
   type RemoteStateClient,
   type Store,
 } from "../lib";
@@ -59,7 +59,7 @@ function RequiredClientStatus() {
 
 describe("RemoteStateProvider", () => {
   it("allows useRemoteStateValue to omit the path", () => {
-    const readRoot: (path?: PathLike) => unknown = useRemoteStateValue;
+    const readRoot: (path?: PathInput) => unknown = useRemoteStateValue;
 
     expect(readRoot).toBe(useRemoteStateValue);
   });

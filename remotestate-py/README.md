@@ -190,6 +190,9 @@ print("UI Base URL:   ", result.ui_base_url)
 advanced integrations:
 
 - `Path`
+- `PathSegment`
+- `PathInput`
+- `PathSegmentInput`
 - `Property`
 - `Index`
 
@@ -214,7 +217,8 @@ subset without the `"$."` prefix:
 | `$.user`                  | no     | `"$."` prefix is not part of the syntax               |
 | `items[01]`               | no     | indices are canonical integers without leading zeroes |
 
-Use `parse_path()` and `format_path()` when you need to inspect, validate, or construct paths.
+Use `normalize_path()` when accepting raw path inputs, and use `parse_path()` and
+`format_path()` when you need to inspect, validate, or construct string paths.
 
 ## More Docs
 
