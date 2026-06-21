@@ -3,8 +3,6 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import BaseModel
 
-from remotestate.path import Index, Property
-
 # noinspection PyProtectedMember
 from remotestate.store import Store, _batch_pending_updates
 
@@ -192,8 +190,8 @@ def test_set_default_factory_receives_missing_prefix_paths():
     store.set("user.address.city", "Hamburg")
 
     assert calls == [
-        (Property("user"),),
-        (Property("user"), Property("address")),
+        ("user",),
+        ("user", "address"),
     ]
 
 
@@ -208,13 +206,13 @@ def test_set_default_factory_receives_root_index_paths():
 
     store.set("[0].label", "foo")
 
-    assert calls == [(Index(0),)]
+    assert calls == [(0,)]
     assert store.state == [{"label": "foo"}]
 
 
 def test_set_default_factory_can_create_pydantic_objects():
     def factory(path):
-        if path == (Property("user"),):
+        if path == ("user",):
             return User(
                 name="",
                 age=0,
@@ -232,7 +230,7 @@ def test_set_default_factory_can_create_pydantic_objects():
 
 def test_set_default_factory_can_create_list_items():
     def factory(path):
-        if path == (Property("items"),):
+        if path == ("items",):
             return []
         return {}
 
@@ -263,7 +261,7 @@ def test_set_sparse_list_index_raises_with_default_factory():
 
     def factory(path):
         calls.append(path)
-        if path == (Property("items"),):
+        if path == ("items",):
             return []
         return {}
 
@@ -272,7 +270,7 @@ def test_set_sparse_list_index_raises_with_default_factory():
     with pytest.raises(IndexError):
         store.set("items[1].label", "foo")
 
-    assert calls == [(Property("items"),)]
+    assert calls == [("items",)]
 
 
 def test_get_never_calls_default_factory():
