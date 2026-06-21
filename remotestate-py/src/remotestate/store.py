@@ -7,11 +7,9 @@ from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
 from .path import (
-    Index,
     Path,
     PathInput,
     PathSegment,
-    Property,
     format_path,
     normalize_path,
 )
@@ -42,7 +40,7 @@ class Store(Generic[T]):
             default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
                 missing prefix path as a ``Path`` tuple, such as one
-                containing ``Property("user")`` or ``Index(0)`` segments.
+                containing ``"user"`` or ``0`` segments.
                 If omitted, missing parents raise the same ``KeyError``,
                 ``IndexError``, or ``AttributeError`` as before.
         """
@@ -58,9 +56,9 @@ class Store(Generic[T]):
     def __getitem__(self, path: PathInput) -> Any:
         """Return the value at ``path``.
 
-        ``path`` may be a RemoteState path string, an integer root index, or a
-        tuple of path segments such as ``("items", 0, "label")``. The empty
-        tuple ``()`` addresses the root state value.
+        ``path`` may be a RemoteState path string or a tuple of path segments
+        such as ``("items", 0, "label")``. The empty tuple ``()`` addresses
+        the root state value.
         """
         return self.get(path)
 
@@ -177,46 +175,41 @@ class Store(Generic[T]):
 def _set_or_append_segment(
     obj: Any, segment: PathSegment, value: Any, *, require_appendable: bool
 ) -> None:
-    if isinstance(segment, Index) and isinstance(obj, list) and segment.i == len(obj):
+    if isinstance(segment, int) and isinstance(obj, list) and segment == len(obj):
         obj.append(value)
         return
     if require_appendable:
-        if isinstance(segment, Index):
-            raise IndexError(segment.i)
-        else:
-            raise KeyError(segment.key)
+        if isinstance(segment, int):
+            raise IndexError(segment)
+        raise KeyError(segment)
     _set_segment(obj, segment, value)
 
 
 def _get_segment(obj: Any, segment: PathSegment, require: bool) -> Any:
-    match segment:
-        case Property(key):
-            if isinstance(obj, dict):
-                if require:
-                    return obj[key]
-                return obj.get(key)
-            else:
-                if require:
-                    return getattr(obj, key)
-                return getattr(obj, key, None)
-        case Index(i):
-            try:
-                return obj[i]
-            except (IndexError, KeyError, TypeError):
-                if require:
-                    raise
-                return None
+    if isinstance(segment, str):
+        if isinstance(obj, dict):
+            if require:
+                return obj[segment]
+            return obj.get(segment)
+        if require:
+            return getattr(obj, segment)
+        return getattr(obj, segment, None)
+    try:
+        return obj[segment]
+    except (IndexError, KeyError, TypeError):
+        if require:
+            raise
+        return None
 
 
 def _set_segment(obj: Any, segment: PathSegment, value: Any) -> None:
-    match segment:
-        case Property(key):
-            if isinstance(obj, dict):
-                obj[key] = value
-            else:
-                setattr(obj, key, value)
-        case Index(i):
-            obj[i] = value
+    if isinstance(segment, str):
+        if isinstance(obj, dict):
+            obj[segment] = value
+        else:
+            setattr(obj, segment, value)
+        return
+    obj[segment] = value
 
 
 def _get_at(root: Any, path: Path, require: bool) -> Any:
@@ -245,9 +238,9 @@ def _set_at(
             if default_factory is None:
                 raise
             if (
-                isinstance(segment, Index)
+                isinstance(segment, int)
                 and isinstance(obj, list)
-                and segment.i > len(obj)
+                and segment > len(obj)
             ):
                 raise
             default_value = default_factory(path[:i])
@@ -255,7 +248,7 @@ def _set_at(
                 obj,
                 segment,
                 default_value,
-                require_appendable=isinstance(segment, Index),
+                require_appendable=isinstance(segment, int),
             )
             obj = default_value
 

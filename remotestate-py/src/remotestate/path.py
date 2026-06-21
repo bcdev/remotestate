@@ -2,42 +2,19 @@ import functools
 import json
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
-class Property:
-    """A named property segment in a RemoteState path.
-
-    Args:
-        key: Property name.
-    """
-
-    key: str
-
-
-@dataclass(frozen=True)
-class Index:
-    """A list index segment in a RemoteState path.
-
-    Args:
-        i: Zero-based list index.
-    """
-
-    i: int
-
-
-# One parsed path segment.
-type PathSegment = Property | Index
+# A single segment in a RemoteState path.
+type PathSegment = str | int
 
 # A parsed RemoteState path.
 type Path = tuple[PathSegment, ...]
 
 # A raw value accepted as one path segment.
-type PathSegmentInput = str | int | PathSegment
+type PathSegmentInput = str | int
 
 # A raw value accepted anywhere a RemoteState path is needed.
-type PathInput = str | int | Sequence[PathSegmentInput] | Path
+type PathInput = str | Sequence[PathSegmentInput]
 
 _IDENTIFIER_RE = re.compile(r"[a-zA-Z_][a-zA-Z0-9_]*")
 _INVALID_PATH_MESSAGE = "RemoteState paths must be valid simplified JSONPath paths"
@@ -52,6 +29,50 @@ _STRING_ESCAPES = {
     "r": "\r",
     "t": "\t",
 }
+
+
+def normalize_path(path: PathInput) -> Path:
+    """Normalize a path input value into a validated RemoteState path.
+
+    Args:
+        path: RemoteState path string or a sequence of path segment inputs
+            such as ``("items", 0, "label")``.
+
+    Returns:
+        Parsed path.
+
+    Raises:
+        TypeError: If ``path`` is not a supported path input value.
+        ValueError: If ``path`` contains an invalid segment.
+    """
+    if isinstance(path, str):
+        return parse_path(path)
+    if isinstance(path, Sequence):
+        return tuple(normalize_path_segment(segment) for segment in path)
+    raise TypeError("RemoteState path must be a string or sequence of path segments")
+
+
+def normalize_path_segment(segment: PathSegmentInput) -> PathSegment:
+    """Normalize one path segment input value into a validated path segment.
+
+    Args:
+        segment: A string property name or integer index.
+
+    Returns:
+        Parsed path segment.
+
+    Raises:
+        TypeError: If ``segment`` is not a supported path segment input value.
+        ValueError: If an integer index is negative.
+    """
+    if isinstance(segment, bool):
+        raise ValueError("RemoteState path indices must be non-negative integers")
+    if isinstance(segment, int):
+        _validate_index(segment)
+        return segment
+    if isinstance(segment, str):
+        return segment
+    raise TypeError("RemoteState path segments must be strings or integers")
 
 
 @functools.cache
@@ -96,7 +117,7 @@ def parse_path(path: str) -> Path:
 
     first = _read_identifier(path, 0)
     if first is not None:
-        segments: list[PathSegment] = [Property(first[0])]
+        segments: list[PathSegment] = [first[0]]
         pos = first[1]
     elif path[0] == "[":
         bracket = _read_bracket_segment(path, 0)
@@ -114,7 +135,7 @@ def parse_path(path: str) -> Path:
                 identifier = _read_identifier(path, pos)
                 if identifier is None:
                     raise _invalid_path(path, pos)
-                segments.append(Property(identifier[0]))
+                segments.append(identifier[0])
                 pos = identifier[1]
             case "[":
                 bracket = _read_bracket_segment(path, pos)
@@ -128,56 +149,27 @@ def parse_path(path: str) -> Path:
     return tuple(segments)
 
 
-def normalize_path(path: PathInput) -> Path:
-    """Normalize a path input value into a parsed RemoteState path.
+def format_path(path: Path) -> str:
+    """Convert parsed RemoteState path segments back to dotted/bracket syntax.
 
     Args:
-        path: RemoteState path string, root array index, or a sequence of path
-            segment inputs such as ``("items", 0, "label")``.
+        path: Parsed path.
 
     Returns:
-        Parsed path.
-
-    Raises:
-        TypeError: If ``path`` is not a supported path input value.
-        ValueError: If ``path`` contains an invalid segment.
+        The canonical string form used by the transport and cache keys.
     """
-    if isinstance(path, str):
-        return parse_path(path)
-    if isinstance(path, int):
-        return (normalize_path_segment(path),)
-    if isinstance(path, Sequence):
-        return tuple(normalize_path_segment(segment) for segment in path)
-    raise TypeError(
-        "RemoteState path must be a string, integer, or sequence of path segments"
-    )
-
-
-def normalize_path_segment(segment: PathSegmentInput) -> PathSegment:
-    """Normalize one path segment input value into a parsed path segment.
-
-    Args:
-        segment: A string property name, integer index, ``Property``, or
-            ``Index``.
-
-    Returns:
-        Parsed path segment.
-
-    Raises:
-        TypeError: If ``segment`` is not a supported path segment input value.
-        ValueError: If an integer index is negative.
-    """
-    if isinstance(segment, Property):
-        return segment
-    if isinstance(segment, Index):
-        return _normalize_index(segment.i)
-    if isinstance(segment, bool):
-        raise ValueError("RemoteState path indices must be non-negative integers")
-    if isinstance(segment, int):
-        return _normalize_index(segment)
-    if isinstance(segment, str):
-        return Property(segment)
-    raise TypeError("RemoteState path segments must be strings or integers")
+    _validate_path(path)
+    parts: list[str] = []
+    for index, segment in enumerate(path):
+        if isinstance(segment, int):
+            parts.append(f"[{segment}]")
+        elif index == 0 and _IDENTIFIER_RE.fullmatch(segment):
+            parts.append(segment)
+        elif _IDENTIFIER_RE.fullmatch(segment):
+            parts.append(f".{segment}")
+        else:
+            parts.append(f"[{json.dumps(segment, ensure_ascii=False)}]")
+    return "".join(parts)
 
 
 def prefixes(path: Path) -> list[Path]:
@@ -191,34 +183,6 @@ def prefixes(path: Path) -> list[Path]:
         no non-root prefixes.
     """
     return [path[:i] for i in range(1, len(path) + 1)]
-
-
-def format_path(path: Path) -> str:
-    """Convert a parsed path back to a RemoteState path string.
-
-    Args:
-        path: Parsed path.
-
-    Returns:
-        String representation of ``path``.
-    """
-    _validate_path(path)
-    if len(path) == 0:
-        return ""
-
-    parts: list[str] = []
-    for index, seg in enumerate(path):
-        match seg:
-            case Property(key):
-                if index == 0 and _IDENTIFIER_RE.fullmatch(key):
-                    parts.append(key)
-                elif _IDENTIFIER_RE.fullmatch(key):
-                    parts.append(f".{key}")
-                else:
-                    parts.append(f"[{json.dumps(key, ensure_ascii=False)}]")
-            case Index(i):
-                parts.append(f"[{i}]")
-    return "".join(parts)
 
 
 def to_jsonpath(path: str) -> str:
@@ -261,21 +225,17 @@ def from_jsonpath(path: str) -> str:
 
 def _validate_path(path: Path) -> None:
     for segment in path:
-        match segment:
-            case Property(key):
-                if not isinstance(key, str):
-                    raise ValueError(_INVALID_PATH_MESSAGE)
-            case Index(i):
-                if not isinstance(i, int) or i < 0:
-                    raise ValueError(_INVALID_PATH_MESSAGE)
-            case _:
-                raise ValueError(_INVALID_PATH_MESSAGE)
+        if isinstance(segment, bool):
+            raise ValueError(_INVALID_PATH_MESSAGE)
+        if isinstance(segment, int):
+            _validate_index(segment)
+        elif not isinstance(segment, str):
+            raise ValueError(_INVALID_PATH_MESSAGE)
 
 
-def _normalize_index(index: int) -> Index:
-    if isinstance(index, bool) or index < 0:
+def _validate_index(index: int) -> None:
+    if index < 0:
         raise ValueError("RemoteState path indices must be non-negative integers")
-    return Index(index)
 
 
 def _read_identifier(path: str, start: int) -> tuple[str, int] | None:
@@ -303,7 +263,7 @@ def _read_bracket_segment(path: str, start: int) -> tuple[PathSegment, int] | No
         key, pos = parsed
         if pos >= len(path) or path[pos] != "]":
             return None
-        return Property(key), pos + 1
+        return key, pos + 1
 
     if not _is_digit(next_char):
         return None
@@ -316,7 +276,7 @@ def _read_bracket_segment(path: str, start: int) -> tuple[PathSegment, int] | No
         return None
     if pos >= len(path) or path[pos] != "]":
         return None
-    return Index(int(digits)), pos + 1
+    return int(digits), pos + 1
 
 
 def _read_quoted_string_literal(path: str, start: int) -> tuple[str, int] | None:

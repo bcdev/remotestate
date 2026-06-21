@@ -2,8 +2,6 @@ import remotestate as rs
 import pytest
 
 from remotestate.path import (
-    Index,
-    Property,
     from_jsonpath,
     format_path,
     normalize_path,
@@ -13,241 +11,162 @@ from remotestate.path import (
     to_jsonpath,
 )
 
-# --- parse_path ---
+
+def test_parse_path_parses_dotted_and_indexed_paths():
+    assert parse_path("items[1].label") == ("items", 1, "label")
 
 
-def test_simple_property():
-    assert parse_path("user") == (Property("user"),)
+def test_parse_path_parses_bracketed_string_keys():
+    assert parse_path('user["display name"]') == ("user", "display name")
+    assert parse_path("user['display name']") == ("user", "display name")
+    assert parse_path('user["0"]') == ("user", "0")
+    assert parse_path("user['0']") == ("user", "0")
+    assert parse_path('items[""].label') == ("items", "", "label")
+    assert parse_path('user["weird.key"].value') == ("user", "weird.key", "value")
+    assert parse_path('user[""]') == ("user", "")
 
 
-def test_empty_path_is_root():
-    assert parse_path("") == ()
-
-
-def test_nested_properties():
-    assert parse_path("user.name") == (Property("user"), Property("name"))
-
-
-def test_index():
-    assert parse_path("items[3]") == (Property("items"), Index(3))
-
-
-def test_root_index():
-    assert parse_path("[3].name") == (Index(3), Property("name"))
-
-
-def test_string_key():
-    assert parse_path('user["display name"]') == (
-        Property("user"),
-        Property("display name"),
-    )
-    assert parse_path("user['display name']") == (
-        Property("user"),
-        Property("display name"),
-    )
-    assert parse_path('user["0"]') == (Property("user"), Property("0"))
-    assert parse_path("user['0']") == (Property("user"), Property("0"))
-    assert parse_path('items[""].label') == (
-        Property("items"),
-        Property(""),
-        Property("label"),
-    )
-
-
-def test_string_key_escapes():
-    assert parse_path('user["line\\nbreak"]') == (
-        Property("user"),
-        Property("line\nbreak"),
-    )
-    assert parse_path('user["tab\\tseparated"]') == (
-        Property("user"),
-        Property("tab\tseparated"),
-    )
-    assert parse_path('user["quote\\"slash\\\\"]') == (
-        Property("user"),
-        Property('quote"slash\\'),
-    )
-    assert parse_path("user['double\\\"quote']") == (
-        Property("user"),
-        Property('double"quote'),
-    )
+def test_parse_path_parses_bracketed_string_key_escapes():
+    assert parse_path('user["line\\nbreak"]') == ("user", "line\nbreak")
+    assert parse_path('user["tab\\tseparated"]') == ("user", "tab\tseparated")
+    assert parse_path('user["quote\\"slash\\\\"]') == ("user", 'quote"slash\\')
+    assert parse_path("user['double\\\"quote']") == ("user", 'double"quote')
     assert parse_path('user["emoji \\uD83D\\uDE00"]') == (
-        Property("user"),
-        Property("emoji " + chr(0x1F600)),
+        "user",
+        "emoji " + chr(0x1F600),
     )
 
 
-def test_root_string_key():
-    assert parse_path('["root"]') == (Property("root"),)
-    assert parse_path('["display name"].value') == (
-        Property("display name"),
-        Property("value"),
-    )
+def test_parse_path_parses_a_single_root_segment():
+    assert parse_path("count") == ("count",)
 
 
-def test_nested_after_index():
-    assert parse_path("items[3].name") == (
-        Property("items"),
-        Index(3),
-        Property("name"),
-    )
-
-
-def test_deep():
-    assert parse_path("a.b[0].c[1].d") == (
-        Property("a"),
-        Property("b"),
-        Index(0),
-        Property("c"),
-        Index(1),
-        Property("d"),
-    )
-
-
-def test_underscore_in_key():
-    assert parse_path("my_field.sub_field") == (
-        Property("my_field"),
-        Property("sub_field"),
-    )
-
-
-def test_invalid_starts_with_dot():
-    with pytest.raises(ValueError):
-        parse_path(".user")
-
-
-def test_allows_root_index():
-    assert parse_path("[0].name") == (Index(0), Property("name"))
-
-
-def test_allows_root_string_key():
-    assert parse_path('["root"]') == (Property("root"),)
-
-
-def test_allows_empty_root():
+def test_parse_path_parses_the_empty_root_path():
     assert parse_path("") == ()
 
 
-def test_invalid_trailing_dot():
+def test_parse_path_parses_root_bracket_segments():
+    assert parse_path("[0].label") == (0, "label")
+    assert parse_path('["display name"].value') == ("display name", "value")
+
+
+def test_parse_path_throws_on_invalid_trailing_input():
+    with pytest.raises(ValueError):
+        parse_path("items..label")
     with pytest.raises(ValueError):
         parse_path("user.")
-
-
-def test_invalid_double_dot():
-    with pytest.raises(ValueError):
-        parse_path("user..name")
-
-
-def test_invalid_non_integer_index():
-    with pytest.raises(ValueError):
-        parse_path("items[foo]")
-
-
-def test_invalid_leading_zero_index():
-    with pytest.raises(ValueError):
-        parse_path("items[01]")
-
-
-def test_invalid_jsonpath_wildcard():
     with pytest.raises(ValueError):
         parse_path("items[*]")
 
 
-# --- normalize_path ---
-
-
-def test_normalize_path_accepts_strings():
-    assert normalize_path("items[0].label") == (
-        Property("items"),
-        Index(0),
-        Property("label"),
-    )
-
-
-def test_normalize_path_accepts_segment_sequences():
-    assert normalize_path(("items", 0, "label")) == (
-        Property("items"),
-        Index(0),
-        Property("label"),
-    )
-
-
-def test_normalize_path_accepts_bare_root_index():
-    assert normalize_path(0) == (Index(0),)
-
-
-def test_normalize_path_segment_accepts_raw_segments():
-    assert normalize_path_segment("items") == Property("items")
-    assert normalize_path_segment(0) == Index(0)
-
-
-def test_normalize_path_rejects_invalid_segments():
+def test_parse_path_throws_on_invalid_path_starts():
     with pytest.raises(ValueError):
-        normalize_path(("items", -1))
+        parse_path("1items")
+    with pytest.raises(ValueError):
+        parse_path(".items")
 
 
-# --- prefixes ---
+def test_parse_path_throws_on_non_canonical_integer_syntax():
+    with pytest.raises(ValueError):
+        parse_path("items[01]")
+    with pytest.raises(ValueError):
+        parse_path("items[foo]")
 
 
-def test_prefixes_simple():
-    path = parse_path("user.name")
-    result = [format_path(p) for p in prefixes(path)]
-    assert result == ["user", "user.name"]
+def test_format_path_formats_dotted_and_indexed_paths():
+    assert format_path(("items", 1, "label")) == "items[1].label"
 
 
-def test_prefixes_with_index():
-    path = parse_path("items[3].name")
-    result = [format_path(p) for p in prefixes(path)]
-    assert result == ["items", "items[3]", "items[3].name"]
+def test_format_path_formats_bracketed_string_keys_canonically():
+    assert format_path(("user", "display name")) == 'user["display name"]'
+    assert format_path(("user", "0")) == 'user["0"]'
+    assert format_path(("items", "", "label")) == 'items[""].label'
+    assert format_path(("user", "weird.key", "value")) == 'user["weird.key"].value'
+    assert format_path(("items", "")) == 'items[""]'
 
 
-def test_prefixes_single():
-    path = parse_path("user")
-    result = prefixes(path)
-    assert len(result) == 1
+def test_format_path_formats_a_single_root_segment():
+    assert format_path(("count",)) == "count"
 
 
-def test_prefixes_root():
+def test_format_path_formats_the_empty_root_path():
+    assert format_path(()) == ""
+
+
+def test_format_path_formats_root_bracket_segments():
+    assert format_path((0, "label")) == "[0].label"
+    assert format_path(("display name", "value")) == '["display name"].value'
+
+
+def test_normalize_path_normalizes_dotted_strings_into_parsed_paths():
+    assert normalize_path("items[1].label") == ("items", 1, "label")
+
+
+def test_normalize_path_accepts_an_already_parsed_path_input_value():
+    path = ("items", 1, "label")
+
+    assert normalize_path(path) == path
+
+
+def test_normalize_path_accepts_parsed_relative_paths():
+    parsed = parse_path("items[1].label")
+
+    assert normalize_path(parsed) == ("items", 1, "label")
+
+
+def test_normalize_path_accepts_string_keys_in_array_form():
+    assert normalize_path(("items", "display name")) == ("items", "display name")
+    assert normalize_path(("items", "")) == ("items", "")
+
+
+def test_normalize_path_accepts_empty_root_paths():
+    assert normalize_path(()) == ()
+    assert normalize_path("") == ()
+
+
+def test_normalize_path_accepts_root_index_and_string_key_paths():
+    assert normalize_path((1, "label")) == (1, "label")
+    assert normalize_path(("", "label")) == ("", "label")
+
+
+def test_normalize_path_segment_accepts_raw_segment_values():
+    assert normalize_path_segment("items") == "items"
+    assert normalize_path_segment(1) == 1
+
+
+def test_normalize_path_rejects_invalid_array_form_path_segments():
+    with pytest.raises(TypeError):
+        normalize_path(("items", 1.5))
+    with pytest.raises(ValueError):
+        normalize_path(("items", -1, "label"))
+    with pytest.raises(ValueError):
+        normalize_path(("items", True, "label"))
+
+
+def test_normalize_path_rejects_invalid_string_syntax():
+    with pytest.raises(ValueError):
+        normalize_path("items..label")
+    with pytest.raises(ValueError):
+        normalize_path("items[01]")
+
+
+def test_normalize_path_rejects_bare_root_index_input():
+    with pytest.raises(TypeError):
+        normalize_path(0)  # type: ignore[arg-type]
+
+
+def test_prefixes_returns_non_root_prefixes():
+    assert [format_path(p) for p in prefixes(parse_path("user.name"))] == [
+        "user",
+        "user.name",
+    ]
+    assert [format_path(p) for p in prefixes(parse_path("items[3].name"))] == [
+        "items",
+        "items[3]",
+        "items[3].name",
+    ]
+    assert prefixes(parse_path("user")) == [("user",)]
     assert prefixes(parse_path("")) == []
-
-
-# --- format_path ---
-
-
-def test_roundtrip_simple():
-    assert format_path(parse_path("user.name")) == "user.name"
-
-
-def test_roundtrip_root():
-    assert format_path(parse_path("")) == ""
-
-
-def test_roundtrip_index():
-    assert format_path(parse_path("items[3].name")) == "items[3].name"
-    assert format_path(parse_path("[3].name")) == "[3].name"
-
-
-def test_roundtrip_string_key():
-    assert format_path(parse_path('user["display name"]')) == 'user["display name"]'
-    assert format_path(parse_path("user['display name']")) == 'user["display name"]'
-    assert format_path(parse_path('user["0"]')) == 'user["0"]'
-    assert format_path(parse_path("user['0']")) == 'user["0"]'
-    assert format_path(parse_path('items[""].label')) == 'items[""].label'
-    assert format_path(parse_path('["display name"].value')) == (
-        '["display name"].value'
-    )
-
-
-def test_roundtrip_deep():
-    s = "a.b[0].c[1].d"
-    assert format_path(parse_path(s)) == s
-
-
-def test_roundtrip_empty_string_key():
-    assert format_path(parse_path('user[""]')) == 'user[""]'
-
-
-# --- jsonpath ---
 
 
 def test_to_jsonpath():
@@ -268,7 +187,8 @@ def test_from_jsonpath_invalid():
 
 
 def test_path_namespace_is_exported_from_package_root():
-    assert rs.path.Property("user") == Property("user")
-    assert rs.path.Index(3) == Index(3)
+    assert rs.path.parse_path("user") == ("user",)
+    assert not hasattr(rs.path, "Property")
+    assert not hasattr(rs.path, "Index")
     assert not hasattr(rs, "Property")
     assert not hasattr(rs, "Index")

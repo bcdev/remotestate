@@ -21,6 +21,11 @@
 - Added public `PathInput` and `PathSegmentInput` aliases plus
   `normalize_path()` and `normalize_path_segment()` helpers under
   `remotestate.path`.
+- Removed the Python-only `Property` and `Index` parsed path segment classes.
+  Parsed paths now use primitive tuple segments, such as `("items", 0,
+  "label")`, matching the TypeScript path model.
+- Aligned `PathInput` with TypeScript: pass a string path or a sequence of
+  path segments. Root array entries can be addressed as `"[0]"` or `(0,)`.
 
 
 ## Version 0.2.0

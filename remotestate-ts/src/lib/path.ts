@@ -16,12 +16,12 @@ export type Path = readonly PathSegment[];
 /**
  * A raw value accepted as one path segment.
  */
-export type PathSegmentInput = string | number | PathSegment;
+export type PathSegmentInput = PathSegment;
 
 /**
  * A raw value accepted anywhere a RemoteState path is needed.
  */
-export type PathInput = string | readonly PathSegmentInput[] | Path;
+export type PathInput = string | readonly PathSegmentInput[];
 
 const IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const INVALID_PATH_MESSAGE =

@@ -101,9 +101,9 @@ class User:
 
 
 def defaults(path: rs.path.Path):
-    if path == (rs.path.Property("user"),):
+    if path == ("user",):
         return User()
-    if path == (rs.path.Property("items"),):
+    if path == ("items",):
         return []
     return {}
 
@@ -187,14 +187,13 @@ print("UI Base URL:   ", result.ui_base_url)
 ## Paths
 
 `remotestate.path` exposes the parsed path types used by `Store.default_factory` and other
-advanced integrations:
+advanced integrations. Parsed paths are tuples of string property names and integer array
+indices, matching the TypeScript package's `string | number` path segments:
 
 - `Path`
 - `PathSegment`
 - `PathInput`
 - `PathSegmentInput`
-- `Property`
-- `Index`
 
 RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
 subset without the `"$."` prefix:
