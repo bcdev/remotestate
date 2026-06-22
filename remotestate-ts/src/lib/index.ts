@@ -3,6 +3,7 @@ export { createLocalStateClient } from "./local";
 export {
   formatPath,
   getPathAt,
+  isPrefixPath,
   normalizePath,
   parsePath,
   setPathAt,

@@ -228,38 +228,27 @@ export function setPathAt(
 }
 
 /**
- * Check whether one parsed path is a prefix of another parsed path.
+ * Tests whether `prefixPath` is a prefix of `path`.
  *
- * @param prefix The candidate prefix path.
- * @param path The full path to compare against.
- * @returns Whether `prefix` is the same path or an ancestor of `path`.
+ * @param prefixPath The candidate prefix path.
+ * @param path The path to test.
+ * @returns `true` if `path` starts with all segments of `prefixPath`.
  */
-export function isPathPrefixSegments(prefix: Path, path: Path): boolean {
-  if (prefix.length > path.length) {
-    return false;
-  }
-  return prefix.every((segment, index) => segment === path[index]);
+export function isPrefixPath(prefixPath: Path, path: Path): boolean {
+  return (
+    prefixPath.length <= path.length &&
+    prefixPath.every((segment, index) => segment === path[index])
+  );
 }
 
 /**
- * Check whether two string paths overlap by ancestor/descendant relationship.
- *
- * @param left The first path string.
- * @param right The second path string.
- * @returns Whether either path is a prefix of the other.
- */
-export function pathsOverlap(left: string, right: string): boolean {
-  return isPathPrefix(left, right) || isPathPrefix(right, left);
-}
-
-/**
- * Drop a prefix from a path.
+ * Drop a prefix from a path and return the remainder.
  *
  * @param prefix The prefix to remove.
  * @param path The full parsed path.
  * @returns The remaining path segments after the prefix.
  */
-export function pathSegmentsAfter(prefix: Path, path: Path): Path {
+export function makeRelativePath(prefix: Path, path: Path): Path {
   return path.slice(prefix.length);
 }
 
@@ -308,26 +297,13 @@ function isUnknownArray(value: unknown): value is unknown[] {
   return Array.isArray(value);
 }
 
-function isPathPrefix(prefix: string, path: string): boolean {
-  if (prefix === "") {
-    return true;
-  }
-  if (prefix === path) {
-    return true;
-  }
-  const next = path[prefix.length];
-  return path.startsWith(prefix) && (next === "." || next === "[");
-}
-
 function validatePathSegments(
   path: readonly PathSegment[],
 ): asserts path is Path {
   for (const segment of path) {
-    if (typeof segment === "number") {
-      if (!Number.isInteger(segment) || segment < 0) {
-        throw new SyntaxError(INVALID_PATH_MESSAGE);
-      }
-    } else if (typeof segment !== "string") {
+    const validSegment =
+      (isInteger(segment) && segment >= 0) || typeof segment === "string";
+    if (!validSegment) {
       throw new SyntaxError(INVALID_PATH_MESSAGE);
     }
   }
@@ -504,4 +480,8 @@ function isHexDigit(char: string): boolean {
     (code >= 0x41 && code <= 0x46) ||
     (code >= 0x61 && code <= 0x66)
   );
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
 }
