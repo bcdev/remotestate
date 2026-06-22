@@ -87,6 +87,8 @@ The public Python API is exported from `remotestate`:
 - `set(path, value)` writes a value and notifies subscribers
 - `store[path]` and `store[path] = value` are notebook-friendly aliases for
   `get()` and `set()`
+- `store.at.some.path = value` is notebook-friendly sugar for nested
+  `set()` calls; use item syntax for keys that are not valid identifiers
 - `subscribe(callback)` receives batched path-to-value updates after changes flush
 - `default_factory` can materialize missing parents while setting nested values
 
@@ -112,10 +114,12 @@ store = rs.Store({}, default_factory=defaults)
 store.set("user.city", "Hamburg")
 store.set("items[0].label", "foo")
 store["items", 0, "label"] = "bar"
+store.at.user.city = "Berlin"
+store.at.items[0].label = "baz"
 
-assert store.get("user.city") == "Hamburg"
+assert store.get("user.city") == "Berlin"
 assert store.get() is store.state
-assert store["items"] == [{"label": "bar"}]
+assert store["items"] == [{"label": "baz"}]
 assert store[()] is store.state
 ```
 

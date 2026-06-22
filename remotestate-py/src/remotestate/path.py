@@ -3,7 +3,6 @@ import json
 import re
 from collections.abc import Sequence
 
-
 # A single segment in a RemoteState path.
 type PathSegment = str | int
 
