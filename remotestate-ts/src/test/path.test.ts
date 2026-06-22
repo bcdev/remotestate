@@ -242,5 +242,3 @@ describe("isPrefixPath", () => {
     expect(isPrefixPath(["a", "b"], ["a"])).toBe(false);
   });
 });
-
-

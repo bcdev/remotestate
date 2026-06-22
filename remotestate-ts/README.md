@@ -195,7 +195,7 @@ subset without the `$.` prefix:
 - bracketed string keys may use either single or double quotes; canonical output uses double quotes
 - the whole string must match the grammar; prefix parsing is not allowed
 
-| Example                | Valid? | Notes                                                 |
+| Example                  | Valid? | Notes                                                 |
 | ------------------------ | ------ | ----------------------------------------------------- |
 | `user`                   | yes    | root identifier only                                  |
 | `items[0].label`         | yes    | dotted identifier plus integer index                  |
@@ -205,7 +205,12 @@ subset without the `$.` prefix:
 | `items[01]`              | no     | indices are canonical integers without leading zeroes |
 
 ```ts
-import { getPathAt, normalizePath, parsePath, setPathAt } from "remotestate/path";
+import {
+  getPathAt,
+  normalizePath,
+  parsePath,
+  setPathAt,
+} from "remotestate/path";
 
 const path = parsePath("items[0].label");
 const labelPath = parsePath('user["display name"]');
