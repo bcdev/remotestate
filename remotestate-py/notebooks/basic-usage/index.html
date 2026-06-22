@@ -17,7 +17,7 @@
         // get initial count
         ws.send(JSON.stringify({
           type: "get",
-          id: "1",
+          call_id: crypto.randomUUID(),
           path: "count",
         }));
       };
@@ -28,6 +28,7 @@
         useEffect(() => {
           ws.onmessage = (e) => {
             const msg = JSON.parse(e.data);
+            console.log("Message received:", msg);
             if (msg.path === "count" || (msg.updates && "count" in msg.updates)) {
               setCount(msg.value ?? msg.updates.count);
             }
