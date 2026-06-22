@@ -1,3 +1,37 @@
+## Version 0.3.0 (in development)
+
+- `Store` now accepts any root state value, exposes it through the typed
+  `state` property, and supports root reads/writes with the empty path.
+- `Store.get()` now defaults to the root state value when no path is passed.
+- Removed the built-in `Service.get()` query and `Service.set()` action.
+  Store reads and writes now use dedicated `get`/`set` protocol messages, while
+  service actions and queries are reserved for domain methods.
+- `Service` is now generic over the root state type, so `service.store`
+  preserves the `Store[T]` type.
+- Added notebook-friendly `Store.__getitem__()` and `Store.__setitem__()`
+  aliases:
+  - `store["items[0].label"]` uses RemoteState string path syntax.
+  - `store["items", 0, "label"]` uses tuple path segments.
+  - `store[()]` addresses the root state value.
+- Added notebook-friendly `store.at` sugar for nested store paths:
+  - `store.at.items[0].label = "x"` writes through `Store.set()`.
+  - evaluating `store.at.items[0].label` in notebooks renders the current
+    stored value instead of the path accessor object.
+- Relaxed the path grammar so the empty string addresses the root value and
+  paths may start with a bracketed array index or string key, such as
+  `[0].label` or `["display name"].value`.
+- Updated JSONPath conversion helpers so `""` maps to `$` and `[0]` maps to
+  `$[0]`.
+- Added public `PathInput` and `PathSegmentInput` aliases plus
+  `normalize_path()` and `normalize_path_segment()` helpers under
+  `remotestate.path`.
+- Removed the Python-only `Property` and `Index` parsed path segment classes.
+  Parsed paths now use primitive tuple segments, such as `("items", 0,
+  "label")`, matching the TypeScript path model.
+- Aligned `PathInput` with TypeScript: pass a string path or a sequence of
+  path segments. Root array entries can be addressed as `"[0]"` or `(0,)`.
+
+
 ## Version 0.2.0
 
 - Tightened the shared path grammar to a strict JSONPath subset without the

@@ -116,33 +116,31 @@ def invoke_query(service, method, args=None, kwargs=None):
     )
 
 
-# --- built-ins ---
+# --- reserved names ---
 
 
 @pytest.mark.asyncio
-async def test_builtin_get_query_works_on_base_service(store):
-    service = Service(store)
-    coro, _ = invoke_query(service, "get", args=["count"])
-    result = await coro
-    assert result == 0
+async def test_get_and_set_are_available_for_custom_service_methods(store):
+    class MyService(Service):
+        @query
+        async def get(self):
+            return self.store.get("count")
 
+        @action
+        async def set(self, count: int):
+            self.store.set("count", count)
 
-@pytest.mark.asyncio
-async def test_builtin_set_action_works_on_base_service(store):
-    service = Service(store)
-    coro, _ = invoke_action(service, "set", args=["count", 7])
-    await coro
+    service = MyService(store)
+    query_coro, _ = invoke_query(service, "get")
+    assert await query_coro == 0
+
+    action_coro, _ = invoke_action(service, "set", args=[7])
+    await action_coro
     assert store.get("count") == 7
 
 
-def test_builtin_method_names_are_reserved():
-    with pytest.raises(TypeError, match="conflicts with a built-in"):
-        class BadService(Service):
-            @query
-            async def get(self):
-                return self.store.get("count")
-
-    with pytest.raises(TypeError, match="conflicts with a built-in"):
+def test_notify_method_name_is_reserved():
+    with pytest.raises(TypeError, match="conflicts with a reserved"):
         class BadNotifyService(Service):
             @action
             async def notify(self):
@@ -176,6 +174,29 @@ async def test_action_batch_single_notify(store):
     coro, _ = invoke_action(service, "multi_set")
     await coro
     assert cb.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_action_does_not_notify_between_store_sets(store):
+    cb = MagicMock()
+
+    class MyService(Service):
+        @action
+        async def multi_set(self):
+            self.store.set("count", 99)
+            cb.assert_not_called()
+
+            self.store.set("user.name", "Klaus")
+            cb.assert_not_called()
+
+    service = MyService(store)
+    store.subscribe(cb)
+
+    coro, _ = invoke_action(service, "multi_set")
+    updates = await coro
+
+    cb.assert_called_once_with({"count": 99, "user.name": "Klaus"})
+    assert updates == {"count": 99, "user.name": "Klaus"}
 
 
 @pytest.mark.asyncio

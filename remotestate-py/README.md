@@ -76,12 +76,19 @@ The public Python API is exported from `remotestate`:
 
 `Store(initial, *, default_factory=None)` holds the Python-side application state.
 
-- the root state is a mapping
+- the root state may be any JSON-serializable value, including a mapping, list,
+  scalar, Pydantic model, or dataclass
 - nested dicts, lists, Pydantic models, and dataclasses are all supported
 - `default_factory` receives the missing prefix as a `rs.path.Path` tuple
 
-- `get(path, require=False)` reads a value from a path such as `user.name` or `items[0].label`
+- `state` returns the current root state value
+- `get(path=(), require=False)` reads a value from a path such as ``, `user.name`,
+  `[0].label`, or `items[0].label`; omit `path` to read the root state value
 - `set(path, value)` writes a value and notifies subscribers
+- `store[path]` and `store[path] = value` are notebook-friendly aliases for
+  `get()` and `set()`
+- `store.at.some.path = value` is notebook-friendly sugar for nested
+  `set()` calls; use item syntax for keys that are not valid identifiers
 - `subscribe(callback)` receives batched path-to-value updates after changes flush
 - `default_factory` can materialize missing parents while setting nested values
 
@@ -96,9 +103,9 @@ class User:
 
 
 def defaults(path: rs.path.Path):
-    if path == (rs.path.Property("user"),):
+    if path == ("user",):
         return User()
-    if path == (rs.path.Property("items"),):
+    if path == ("items",):
         return []
     return {}
 
@@ -106,9 +113,14 @@ def defaults(path: rs.path.Path):
 store = rs.Store({}, default_factory=defaults)
 store.set("user.city", "Hamburg")
 store.set("items[0].label", "foo")
+store["items", 0, "label"] = "bar"
+store.at.user.city = "Berlin"
+store.at.items[0].label = "baz"
 
-assert store.get("user.city") == "Hamburg"
-assert store.get("items") == [{"label": "foo"}]
+assert store.get("user.city") == "Berlin"
+assert store.get() is store.state
+assert store["items"] == [{"label": "baz"}]
+assert store[()] is store.state
 ```
 
 `get()` never calls the default factory. Reads stay side-effect free, and missing 
@@ -139,15 +151,14 @@ class Counter(rs.Service):
 
 ## Service Helpers
 
-`Service` also provides built-in methods that power the generic TypeScript bridge:
+`Service` exposes the store and progress helper used by actions and queries:
 
-- `get(path)` reads a store value by path
-- `set(path, value)` writes a store value by path
 - `notify(name=None, detail=None, progress=None)` emits `update_task` progress messages 
   for tracked calls
 
-The reserved service method names are `get`, `set`, and `notify`. Do not reuse those names 
-for custom actions or queries.
+The reserved service method name is `notify`. Store reads and writes use
+`service.store.get(...)` and `service.store.set(...)`; `get` and `set` remain
+available for custom actions or queries.
 
 `Service._init_app(app)` can be overridden to customize the FastAPI app when `serve()` 
 creates one.
@@ -180,30 +191,37 @@ print("UI Base URL:   ", result.ui_base_url)
 ## Paths
 
 `remotestate.path` exposes the parsed path types used by `Store.default_factory` and other
-advanced integrations:
+advanced integrations. Parsed paths are tuples of string property names and integer array
+indices, matching the TypeScript package's `string | number` path segments:
 
 - `Path`
-- `Property`
-- `Index`
+- `PathSegment`
+- `PathInput`
+- `PathSegmentInput`
 
 RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/) 
 subset without the `"$."` prefix:
 
-- the root segment is an identifier
+- the empty string addresses the root state value
+- the first segment may be an identifier, bracketed integer index, or bracketed
+  JSON string key
 - later segments may be dotted identifiers, bracketed integer indices, or bracketed JSON string keys
 - bracketed string keys may use either single or double quotes; canonical output uses double quotes
 - the whole string must match the grammar; prefix parsing is not allowed
 
-| Example                | Valid? | Notes                                                 |
-|------------------------|--------|-------------------------------------------------------|
-| `user`                 | yes    | root identifier only                                  |
-| `items[0].label`       | yes    | dotted identifier plus integer index                  |
-| `user["display name"]` | yes    | bracketed string key                                  |
-| `$.user`               | no     | `"$."` prefix is not part of the syntax               |
-| `["root"]`             | no     | root must be an identifier                            |
-| `items[01]`            | no     | indices are canonical integers without leading zeroes |
+| Example                   | Valid? | Notes                                                 |
+|---------------------------|--------|-------------------------------------------------------|
+| empty string              | yes    | root state value                                      |
+| `user`                    | yes    | root property shorthand                               |
+| `[0].label`               | yes    | array root plus child property                        |
+| `items[0].label`          | yes    | dotted identifier plus integer index                  |
+| `["display name"].value`  | yes    | bracketed string key at the root                      |
+| `user["display name"]`    | yes    | bracketed string key                                  |
+| `$.user`                  | no     | `"$."` prefix is not part of the syntax               |
+| `items[01]`               | no     | indices are canonical integers without leading zeroes |
 
-Use `parse_path()` and `format_path()` when you need to inspect, validate, or construct paths.
+Use `normalize_path()` when accepting raw path inputs, and use `parse_path()` and
+`format_path()` when you need to inspect, validate, or construct string paths.
 
 ## More Docs
 

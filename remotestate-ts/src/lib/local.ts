@@ -1,5 +1,4 @@
 import type { RemoteStateClient } from "./client";
-import { normalizePath, PathLike } from "./path";
 import { createRemoteTaskStore, type WritableTaskStore } from "./tasks";
 import {
   type ActionMethod,
@@ -90,10 +89,7 @@ export function createLocalStateClient<S = unknown>(
   const ownsTaskStore = options.tasks === undefined;
   const actionHandlers: Partial<
     Record<string, (...args: unknown[]) => Awaitable<unknown>>
-  > = {
-    ...actions,
-    set: createLocalSetAction(store),
-  };
+  > = actions;
   const queryHandlers: Partial<
     Record<string, (...args: unknown[]) => Awaitable<unknown>>
   > = queries;
@@ -129,11 +125,4 @@ export function createLocalStateClient<S = unknown>(
       }
     },
   };
-}
-
-function createLocalSetAction(store: Store) {
-  const set = async (path: PathLike, value: unknown) => {
-    await store.set(normalizePath(path), value);
-  };
-  return set as (...args: unknown[]) => Awaitable<unknown>;
 }

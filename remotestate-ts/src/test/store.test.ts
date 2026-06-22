@@ -22,6 +22,22 @@ describe("StoreImpl", () => {
     expect(store.get(["count"])).toBe(42);
   });
 
+  it("caches the root value from GetResultMessage", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const value = [{ label: "foo" }];
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "",
+      value,
+    });
+
+    expect(store.get([])).toBe(value);
+    expect(store.get()).toBe(value);
+  });
+
   it("updates cache from ActionResultMessage", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
@@ -57,6 +73,21 @@ describe("StoreImpl", () => {
     const store = new StoreImpl(asTransport(transport));
     const listener = vi.fn();
     store.subscribe(["items", 1, "label"], listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[1].label": "Test 2" },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it("notifies root listeners on child updates", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe([], listener);
 
     transport._triggerMessage({
       type: "action_result",
@@ -173,6 +204,28 @@ describe("StoreImpl", () => {
     expect(store.get(["items"])).not.toBe(items);
   });
 
+  it("patches cached root values from a leaf action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const root = { items: [{ label: "foo" }] };
+
+    transport._triggerMessage({
+      type: "get_result",
+      call_id: "1",
+      path: "",
+      value: root,
+    });
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "items[0].label": "x" },
+    });
+
+    expect(store.get([])).toEqual({ items: [{ label: "x" }] });
+    expect(store.get([])).not.toBe(root);
+  });
+
   it("materializes a subscribed parent snapshot from a leaf action update", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
@@ -227,9 +280,25 @@ describe("StoreImpl", () => {
     });
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(
-      store.get(["processRequests", "sleep_a_while", "inputs"]),
-    ).toEqual({ duration: 123 });
+    expect(store.get(["processRequests", "sleep_a_while", "inputs"])).toEqual({
+      duration: 123,
+    });
+  });
+
+  it("materializes a subscribed child snapshot from a root action update", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+    const listener = vi.fn();
+    store.subscribe(["items", 0, "label"], listener);
+
+    transport._triggerMessage({
+      type: "action_result",
+      call_id: "abc",
+      updates: { "": { items: [{ label: "x" }] } },
+    });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(store.get(["items", 0, "label"])).toBe("x");
   });
 
   it("materializes a subscribed child snapshot from a parent fetch result", () => {
@@ -248,9 +317,9 @@ describe("StoreImpl", () => {
     });
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(
-      store.get(["processRequests", "sleep_a_while", "inputs"]),
-    ).toEqual({ duration: 123 });
+    expect(store.get(["processRequests", "sleep_a_while", "inputs"])).toEqual({
+      duration: 123,
+    });
   });
 
   it("refreshes cached child values from a parent action update", () => {
@@ -301,7 +370,18 @@ describe("StoreImpl", () => {
     );
   });
 
-  it("sets a path through the built-in set action", () => {
+  it("fetches the root path if not cached", () => {
+    const transport = mockTransport();
+    const store = new StoreImpl(asTransport(transport));
+
+    store.provide([]);
+
+    expect(transport.send).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "get", path: "" }),
+    );
+  });
+
+  it("sets a path through the store set message", () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
@@ -309,15 +389,29 @@ describe("StoreImpl", () => {
 
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "action",
-        method: "set",
-        args: ["count", 3],
-        kwargs: {},
+        type: "set",
+        path: "count",
+        value: 3,
       }),
     );
   });
 
-  it("resolves set after matching action result", async () => {
+  it("sets the root path through the store set message", () => {
+    const transport = mockTransportWithHandler();
+    const store = new StoreImpl(asTransport(transport));
+
+    void store.set([], { count: 3 });
+
+    expect(transport.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "set",
+        path: "",
+        value: { count: 3 },
+      }),
+    );
+  });
+
+  it("resolves set after matching set result", async () => {
     const transport = mockTransportWithHandler();
     const store = new StoreImpl(asTransport(transport));
 
@@ -325,7 +419,7 @@ describe("StoreImpl", () => {
     const sentMsg = transport.send.mock.calls[0][0] as { call_id: string };
 
     transport._triggerMessage({
-      type: "action_result",
+      type: "set_result",
       call_id: sentMsg.call_id,
       updates: { count: 3 },
     });

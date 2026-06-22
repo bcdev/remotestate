@@ -136,10 +136,11 @@ export class ServiceImpl implements Service {
         if (!("call_id" in msg) || msg.call_id !== callId) {
           return;
         }
-        unsubscribe();
         if (msg.type === "query_result") {
+          unsubscribe();
           resolve(msg.value);
         } else if (msg.type === "error") {
+          unsubscribe();
           reject(new Error(msg.message));
         }
       });

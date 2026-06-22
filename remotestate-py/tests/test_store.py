@@ -3,8 +3,6 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import BaseModel
 
-from remotestate.path import Property
-
 # noinspection PyProtectedMember
 from remotestate.store import Store, _batch_pending_updates
 
@@ -57,6 +55,26 @@ def test_get_simple(simple_store):
     assert simple_store.get("user.name") == "Norman"
 
 
+def test_get_root_value(simple_store):
+    assert simple_store.get() is simple_store.state
+    assert simple_store.get("") is simple_store.state
+    assert simple_store[()] is simple_store.state
+
+
+def test_get_root_array_by_index():
+    store = Store([{"label": "foo"}])
+
+    assert store.get("[0].label") == "foo"
+    assert store[0, "label"] == "foo"
+
+
+def test_get_tuple_path_treats_string_as_single_segment():
+    store = Store({"items.with.dot": "value"})
+
+    assert store["items.with.dot",] == "value"
+    assert store["items.with.dot"] is None
+
+
 def test_get_index(simple_store):
     assert simple_store.get("items[0].label") == "foo"
 
@@ -104,9 +122,79 @@ def test_set_simple(simple_store):
     assert simple_store.get("user.name") == "Klaus"
 
 
+def test_set_root_value(simple_store):
+    simple_store.set("", ["replacement"])
+
+    assert simple_store.state == ["replacement"]
+    assert simple_store.get("") == ["replacement"]
+
+
+def test_set_root_value_with_empty_tuple(simple_store):
+    simple_store[()] = {"count": 99}
+
+    assert simple_store.state == {"count": 99}
+    assert simple_store["count"] == 99
+
+
+def test_set_tuple_path(simple_store):
+    simple_store["items", 0, "label"] = "x"
+
+    assert simple_store["items[0].label"] == "x"
+
+
+def test_set_root_array_by_index():
+    store = Store([{"label": "foo"}])
+
+    store[0, "label"] = "x"
+
+    assert store.state == [{"label": "x"}]
+
+
 def test_set_index(simple_store):
     simple_store.set("items[1].label", "baz")
     assert simple_store.get("items[1].label") == "baz"
+
+
+def test_set_with_at_accessor(simple_store):
+    simple_store.at.items[0].label = "x"
+
+    assert simple_store.get("items[0].label") == "x"
+
+
+def test_set_with_at_accessor_item_keys():
+    store = Store({"items.with.dot": {"get": "old"}})
+
+    store.at["items.with.dot"].get = "new"
+
+    assert store["items.with.dot", "get"] == "new"
+
+
+def test_set_with_at_accessor_notifies_exact_path(simple_store):
+    cb = MagicMock()
+    simple_store.subscribe(cb)
+
+    simple_store.at.items[0].label = "new"
+
+    updates = cb.call_args[0][0]
+    assert updates == {"items[0].label": "new"}
+
+
+def test_at_accessor_repr_shows_value(simple_store):
+    assert repr(simple_store.at.items[0].label) == "'foo'"
+
+
+def test_at_accessor_pretty_repr_shows_value(simple_store):
+    printer = MagicMock()
+
+    simple_store.at.items[0].label._repr_pretty_(printer, cycle=False)
+
+    printer.pretty.assert_called_once_with("foo")
+
+
+def test_at_accessor_html_repr_shows_escaped_value():
+    store = Store({"value": "<tag>"})
+
+    assert store.at.value._repr_html_() == "<pre>&#x27;&lt;tag&gt;&#x27;</pre>"
 
 
 def test_set_pydantic(pydantic_store):
@@ -144,14 +232,29 @@ def test_set_default_factory_receives_missing_prefix_paths():
     store.set("user.address.city", "Hamburg")
 
     assert calls == [
-        (Property("user"),),
-        (Property("user"), Property("address")),
+        ("user",),
+        ("user", "address"),
     ]
+
+
+def test_set_default_factory_receives_root_index_paths():
+    calls = []
+
+    def factory(path):
+        calls.append(path)
+        return {}
+
+    store = Store([], default_factory=factory)
+
+    store.set("[0].label", "foo")
+
+    assert calls == [(0,)]
+    assert store.state == [{"label": "foo"}]
 
 
 def test_set_default_factory_can_create_pydantic_objects():
     def factory(path):
-        if path == (Property("user"),):
+        if path == ("user",):
             return User(
                 name="",
                 age=0,
@@ -169,7 +272,7 @@ def test_set_default_factory_can_create_pydantic_objects():
 
 def test_set_default_factory_can_create_list_items():
     def factory(path):
-        if path == (Property("items"),):
+        if path == ("items",):
             return []
         return {}
 
@@ -200,7 +303,7 @@ def test_set_sparse_list_index_raises_with_default_factory():
 
     def factory(path):
         calls.append(path)
-        if path == (Property("items"),):
+        if path == ("items",):
             return []
         return {}
 
@@ -209,7 +312,7 @@ def test_set_sparse_list_index_raises_with_default_factory():
     with pytest.raises(IndexError):
         store.set("items[1].label", "foo")
 
-    assert calls == [(Property("items"),)]
+    assert calls == [("items",)]
 
 
 def test_get_never_calls_default_factory():
@@ -236,6 +339,14 @@ def test_subscribe_updates_contain_exact_path_only(simple_store):
     simple_store.set("items[0].label", "new")
     updates = cb.call_args[0][0]
     assert updates == {"items[0].label": "new"}
+
+
+def test_subscribe_root_update_uses_empty_path(simple_store):
+    cb = MagicMock()
+    simple_store.subscribe(cb)
+    simple_store.set("", {"count": 1})
+    updates = cb.call_args[0][0]
+    assert updates == {"": {"count": 1}}
 
 
 def test_unsubscribe(simple_store):

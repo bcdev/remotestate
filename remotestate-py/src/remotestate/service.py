@@ -4,13 +4,15 @@ import asyncio
 import functools
 import inspect
 from collections.abc import Callable, Coroutine
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from fastapi import FastAPI
 
-from .context import _call_context, _CallContext
+from .context import _call_context, _CallContext, _suppress_store_broadcast
 from .protocol import TaskUpdateMessage
 from .store import PendingUpdates, Store, _batch_pending_updates
+
+T = TypeVar("T")
 
 
 class _ActionMarker:
@@ -66,18 +68,15 @@ def query(fn: Callable) -> _QueryMarker:
     return _QueryMarker(_ensure_async(fn))
 
 
-_BUILTIN_SERVICE_METHODS = {"get", "set", "notify"}
+_RESERVED_SERVICE_METHODS = {"notify"}
 
 
-class Service:
+class Service(Generic[T]):
     """Implements the Python queries and actions exposed over the websocket bridge.
 
     Subclasses define ``@action`` and ``@query`` methods. Dispatch helpers take
     care of call scoping, read-only enforcement for queries, and batched store
     invalidation after actions complete.
-
-    The base class also provides the built-in ``get`` query and ``set``
-    action used by the generic React bridge.
 
     ``Service`` may serve as a base class for store-specific queries and actions,
     but it can also be instantiated as-is, if no queries and actions are required
@@ -88,15 +87,13 @@ class Service:
 
     - ``_init_app`` - FastAPI instance initialization
     - ``store`` - property that provides reactive state container
-    - ``get`` - built-in query to get a state value
-    - ``set`` - built-in action to set a state value
     - ``notify`` - report task updates
 
     Args:
         store: The reactive state container.
     """
 
-    _store: Store
+    _store: Store[T]
     _actions: dict[str, Callable]
     _queries: dict[str, Callable]
 
@@ -110,9 +107,9 @@ class Service:
             cls._queries.update(getattr(base, "_queries", {}))
 
         for name, value in list(cls.__dict__.items()):
-            if name in _BUILTIN_SERVICE_METHODS:
+            if name in _RESERVED_SERVICE_METHODS:
                 raise TypeError(
-                    f"{cls.__name__}.{name} conflicts with a built-in "
+                    f"{cls.__name__}.{name} conflicts with a reserved "
                     "RemoteState service method"
                 )
             if isinstance(value, _ActionMarker):
@@ -122,7 +119,7 @@ class Service:
                 cls._queries[name] = value.fn
                 setattr(cls, name, value.fn)
 
-    def __init__(self, store: Store) -> None:
+    def __init__(self, store: Store[T]) -> None:
         """Create a service bound to a reactive store.
 
         Args:
@@ -149,41 +146,9 @@ class Service:
         """
 
     @property
-    def store(self) -> Store:
+    def store(self) -> Store[T]:
         """Store: The reactive state container."""
         return self._store
-
-    @query
-    def get(self, path: str) -> Any:
-        """Built-in query that returns a store value by path.
-
-        This is the read side of the generic bridge used by the TypeScript
-        ``useRemoteState()`` hook and related helpers.
-
-        Args:
-            path: RemoteState path to read.
-
-        Returns:
-            The value at ``path``, or ``None`` when the path is missing.
-        """
-        return self.store.get(path)
-
-    @action
-    def set(self, path: str, value: Any) -> None:
-        """Built-in action that sets a store value by path.
-
-        This is the write-side of the generic bridge used by the TypeScript
-        ``useRemoteState()`` hook and related helpers, so a simple UI state does
-        not require a custom action on every user service.
-
-        Args:
-            path: RemoteState path to write.
-            value: New value to assign at ``path``.
-
-        Returns:
-            None.
-        """
-        self.store.set(path, value)
 
     # noinspection PyMethodMayBeStatic
     def notify(
@@ -263,6 +228,7 @@ class Service:
                 readonly=False,
             )
         )
+        broadcast_token = _suppress_store_broadcast.set(True)
         try:
             with _batch_pending_updates() as pending:
                 await fn(self, *args, **kwargs)
@@ -270,6 +236,7 @@ class Service:
             self.store._flush(pending)
             return pending
         finally:
+            _suppress_store_broadcast.reset(broadcast_token)
             _call_context.reset(token)
 
     async def _rs_invoke_query(

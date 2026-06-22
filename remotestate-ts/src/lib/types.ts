@@ -89,19 +89,21 @@ export interface Store {
   /**
    * Get the current value snapshot for the given path segments.
    *
-   * @param path The parsed non-empty path into the state.
+   * @param path The parsed path into the state. If omitted or empty, the root
+   * state value is read.
    * @returns The cached value, or `undefined` if the value is not cached.
    */
-  get(path: Path): unknown;
+  get(path?: Path): unknown;
 
   /**
-   * Set the value at a parsed non-empty state path.
+   * Set the value at a parsed state path.
    *
-   * Remote tasks dispatch the built-in backend `set` action and resolve after
-   * the resulting update is applied. Local tasks should update their backing
-   * state container and notify subscribers.
+   * Remote stores dispatch a store `set` message and resolve after the
+   * resulting update is applied. Local stores should update their backing state
+   * container and notify subscribers.
    *
-   * @param path The parsed non-empty state path to write.
+   * @param path The parsed state path to write. An empty path replaces the
+   * root state value.
    * @param value The value to assign.
    */
   set(path: Path, value: unknown): void | Promise<void>;
@@ -112,14 +114,16 @@ export interface Store {
    * fetch its current value (and cache it) so ``get()`` can return its
    * latest value.
    *
-   * @param path The parsed non-empty state path to provide.
+   * @param path The parsed state path to provide. An empty path fetches the
+   * root state value.
    */
   provide(path: Path): void;
 
   /**
    * Subscribes to this store by registering a listener.
    *
-   * @param path The parsed non-empty state path to subscribe to.
+   * @param path The parsed state path to subscribe to. An empty path
+   * subscribes to the root state value and all descendants.
    * @param listener A listener that is informed about state changes.
    * @returns A function that unregisters the listener.
    */

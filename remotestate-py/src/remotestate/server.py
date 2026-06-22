@@ -6,27 +6,28 @@ from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from starlette.staticfiles import PathLike
 from pydantic import TypeAdapter
+from starlette.staticfiles import PathLike
 
+from .context import _suppress_store_broadcast
+from .log import LOG
 from .protocol import (
     ActionMessage,
+    ActionResultMessage,
     ErrorMessage,
     GetMessage,
     GetResultMessage,
     IncomingMessage,
-    ActionResultMessage,
     OutgoingMessage,
     QueryMessage,
     QueryResultMessage,
+    SetMessage,
+    SetResultMessage,
     TaskUpdateMessage,
 )
-from .context import _call_context
 from .service import Service
-from .store import PendingUpdates
+from .store import PendingUpdates, _batch_pending_updates
 from .transport import Transport
-from .log import LOG
-
 
 _IncomingAdapter: TypeAdapter[IncomingMessage] = TypeAdapter(IncomingMessage)
 
@@ -83,13 +84,13 @@ class Server:
         return sender
 
     def _broadcast_store_update(self, updates: PendingUpdates) -> None:
-        # Action dispatch already returns the batched updates as an
-        # ActionResultMessage. This subscription is for Python-side store.set()
-        # calls that happen outside a dispatched service action.
-        if _call_context.get() is not None:
+        # Dispatched actions and store set messages return their updates in the
+        # matching result message. This subscription is for Python-side
+        # store.set() calls that happen outside a dispatched request.
+        if _suppress_store_broadcast.get():
             return
         self._transport.send_nowait(
-            ActionResultMessage(call_id="store_update", updates=updates)
+            SetResultMessage(call_id="store_update", updates=updates)
         )
 
     # noinspection PyProtectedMember
@@ -111,6 +112,18 @@ class Server:
                 await self._transport.send(
                     GetResultMessage(call_id=call_id, path=path, value=value)
                 )
+
+            case SetMessage(call_id=call_id, path=path, value=value):
+                token = _suppress_store_broadcast.set(True)
+                try:
+                    with _batch_pending_updates() as pending:
+                        self._store.set(path, value)
+                    self._store._flush(pending)
+                    await self._transport.send(
+                        SetResultMessage(call_id=call_id, updates=pending)
+                    )
+                finally:
+                    _suppress_store_broadcast.reset(token)
 
             case ActionMessage(
                 call_id=call_id,

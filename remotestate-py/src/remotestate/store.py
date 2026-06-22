@@ -3,23 +3,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any
+from html import escape
+from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
-from .path import (
-    Index,
-    Path,
-    PathSegment,
-    Property,
-    format_path,
-    parse_path,
-)
+from .path import Path, PathInput, PathSegment, format_path, normalize_path
 
 type PendingUpdates = dict[str, Any]
 type DefaultFactory = Callable[[Path], Any]
+T = TypeVar("T")
 
 
-class Store:
+class Store(Generic[T]):
     """Reactive Python-side state container addressed by ``remotestate`` paths.
 
     Values live here as the single source of truth. Actions and queries read
@@ -28,18 +23,19 @@ class Store:
 
     def __init__(
         self,
-        initial: dict[str, Any],
+        initial: T,
         *,
         default_factory: DefaultFactory | None = None,
     ) -> None:
         """Create a store.
 
         Args:
-            initial: Initial application state.
+            initial: Initial application state. Any JSON-serializable Python
+                value is supported, including mappings, lists, and scalars.
             default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
                 missing prefix path as a ``Path`` tuple, such as one
-                containing ``Property("user")`` or ``Index(0)`` segments.
+                containing ``"user"`` or ``0`` segments.
                 If omitted, missing parents raise the same ``KeyError``,
                 ``IndexError``, or ``AttributeError`` as before.
         """
@@ -47,7 +43,38 @@ class Store:
         self._default_factory = default_factory
         self._subscribers: list[Callable[[PendingUpdates], None]] = []
 
-    def get(self, path: str, *, require: bool = False) -> Any:
+    @property
+    def state(self) -> T:
+        """The current root state value."""
+        return self._state
+
+    @property
+    def at(self) -> _StoreAt:
+        """Notebook-friendly path accessor for setting nested values.
+
+        The accessor builds paths through attribute and item access, then writes
+        values through ``Store.set()`` when a final attribute or item is
+        assigned.
+        """
+        return _StoreAt(self)
+
+    def __getitem__(self, path: PathInput) -> Any:
+        """Return the value at ``path``.
+
+        ``path`` may be a RemoteState path string or a tuple of path segments
+        such as ``("items", 0, "label")``. The empty tuple ``()`` addresses
+        the root state value.
+        """
+        return self.get(path)
+
+    def __setitem__(self, path: PathInput, value: Any) -> None:
+        """Set ``value`` at ``path``.
+
+        ``path`` follows the same rules as ``__getitem__``.
+        """
+        self.set(path, value)
+
+    def get(self, path: PathInput = (), *, require: bool = False) -> Any:
         """Return the value at ``path``.
 
         Missing values return ``None`` by default. Pass ``require=True`` to
@@ -55,8 +82,9 @@ class Store:
         calls the default factory.
 
         Args:
-            path: RemoteState path to read, such as ``"user.name"`` or
-                ``"items[0].label"``.
+            path: RemoteState path to read, such as ``""``, ``"user.name"``,
+                ``"[0].label"``, or ``("items", 0, "label")``. If omitted,
+                the root state value is returned.
             require: If true, raise when the path is missing instead of
                 returning ``None``.
 
@@ -70,10 +98,10 @@ class Store:
             IndexError: If a required list index is missing.
             AttributeError: If a required object attribute is missing.
         """
-        parsed = parse_path(path)
+        parsed = normalize_path(path)
         return _get_at(self._state, parsed, require)
 
-    def set(self, path: str, value: Any) -> None:
+    def set(self, path: PathInput, value: Any) -> None:
         """Set ``value`` at ``path`` and notify subscribers.
 
         If this store has a default factory, missing intermediate path
@@ -82,8 +110,8 @@ class Store:
         ``IndexError``.
 
         Args:
-            path: RemoteState path to write, such as ``"user.name"`` or
-                ``"items[0].label"``.
+            path: RemoteState path to write, such as ``""``, ``"user.name"``,
+                ``"[0].label"``, or ``("items", 0, "label")``.
             value: New value to assign at ``path``.
 
         Raises:
@@ -98,12 +126,15 @@ class Store:
         if ctx is not None and ctx.readonly:
             raise PermissionError("query methods cannot mutate store")
 
-        parsed = parse_path(path)
-        _set_at(
-            self._state,
-            parsed,
-            value,
-            default_factory=self._default_factory,
+        parsed = normalize_path(path)
+        self._state = cast(
+            T,
+            _set_at(
+                self._state,
+                parsed,
+                value,
+                default_factory=self._default_factory,
+            ),
         )
 
         pending = _batch_context.get()
@@ -146,49 +177,90 @@ class Store:
             self._notify(pending)
 
 
+class _StoreAt:
+    """Path-building proxy returned by ``Store.at``."""
+
+    _path: Path
+    _store: Store[Any]
+
+    # Only these names are real attributes; all other attributes are path segments.
+    # It prevents silently and accidentally created attributes.
+    __slots__ = ("_path", "_store")
+
+    def __init__(self, store: Store[Any], path: Path = ()) -> None:
+        object.__setattr__(self, "_store", store)
+        object.__setattr__(self, "_path", path)
+
+    def __getattr__(self, segment: str) -> _StoreAt:
+        if segment.startswith("_"):
+            raise AttributeError(segment)
+        return _StoreAt(self._store, (*self._path, segment))
+
+    def __setattr__(self, segment: str, value: Any) -> None:
+        if segment.startswith("_"):
+            raise AttributeError(segment)
+        self._store.set((*self._path, segment), value)
+
+    def __getitem__(self, segment: PathSegment) -> _StoreAt:
+        return _StoreAt(self._store, (*self._path, segment))
+
+    def __setitem__(self, segment: PathSegment, value: Any) -> None:
+        self._store.set((*self._path, segment), value)
+
+    def __repr__(self) -> str:
+        return repr(self._value())
+
+    def _repr_html_(self) -> str:
+        return f"<pre>{escape(repr(self._value()))}</pre>"
+
+    def _repr_pretty_(self, printer: Any, cycle: bool) -> None:
+        if cycle:
+            printer.text("...")
+            return
+        printer.pretty(self._value())
+
+    def _value(self) -> Any:
+        return self._store.get(self._path)
+
+
 def _set_or_append_segment(
     obj: Any, segment: PathSegment, value: Any, *, require_appendable: bool
 ) -> None:
-    if isinstance(segment, Index) and isinstance(obj, list) and segment.i == len(obj):
+    if isinstance(segment, int) and isinstance(obj, list) and segment == len(obj):
         obj.append(value)
         return
     if require_appendable:
-        if isinstance(segment, Index):
-            raise IndexError(segment.i)
-        else:
-            raise KeyError(segment.key)
+        if isinstance(segment, int):
+            raise IndexError(segment)
+        raise KeyError(segment)
     _set_segment(obj, segment, value)
 
 
 def _get_segment(obj: Any, segment: PathSegment, require: bool) -> Any:
-    match segment:
-        case Property(key):
-            if isinstance(obj, dict):
-                if require:
-                    return obj[key]
-                return obj.get(key)
-            else:
-                if require:
-                    return getattr(obj, key)
-                return getattr(obj, key, None)
-        case Index(i):
-            try:
-                return obj[i]
-            except IndexError:
-                if require:
-                    raise
-                return None
+    if isinstance(segment, str):
+        if isinstance(obj, dict):
+            if require:
+                return obj[segment]
+            return obj.get(segment)
+        if require:
+            return getattr(obj, segment)
+        return getattr(obj, segment, None)
+    try:
+        return obj[segment]
+    except (IndexError, KeyError, TypeError):
+        if require:
+            raise
+        return None
 
 
 def _set_segment(obj: Any, segment: PathSegment, value: Any) -> None:
-    match segment:
-        case Property(key):
-            if isinstance(obj, dict):
-                obj[key] = value
-            else:
-                setattr(obj, key, value)
-        case Index(i):
-            obj[i] = value
+    if isinstance(segment, str):
+        if isinstance(obj, dict):
+            obj[segment] = value
+        else:
+            setattr(obj, segment, value)
+        return
+    obj[segment] = value
 
 
 def _get_at(root: Any, path: Path, require: bool) -> Any:
@@ -205,7 +277,10 @@ def _set_at(
     path: Path,
     value: Any,
     default_factory: DefaultFactory | None = None,
-) -> None:
+) -> Any:
+    if len(path) == 0:
+        return value
+
     obj = root
     for i, segment in enumerate(path[:-1], start=1):
         try:
@@ -214,9 +289,9 @@ def _set_at(
             if default_factory is None:
                 raise
             if (
-                isinstance(segment, Index)
+                isinstance(segment, int)
                 and isinstance(obj, list)
-                and segment.i > len(obj)
+                and segment > len(obj)
             ):
                 raise
             default_value = default_factory(path[:i])
@@ -224,7 +299,7 @@ def _set_at(
                 obj,
                 segment,
                 default_value,
-                require_appendable=isinstance(segment, Index),
+                require_appendable=isinstance(segment, int),
             )
             obj = default_value
 
@@ -234,6 +309,7 @@ def _set_at(
         if default_factory is None:
             raise
         _set_or_append_segment(obj, path[-1], value, require_appendable=True)
+    return root
 
 
 def _serialize(value: Any) -> Any:

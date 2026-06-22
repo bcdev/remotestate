@@ -1,3 +1,22 @@
+## Version 0.3.0 (in development)
+
+- Relaxed the shared path grammar so the empty string addresses the root value
+  and paths may start with a bracketed array index or string key, such as
+  `[0].label` or `["display name"].value`.
+- Changed `Path` from a non-empty tuple type to a general segment array so
+  `[]` represents the root state value.
+- Removed the redundant `RelativePath` export; `Path` is now the single parsed
+  segment-array type.
+- `Store.get()` and `useRemoteStateValue()` now default to the root state value
+  when no path is passed.
+- `Store.set()` now uses a dedicated store `set` protocol message and receives
+  `set_result` updates instead of dispatching a service action named `set`.
+- Updated the transport-backed store cache so root subscriptions overlap all
+  descendant updates, root updates materialize cached descendants, and leaf
+  updates can patch cached root snapshots.
+- Renamed the public path input alias from `PathLike` to `PathInput`, and added
+  `PathSegmentInput` for raw segment values.
+
 ## Version 0.2.0
 
 - Tightened the shared path grammar to a strict JSONPath subset without the

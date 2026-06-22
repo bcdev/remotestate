@@ -147,7 +147,8 @@ Hook overview:
 - `useRemoteStateClient<S>()` returns the nearest typed client
 - `useRemoteStore()` returns the reactive value store behind the hooks
 - `useRemoteTaskStore()` returns the task store behind the progress hooks
-- `useRemoteStateValue(path)` subscribes to one path and returns the cached value or `undefined`
+- `useRemoteStateValue(path?)` subscribes to one path and returns the cached value or `undefined`;
+  omit `path` to subscribe to the root state value
 - `useRemoteState(path, initialValue?)` behaves like React `useState` for one remote path
 - `useRemoteTask(taskId)` returns one tracked task snapshot
 - `useRemoteTasks()` returns all tracked task snapshots
@@ -179,21 +180,25 @@ Find an example in the section **User Guide** below.
 The path helpers are useful when you need to work with nested state outside
 the React hooks.
 They use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/)
-form without the `$.` prefix: a root identifier, followed by dotted
-identifiers, bracketed integer indices, or bracketed JSON string keys.
+form without the `$.` prefix. The empty string addresses the root state value.
+Otherwise a path starts with an identifier, bracketed integer index, or
+bracketed JSON string key, followed by dotted identifiers, bracketed integer
+indices, or bracketed JSON string keys.
 Bracketed string keys may use either single or double quotes; canonical output
 always uses double quotes.
 
-| Example                | Valid? | Notes                                                 |
-| ---------------------- | ------ | ----------------------------------------------------- |
-| `user`                 | yes    | root identifier only                                  |
-| `items[0].label`       | yes    | dotted identifier plus integer index                  |
-| `user["display name"]` | yes    | bracketed string key                                  |
-| `$.user`               | no     | `$.` prefix is not part of the syntax                 |
-| `["root"]`             | no     | root must be an identifier                            |
-| `items[01]`            | no     | indices are canonical integers without leading zeroes |
+| Example                  | Valid? | Notes                                                 |
+| ------------------------ | ------ | ----------------------------------------------------- |
+| empty string             | yes    | root state value                                      |
+| `user`                   | yes    | root property shorthand                               |
+| `[0].label`              | yes    | array root plus child property                        |
+| `items[0].label`         | yes    | dotted identifier plus integer index                  |
+| `["display name"].value` | yes    | bracketed string key at the root                      |
+| `user["display name"]`   | yes    | bracketed string key                                  |
+| `$.user`                 | no     | `$.` prefix is not part of the syntax                 |
+| `items[01]`              | no     | indices are canonical integers without leading zeroes |
 
-- `normalizePath(path)` validates a path-like value and returns a `Path`
+- `normalizePath(path)` validates a `PathInput` value and returns a `Path`
 - `parsePath(path)` turns a strict string path into a `Path` and throws `SyntaxError` on malformed input
 - `formatPath(path)` turns parsed segments back into canonical path syntax
 - `getPathAt(value, path)` reads a nested value
@@ -204,6 +209,8 @@ import { getPathAt, normalizePath, parsePath, setPathAt } from "remotestate";
 
 const path = parsePath("items[0].label");
 const labelPath = parsePath('user["display name"]');
+const rootPath = parsePath("");
+const arrayRootPath = normalizePath([0, "label"]);
 const safePath = normalizePath(["items", 0, "label"]);
 const current = getPathAt(state, path);
 const next = setPathAt(state, path, "updated");
@@ -244,9 +251,11 @@ store and task store used by the React hooks.
 The low-level store can be observed by path:
 
 ```typescript
-const unsubscribe = client.store.subscribe("items[1].label", () => {
-  console.log(client.store.get("items[1].label"));
+const path = parsePath("items[1].label");
+const unsubscribe = client.store.subscribe(path, () => {
+  console.log(client.store.get(path));
 });
+console.log(client.store.get()); // root state value
 ```
 
 Subscriptions also react to related parent or child updates. For example, a
@@ -309,8 +318,8 @@ Fallback clients use the same `RemoteStateClient` shape as remote clients, so
 the standard hooks keep working and remain reactive. The example below adapts a
 [Zustand](https://zustand.docs.pmnd.rs/) store for local fallback mode.
 
-When you implement a fallback store, the store methods receive parsed,
-non-empty path segments. `getPathAt()` and `setPathAt()` are the shared path
+When you implement a fallback store, the store methods receive parsed path
+segments. An empty path addresses the root state value. `getPathAt()` and `setPathAt()` are the shared path
 helpers to use for nested reads and writes. `setPathAt()` preserves the
 original identity when the target value is unchanged, which makes it easy to
 skip unnecessary Zustand updates and avoid extra renders.
@@ -343,7 +352,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
 
   const store: Store = {
     // Read the current local value for one RemoteState path.
-    get: (path: Path): unknown => {
+    get: (path: Path = []): unknown => {
       if (isCountProperty(path)) {
         return getPathAt(useCounterStore.getState(), path);
       }
@@ -353,7 +362,7 @@ function createLocalCounterClient(): RemoteStateClient<CounterService> {
     set: (path: Path, value: unknown): void => {
       if (isCountProperty(path)) {
         const currentState = useCounterStore.getState();
-        const nextState = setPathAt(currentState, pathSegments, value);
+        const nextState = setPathAt(currentState, path, value);
         if (nextState !== currentState) {
           useCounterStore.setState(nextState);
         }

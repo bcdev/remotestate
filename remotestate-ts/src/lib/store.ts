@@ -1,4 +1,8 @@
-import type { ActionResultMessage, GetResultMessage } from "./protocol";
+import type {
+  ActionResultMessage,
+  GetResultMessage,
+  SetResultMessage,
+} from "./protocol";
 import {
   getPathAt,
   formatPath,
@@ -11,6 +15,8 @@ import {
 } from "./path";
 import type { Store, Transport } from "./types";
 import { DebugLog, getDebugLog } from "./debug";
+
+const ROOT_PATH: Path = [];
 
 type StoreListener = () => void;
 type StoreSubscription = {
@@ -49,8 +55,8 @@ export class StoreImpl implements Store {
     this.unsubscribeTransport = transport.subscribe((msg) => {
       if (msg.type === "get_result") {
         this._onGetResult(msg);
-      } else if (msg.type === "action_result") {
-        this._onActionResult(msg);
+      } else if (msg.type === "action_result" || msg.type === "set_result") {
+        this._onUpdateResult(msg);
       }
     });
   }
@@ -58,19 +64,20 @@ export class StoreImpl implements Store {
   /**
    * Get the current cached value for a path.
    *
-   * @param path The parsed non-empty state path to read.
+   * @param path The parsed state path to read. If omitted or empty, reads the
+   * root state value.
    * @returns The cached value, or `undefined` if the path is not cached.
    */
-  get(path: Path): unknown {
+  get(path: Path = ROOT_PATH): unknown {
     return this.cache.get(formatPath(path));
   }
 
   /**
-   * Set a state value through the backend's built-in `set` action.
+   * Set a state value through the backend store protocol.
    *
-   * @param path The parsed non-empty state path to write.
+   * @param path The parsed state path to write.
    * @param value The value to assign.
-   * @returns A promise that resolves after the action result is applied.
+   * @returns A promise that resolves after the set result is applied.
    */
   set(path: Path, value: unknown): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -80,7 +87,7 @@ export class StoreImpl implements Store {
           return;
         }
         unsubscribe();
-        if (msg.type === "action_result") {
+        if (msg.type === "set_result") {
           resolve();
         } else if (msg.type === "error") {
           reject(new Error(msg.message));
@@ -88,11 +95,10 @@ export class StoreImpl implements Store {
       });
 
       this.transport.send({
-        type: "action",
+        type: "set",
         call_id: callId,
-        method: "set",
-        args: [formatPath(path), value],
-        kwargs: {},
+        path: formatPath(path),
+        value,
       });
     });
   }
@@ -100,7 +106,7 @@ export class StoreImpl implements Store {
   /**
    * Ensure a path is fetched from Python if it is not already cached.
    *
-   * @param path The parsed non-empty state path to provide.
+   * @param path The parsed state path to provide.
    */
   provide(path: Path): void {
     const pathKey = formatPath(path);
@@ -121,7 +127,7 @@ export class StoreImpl implements Store {
   /**
    * Register a listener for changes related to one path.
    *
-   * @param path The parsed non-empty state path to subscribe to.
+   * @param path The parsed state path to subscribe to.
    * @param listener Listener called when the path or a related path changes.
    * @returns A function that unregisters the listener.
    */
@@ -150,7 +156,7 @@ export class StoreImpl implements Store {
     this._notify([msg.path]);
   }
 
-  private _onActionResult(msg: ActionResultMessage): void {
+  private _onUpdateResult(msg: ActionResultMessage | SetResultMessage): void {
     const changedPaths = Object.keys(msg.updates);
     for (const [path, value] of Object.entries(msg.updates)) {
       this._applyUpdate(path, value);
@@ -162,9 +168,6 @@ export class StoreImpl implements Store {
     this.cache.set(path, value);
     this.authoritativePaths.add(path);
     const parsedPath = this._getParsedPath(path);
-    if (parsedPath.length === 0) {
-      return;
-    }
 
     for (const relatedPath of this._getRelatedPaths(path)) {
       if (relatedPath === path) {
@@ -172,9 +175,6 @@ export class StoreImpl implements Store {
       }
 
       const relatedSegments = this._getParsedPath(relatedPath);
-      if (relatedSegments.length === 0) {
-        continue;
-      }
 
       if (isPathPrefixSegments(relatedSegments, parsedPath)) {
         // A subscribed/cached ancestor changed through a leaf update.

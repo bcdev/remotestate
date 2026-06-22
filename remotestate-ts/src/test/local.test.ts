@@ -35,30 +35,6 @@ describe("createLocalStateClient", () => {
     await expect(client.query("count")).resolves.toBe(2);
   });
 
-  it("delegates the built-in set action to the store", async () => {
-    const set = vi.fn();
-    const client = createLocalStateClient({
-      store: {
-        ...createStore(),
-        set,
-      },
-    });
-
-    await client.action("set", ["count", 7]);
-
-    expect(set).toHaveBeenCalledWith(["count"], 7);
-  });
-
-  it("rejects built-in set action without a string/array path", async () => {
-    const client = createLocalStateClient({
-      store: createStore(),
-    });
-
-    await expect(client.action("set", [7, "count"])).rejects.toThrow(
-      "RemoteState path must be a string or array, but got number",
-    );
-  });
-
   it("throws for unsupported local methods", async () => {
     const client = createLocalStateClient({
       store: createStore(),
