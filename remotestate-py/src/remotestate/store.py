@@ -7,13 +7,7 @@ from html import escape
 from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
-from .path import (
-    Path,
-    PathInput,
-    PathSegment,
-    format_path,
-    normalize_path,
-)
+from .path import Path, PathInput, PathSegment, format_path, normalize_path
 
 type PendingUpdates = dict[str, Any]
 type DefaultFactory = Callable[[Path], Any]
