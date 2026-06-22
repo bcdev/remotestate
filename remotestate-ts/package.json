@@ -32,6 +32,10 @@
     ".": {
       "import": "./dist/remotestate.js",
       "types": "./dist/remotestate.d.ts"
+    },
+    "./path": {
+      "import": "./dist/path.js",
+      "types": "./dist/path.d.ts"
     }
   },
   "engines": {
@@ -39,7 +43,7 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "build": "rimraf dist && tsc -b && vite build",
+    "build": "rimraf dist && vite build && tsc -b --force",
     "tests": "vitest run",
     "checks": "tsc -b --noEmit && eslint src",
     "format": "prettier -w ."
@@ -70,3 +74,7 @@
     "esbuild@0.25.12": true
   }
 }
+
+
+
+

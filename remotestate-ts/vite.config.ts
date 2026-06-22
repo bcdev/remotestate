@@ -1,5 +1,4 @@
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
 import react from "@vitejs/plugin-react";
 
 function stripJsDocComments() {
@@ -19,24 +18,22 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
-  plugins: [
-    dts({
-      tsconfigPath: "./tsconfig.lib.json",
-      include: ["src/lib/**/*"],
-      bundleTypes: true,
-    }),
-    react(),
-    stripJsDocComments(),
-  ],
+  plugins: [react(), stripJsDocComments()],
   build: {
     lib: {
-      entry: "src/lib/index.ts",
-      name: "remotestate",
-      fileName: "remotestate",
+      entry: {
+        remotestate: "src/lib/remotestate.ts",
+        path: "src/lib/path.ts",
+      },
       formats: ["es"],
+      fileName: (_format, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
       external: ["react", "react-dom", "react/jsx-runtime"],
     },
   },
 });
+
+
+
+

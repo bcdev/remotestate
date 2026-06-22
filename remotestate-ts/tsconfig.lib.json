@@ -7,8 +7,10 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
+    "rootDir": "./src/lib",
     "strict": true,
     "declaration": true,
+    "emitDeclarationOnly": true,
     "declarationDir": "./dist",
     "outDir": "./dist",
     "skipLibCheck": true
@@ -16,3 +18,4 @@
   "include": ["src/lib/**/*"],
   "exclude": ["node_modules", "dist"]
 }
+

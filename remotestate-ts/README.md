@@ -87,11 +87,7 @@ The public TypeScript API is exported from `remotestate`:
 - `useRemoteTasks`
 - `createRemoteTaskStore`
 - `TaskStoreImpl`
-- `normalizePath`
-- `parsePath`
-- `formatPath`
-- `getPathAt`
-- `setPathAt`
+- `remotestate/path` for low-level path helpers and types
 
 ## Remote Client
 
@@ -175,37 +171,41 @@ URL was not provided to the `RemoteStateProvider`.
 
 Find an example in the section **User Guide** below.
 
-## Path Helpers
+## Path Module
 
-The path helpers are useful when you need to work with nested state outside
-the React hooks.
-They use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/)
-form without the `$.` prefix. The empty string addresses the root state value.
-Otherwise a path starts with an identifier, bracketed integer index, or
-bracketed JSON string key, followed by dotted identifiers, bracketed integer
-indices, or bracketed JSON string keys.
-Bracketed string keys may use either single or double quotes; canonical output
-always uses double quotes.
+Low-level path helpers live in `remotestate/path`:
 
-| Example                  | Valid? | Notes                                                 |
+- `Path`
+- `PathInput`
+- `PathSegment`
+- `PathSegmentInput`
+- `normalizePath(path)` validates a `PathInput` value and returns a `Path`
+- `parsePath(path)` turns a strict string path into a `Path` and throws `SyntaxError` on malformed input
+- `formatPath(path)` turns parsed segments back into canonical path syntax
+- `getPathAt(value, path)` reads a nested value
+- `setPathAt(value, path, nextValue)` writes a nested value without mutating when nothing changes
+- `isPrefixPath(prefixPath, path)` checks whether one path is a prefix of another
+
+RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/)
+subset without the `$.` prefix:
+
+- an empty path addresses the root state value
+- the first segment may be an identifier, bracketed integer index, or bracketed JSON string key
+- later segments may be dotted identifiers, bracketed integer indices, or bracketed JSON string keys
+- bracketed string keys may use either single or double quotes; canonical output uses double quotes
+- the whole string must match the grammar; prefix parsing is not allowed
+
+| Example                | Valid? | Notes                                                 |
 | ------------------------ | ------ | ----------------------------------------------------- |
-| empty string             | yes    | root state value                                      |
-| `user`                   | yes    | root property shorthand                               |
-| `[0].label`              | yes    | array root plus child property                        |
+| `user`                   | yes    | root identifier only                                  |
 | `items[0].label`         | yes    | dotted identifier plus integer index                  |
 | `["display name"].value` | yes    | bracketed string key at the root                      |
 | `user["display name"]`   | yes    | bracketed string key                                  |
 | `$.user`                 | no     | `$.` prefix is not part of the syntax                 |
 | `items[01]`              | no     | indices are canonical integers without leading zeroes |
 
-- `normalizePath(path)` validates a `PathInput` value and returns a `Path`
-- `parsePath(path)` turns a strict string path into a `Path` and throws `SyntaxError` on malformed input
-- `formatPath(path)` turns parsed segments back into canonical path syntax
-- `getPathAt(value, path)` reads a nested value
-- `setPathAt(value, path, nextValue)` writes a nested value without mutating when nothing changes
-
 ```ts
-import { getPathAt, normalizePath, parsePath, setPathAt } from "remotestate";
+import { getPathAt, normalizePath, parsePath, setPathAt } from "remotestate/path";
 
 const path = parsePath("items[0].label");
 const labelPath = parsePath('user["display name"]');
@@ -329,14 +329,12 @@ import type { ReactNode } from "react";
 import {
   RemoteStateProvider,
   createLocalStateClient,
-  getPathAt,
-  setPathAt,
   type LocalActionHandlers,
   type LocalQueryHandlers,
-  type Path,
   type RemoteStateClient,
   type Store,
 } from "remotestate";
+import { getPathAt, setPathAt, type Path } from "remotestate/path";
 import { useCounterStore } from "./counterStore";
 
 type CounterService = {

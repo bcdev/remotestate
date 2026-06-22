@@ -9,7 +9,7 @@ import {
   type Path,
   type PathInput,
   type PathSegmentInput,
-} from "../lib";
+} from "../lib/path";
 
 describe("parsePath", () => {
   it("parses dotted and indexed paths", () => {
@@ -242,3 +242,5 @@ describe("isPrefixPath", () => {
     expect(isPrefixPath(["a", "b"], ["a"])).toBe(false);
   });
 });
+
+

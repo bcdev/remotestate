@@ -5,10 +5,10 @@ import {
   RemoteStateProvider,
   useRemoteStateClient,
   useRemoteStateValue,
-  type PathInput,
   type RemoteStateClient,
   type Store,
 } from "../lib";
+import type { PathInput } from "../lib/path";
 
 let websocketUrls: string[];
 
@@ -119,3 +119,5 @@ describe("RemoteStateProvider", () => {
     );
   });
 });
+
+
