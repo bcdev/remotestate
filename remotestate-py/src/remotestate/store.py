@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
+from html import escape
 from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
@@ -52,6 +53,16 @@ class Store(Generic[T]):
     def state(self) -> T:
         """The current root state value."""
         return self._state
+
+    @property
+    def at(self) -> _StoreAt:
+        """Notebook-friendly path accessor for setting nested values.
+
+        The accessor builds paths through attribute and item access, then writes
+        values through ``Store.set()`` when a final attribute or item is
+        assigned.
+        """
+        return _StoreAt(self)
 
     def __getitem__(self, path: PathInput) -> Any:
         """Return the value at ``path``.
@@ -170,6 +181,52 @@ class Store(Generic[T]):
     def _flush(self, pending: PendingUpdates) -> None:
         if pending:
             self._notify(pending)
+
+
+class _StoreAt:
+    """Path-building proxy returned by ``Store.at``."""
+
+    _path: Path
+    _store: Store[Any]
+
+    # Only these names are real attributes; all other attributes are path segments.
+    # It prevents silently and accidentally created attributes.
+    __slots__ = ("_path", "_store")
+
+    def __init__(self, store: Store[Any], path: Path = ()) -> None:
+        object.__setattr__(self, "_store", store)
+        object.__setattr__(self, "_path", path)
+
+    def __getattr__(self, segment: str) -> _StoreAt:
+        if segment.startswith("_"):
+            raise AttributeError(segment)
+        return _StoreAt(self._store, (*self._path, segment))
+
+    def __setattr__(self, segment: str, value: Any) -> None:
+        if segment.startswith("_"):
+            raise AttributeError(segment)
+        self._store.set((*self._path, segment), value)
+
+    def __getitem__(self, segment: PathSegment) -> _StoreAt:
+        return _StoreAt(self._store, (*self._path, segment))
+
+    def __setitem__(self, segment: PathSegment, value: Any) -> None:
+        self._store.set((*self._path, segment), value)
+
+    def __repr__(self) -> str:
+        return repr(self._value())
+
+    def _repr_html_(self) -> str:
+        return f"<pre>{escape(repr(self._value()))}</pre>"
+
+    def _repr_pretty_(self, printer: Any, cycle: bool) -> None:
+        if cycle:
+            printer.text("...")
+            return
+        printer.pretty(self._value())
+
+    def _value(self) -> Any:
+        return self._store.get(self._path)
 
 
 def _set_or_append_segment(

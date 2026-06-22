@@ -155,6 +155,48 @@ def test_set_index(simple_store):
     assert simple_store.get("items[1].label") == "baz"
 
 
+def test_set_with_at_accessor(simple_store):
+    simple_store.at.items[0].label = "x"
+
+    assert simple_store.get("items[0].label") == "x"
+
+
+def test_set_with_at_accessor_item_keys():
+    store = Store({"items.with.dot": {"get": "old"}})
+
+    store.at["items.with.dot"].get = "new"
+
+    assert store["items.with.dot", "get"] == "new"
+
+
+def test_set_with_at_accessor_notifies_exact_path(simple_store):
+    cb = MagicMock()
+    simple_store.subscribe(cb)
+
+    simple_store.at.items[0].label = "new"
+
+    updates = cb.call_args[0][0]
+    assert updates == {"items[0].label": "new"}
+
+
+def test_at_accessor_repr_shows_value(simple_store):
+    assert repr(simple_store.at.items[0].label) == "'foo'"
+
+
+def test_at_accessor_pretty_repr_shows_value(simple_store):
+    printer = MagicMock()
+
+    simple_store.at.items[0].label._repr_pretty_(printer, cycle=False)
+
+    printer.pretty.assert_called_once_with("foo")
+
+
+def test_at_accessor_html_repr_shows_escaped_value():
+    store = Store({"value": "<tag>"})
+
+    assert store.at.value._repr_html_() == "<pre>&#x27;&lt;tag&gt;&#x27;</pre>"
+
+
 def test_set_pydantic(pydantic_store):
     pydantic_store.set("user.name", "Klaus")
     assert pydantic_store.get("user.name") == "Klaus"

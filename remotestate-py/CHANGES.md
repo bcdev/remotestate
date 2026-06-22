@@ -13,6 +13,10 @@
   - `store["items[0].label"]` uses RemoteState string path syntax.
   - `store["items", 0, "label"]` uses tuple path segments.
   - `store[()]` addresses the root state value.
+- Added notebook-friendly `store.at` sugar for nested store paths:
+  - `store.at.items[0].label = "x"` writes through `Store.set()`.
+  - evaluating `store.at.items[0].label` in notebooks renders the current
+    stored value instead of the path accessor object.
 - Relaxed the path grammar so the empty string addresses the root value and
   paths may start with a bracketed array index or string key, such as
   `[0].label` or `["display name"].value`.
