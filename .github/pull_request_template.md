@@ -1,11 +1,11 @@
-# Summary
+## Summary
 
 _Describe the change in a few sentences._
 
 Closes #
 See also #
 
-## Changes made
+## Changes
 
 - 
 - 

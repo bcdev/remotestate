@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  python:
-    name: Python workspace
+  python-library:
+    name: Python library
     runs-on: ubuntu-latest
     defaults:
       run:
