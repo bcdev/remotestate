@@ -1,4 +1,4 @@
-## Version 0.3.0 (in development)
+## Version 0.3.0
 
 - Relaxed the shared path grammar so the empty string addresses the root value
   and paths may start with a bracketed array index or string key, such as

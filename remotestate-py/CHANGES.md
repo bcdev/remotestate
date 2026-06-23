@@ -1,4 +1,4 @@
-## Version 0.3.0 (in development)
+## Version 0.3.0
 
 - `Store` now accepts any root state value, exposes it through the typed
   `state` property, and supports root reads/writes with the empty path.
