@@ -1,3 +1,20 @@
+import type { Path } from "./path";
+
+/**
+ * One changed store value.
+ */
+export interface StateUpdate {
+  /**
+   * Normalized path into the state.
+   */
+  path: Path;
+
+  /**
+   * Value at the path.
+   */
+  value: unknown;
+}
+
 // -------------------------------------------
 // JS --> Python
 // -------------------------------------------
@@ -19,7 +36,7 @@ export interface GetMessage {
   /**
    * State path to fetch.
    */
-  path: string;
+  path: Path;
 }
 
 /**
@@ -39,7 +56,7 @@ export interface SetMessage {
   /**
    * State path to write.
    */
-  path: string;
+  path: Path;
 
   /**
    * Value to assign at the path.
@@ -138,7 +155,7 @@ export interface GetResultMessage {
   /**
    * State path that was fetched.
    */
-  path: string;
+  path: Path;
 
   /**
    * Value at the requested path.
@@ -161,9 +178,9 @@ export interface ActionResultMessage {
   call_id: string;
 
   /**
-   * Mapping from changed state paths to their latest values.
+   * Changed state values.
    */
-  updates: Record<string, unknown>; // path --> value mapping
+  updates: StateUpdate[];
 }
 
 /**
@@ -181,9 +198,9 @@ export interface SetResultMessage {
   call_id: string;
 
   /**
-   * Mapping from changed state paths to their latest values.
+   * Changed state values.
    */
-  updates: Record<string, unknown>;
+  updates: StateUpdate[];
 }
 
 /**

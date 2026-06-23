@@ -41,14 +41,14 @@ describe("TransportImpl", () => {
   it("sends message immediately when connected", () => {
     const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 1; // OPEN
-    transport.send({ type: "get", call_id: "1", path: "count" });
+    transport.send({ type: "get", call_id: "1", path: ["count"] });
     expect(lastMockWs.send).toHaveBeenCalledOnce();
   });
 
   it("queues messages when not yet connected", () => {
     const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 0; // CONNECTING
-    transport.send({ type: "get", call_id: "1", path: "count" });
+    transport.send({ type: "get", call_id: "1", path: ["count"] });
     expect(lastMockWs.send).not.toHaveBeenCalled();
   });
 
@@ -56,8 +56,8 @@ describe("TransportImpl", () => {
     const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 0; // CONNECTING
 
-    transport.send({ type: "get", call_id: "1", path: "count" });
-    transport.send({ type: "get", call_id: "2", path: "user.name" });
+    transport.send({ type: "get", call_id: "1", path: ["count"] });
+    transport.send({ type: "get", call_id: "2", path: ["user", "name"] });
 
     lastMockWs.readyState = 1; // OPEN
     if (lastMockWs.onopen) {
@@ -72,7 +72,7 @@ describe("TransportImpl", () => {
     const handler = vi.fn();
     transport.subscribe(handler);
 
-    const msg = { type: "value", id: "1", path: "count", value: 42 };
+    const msg = { type: "value", id: "1", path: ["count"], value: 42 };
     if (lastMockWs.onmessage) {
       lastMockWs.onmessage({ data: JSON.stringify(msg) });
     }
@@ -86,7 +86,7 @@ describe("TransportImpl", () => {
     const unsubscribe = transport.subscribe(handler);
     unsubscribe();
 
-    const msg = { type: "value", id: "1", path: "count", value: 42 };
+    const msg = { type: "value", id: "1", path: ["count"], value: 42 };
     if (lastMockWs.onmessage) {
       lastMockWs.onmessage({ data: JSON.stringify(msg) });
     }

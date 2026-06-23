@@ -242,14 +242,32 @@ export function isPrefixPath(prefixPath: Path, path: Path): boolean {
 }
 
 /**
- * Drop a prefix from a path and return the remainder.
+ * Tests whether two paths overlap.
  *
- * @param prefix The prefix to remove.
- * @param path The full parsed path.
- * @returns The remaining path segments after the prefix.
+ * Paths overlap when either path is a prefix of the other. This means a change
+ * at one path may affect subscribers or cached snapshots for the other path.
+ *
+ * @param first The first path to compare.
+ * @param second The second path to compare.
+ * @returns `true` if either path is a prefix of the other.
  */
-export function makeRelativePath(prefix: Path, path: Path): Path {
-  return path.slice(prefix.length);
+export function pathsOverlap(first: Path, second: Path): boolean {
+  return isPrefixPath(first, second) || isPrefixPath(second, first);
+}
+
+/**
+ * Return a path relative to a prefix path.
+ *
+ * @param prefixPath The prefix to remove.
+ * @param path The full parsed path.
+ * @returns The remaining path segments after the prefix, or `null` if
+ * `prefixPath` is not a prefix of `path`.
+ */
+export function getRelativePath(prefixPath: Path, path: Path): Path | null {
+  if (!isPrefixPath(prefixPath, path)) {
+    return null;
+  }
+  return path.slice(prefixPath.length);
 }
 
 // --- Implementation helpers

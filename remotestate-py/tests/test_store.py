@@ -176,7 +176,7 @@ def test_set_with_at_accessor_notifies_exact_path(simple_store):
     simple_store.at.items[0].label = "new"
 
     updates = cb.call_args[0][0]
-    assert updates == {"items[0].label": "new"}
+    assert updates == {("items", 0, "label"): "new"}
 
 
 def test_at_accessor_repr_shows_value(simple_store):
@@ -338,7 +338,7 @@ def test_subscribe_updates_contain_exact_path_only(simple_store):
     simple_store.subscribe(cb)
     simple_store.set("items[0].label", "new")
     updates = cb.call_args[0][0]
-    assert updates == {"items[0].label": "new"}
+    assert updates == {("items", 0, "label"): "new"}
 
 
 def test_subscribe_root_update_uses_empty_path(simple_store):
@@ -346,7 +346,7 @@ def test_subscribe_root_update_uses_empty_path(simple_store):
     simple_store.subscribe(cb)
     simple_store.set("", {"count": 1})
     updates = cb.call_args[0][0]
-    assert updates == {"": {"count": 1}}
+    assert updates == {(): {"count": 1}}
 
 
 def test_unsubscribe(simple_store):
@@ -377,8 +377,8 @@ def test_multiple_changes(simple_store):
     simple_store.set("items[0].label", "Test 1")
 
     assert changes == [
-        {"items[1].label": "Test 2"},
-        {"items[0].label": "Test 1"},
+        {("items", 1, "label"): "Test 2"},
+        {("items", 0, "label"): "Test 1"},
     ]
 
 
@@ -404,9 +404,9 @@ def test_batch_contains_all_updates(simple_store):
         simple_store.set("count", 99)
     simple_store._flush(pending)
     updates = cb.call_args[0][0]
-    assert "user.name" in updates
-    assert "count" in updates
-    assert "user" not in updates
+    assert ("user", "name") in updates
+    assert ("count",) in updates
+    assert ("user",) not in updates
 
 
 def test_batch_leaf_values_are_serialized(pydantic_store):
@@ -416,7 +416,7 @@ def test_batch_leaf_values_are_serialized(pydantic_store):
         pydantic_store.set("user.name", "Klaus")
     pydantic_store._flush(pending)
     updates = cb.call_args[0][0]
-    assert updates == {"user.name": "Klaus"}
+    assert updates == {("user", "name"): "Klaus"}
 
 
 def test_batch_object_values_are_serialized(pydantic_store):
@@ -431,8 +431,8 @@ def test_batch_object_values_are_serialized(pydantic_store):
         pydantic_store.set("user", user)
     pydantic_store._flush(pending)
     updates = cb.call_args[0][0]
-    assert isinstance(updates["user"], dict)
-    assert updates["user"]["name"] == "Klaus"
+    assert isinstance(updates[("user",)], dict)
+    assert updates[("user",)]["name"] == "Klaus"
 
 
 def test_store_set_raises_in_readonly_context(simple_store, readonly_ctx):

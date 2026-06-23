@@ -23,6 +23,7 @@ from .protocol import (
     QueryResultMessage,
     SetMessage,
     SetResultMessage,
+    StateUpdate,
     TaskUpdateMessage,
 )
 from .service import Service
@@ -90,7 +91,10 @@ class Server:
         if _suppress_store_broadcast.get():
             return
         self._transport.send_nowait(
-            SetResultMessage(call_id="store_update", updates=updates)
+            SetResultMessage(
+                call_id="store_update",
+                updates=_protocol_updates(updates),
+            )
         )
 
     # noinspection PyProtectedMember
@@ -118,9 +122,13 @@ class Server:
                 try:
                     with _batch_pending_updates() as pending:
                         self._store.set(path, value)
+                    # noinspection PyProtectedMember
                     self._store._flush(pending)
                     await self._transport.send(
-                        SetResultMessage(call_id=call_id, updates=pending)
+                        SetResultMessage(
+                            call_id=call_id,
+                            updates=_protocol_updates(pending),
+                        )
                     )
                 finally:
                     _suppress_store_broadcast.reset(token)
@@ -142,7 +150,10 @@ class Server:
                     sender=self._make_sender(),
                 )
                 await self._transport.send(
-                    ActionResultMessage(call_id=call_id, updates=updates)
+                    ActionResultMessage(
+                        call_id=call_id,
+                        updates=_protocol_updates(updates),
+                    )
                 )
 
             case QueryMessage(
@@ -167,6 +178,10 @@ class Server:
             case _:
                 # We should really not arrive here
                 raise AssertionError(f"Unknown message type {msg.type!r}")
+
+
+def _protocol_updates(updates: PendingUpdates) -> list[StateUpdate]:
+    return [StateUpdate(path=path, value=value) for path, value in updates.items()]
 
 
 class WebSocketTransport(Transport):

@@ -195,8 +195,8 @@ async def test_action_does_not_notify_between_store_sets(store):
     coro, _ = invoke_action(service, "multi_set")
     updates = await coro
 
-    cb.assert_called_once_with({"count": 99, "user.name": "Klaus"})
-    assert updates == {"count": 99, "user.name": "Klaus"}
+    cb.assert_called_once_with({("count",): 99, ("user", "name"): "Klaus"})
+    assert updates == {("count",): 99, ("user", "name"): "Klaus"}
 
 
 @pytest.mark.asyncio
@@ -204,7 +204,7 @@ async def test_action_returns_updates(store):
     service = make_service(store)
     coro, _ = invoke_action(service, "increment")
     updates = await coro
-    assert "count" in updates
+    assert ("count",) in updates
 
 
 @pytest.mark.asyncio
