@@ -1,5 +1,6 @@
 import { describe, expect, it, expectTypeOf } from "vitest";
 import {
+  isPrefixPath,
   formatPath,
   getPathAt,
   normalizePath,
@@ -8,8 +9,7 @@ import {
   type Path,
   type PathInput,
   type PathSegmentInput,
-} from "../lib";
-import { pathsOverlap } from "../lib/path";
+} from "../lib/path";
 
 describe("parsePath", () => {
   it("parses dotted and indexed paths", () => {
@@ -227,9 +227,18 @@ describe("setPathAt", () => {
   });
 });
 
-describe("pathsOverlap", () => {
-  it("treats the root path as overlapping every path", () => {
-    expect(pathsOverlap("", "items[0].label")).toBe(true);
-    expect(pathsOverlap("items[0].label", "")).toBe(true);
+describe("isPrefixPath", () => {
+  it("yields true", () => {
+    expect(isPrefixPath([], [])).toBe(true);
+    expect(isPrefixPath([], ["a"])).toBe(true);
+    expect(isPrefixPath(["a", 3], ["a", 3])).toBe(true);
+    expect(isPrefixPath([0], [0, 4])).toBe(true);
+    expect(isPrefixPath(["a", "b"], ["a", "b", "c"])).toBe(true);
+  });
+  it("yields false", () => {
+    expect(isPrefixPath(["a"], [])).toBe(false);
+    expect(isPrefixPath([1, 2, 3], [1, 2, 4, 6])).toBe(false);
+    expect(isPrefixPath(["a", "b", "c"], ["a", "b"])).toBe(false);
+    expect(isPrefixPath(["a", "b"], ["a"])).toBe(false);
   });
 });

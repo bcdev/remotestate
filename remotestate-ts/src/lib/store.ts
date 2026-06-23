@@ -7,10 +7,9 @@ import {
   getPathAt,
   formatPath,
   parsePath,
-  pathSegmentsAfter,
-  pathsOverlap,
+  makeRelativePath,
   setPathAt,
-  isPathPrefixSegments,
+  isPrefixPath,
   type Path,
 } from "./path";
 import type { Store, Transport } from "./types";
@@ -176,18 +175,18 @@ export class StoreImpl implements Store {
 
       const relatedSegments = this._getParsedPath(relatedPath);
 
-      if (isPathPrefixSegments(relatedSegments, parsedPath)) {
+      if (isPrefixPath(relatedSegments, parsedPath)) {
         // A subscribed/cached ancestor changed through a leaf update.
         // Build or patch that parent snapshot so React sees a new value.
-        const relativePath = pathSegmentsAfter(relatedSegments, parsedPath);
+        const relativePath = makeRelativePath(relatedSegments, parsedPath);
         this.cache.set(
           relatedPath,
           setPathAt(this.cache.get(relatedPath), relativePath, value),
         );
-      } else if (isPathPrefixSegments(parsedPath, relatedSegments)) {
+      } else if (isPrefixPath(parsedPath, relatedSegments)) {
         // A subscribed/cached descendant changed through a parent update.
         // Its value is fully known because it is contained in this update.
-        const relativePath = pathSegmentsAfter(parsedPath, relatedSegments);
+        const relativePath = makeRelativePath(parsedPath, relatedSegments);
         this.cache.set(relatedPath, getPathAt(value, relativePath));
         this.authoritativePaths.add(relatedPath);
       }
@@ -235,4 +234,19 @@ export class StoreImpl implements Store {
     }
     return relatedPaths;
   }
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  return isPathPrefix(left, right) || isPathPrefix(right, left);
+}
+
+function isPathPrefix(prefix: string, path: string): boolean {
+  if (prefix === "") {
+    return true;
+  }
+  if (prefix === path) {
+    return true;
+  }
+  const next = path[prefix.length];
+  return path.startsWith(prefix) && (next === "." || next === "[");
 }

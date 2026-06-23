@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.lib.json",
   "compilerOptions": {
+    "rootDir": ".",
     "noEmit": true,
     "types": ["vitest"]
   },
