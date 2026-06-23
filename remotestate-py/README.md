@@ -89,7 +89,7 @@ The public Python API is exported from `remotestate`:
   `get()` and `set()`
 - `store.at.some.path = value` is notebook-friendly sugar for nested
   `set()` calls; use item syntax for keys that are not valid identifiers
-- `subscribe(callback)` receives batched parsed-path-to-value updates after changes flush
+- `subscribe(callback)` receives batched path-to-value updates after changes flush
 - `default_factory` can materialize missing parents while setting nested values
 
 ```python

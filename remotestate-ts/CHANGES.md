@@ -14,9 +14,6 @@
 - The WebSocket protocol now carries normalized path arrays instead of path
   strings. Store update results now use `[{path, value}]` entries instead of
   path-to-value objects.
-- Added `pathsOverlap()` to the public path helpers.
-- Renamed `makeRelativePath()` to `getRelativePath()` and made it return
-  `null` when the prefix does not match.
 - Updated the transport-backed store cache so root subscriptions overlap all
   descendant updates, root updates materialize cached descendants, and leaf
   updates can patch cached root snapshots.
