@@ -30,6 +30,9 @@
   "label")`, matching the TypeScript path model.
 - Aligned `PathInput` with TypeScript: pass a string path or a sequence of
   path segments. Root array entries can be addressed as `"[0]"` or `(0,)`.
+- Changed the WebSocket protocol to carry normalized path arrays instead of
+  path strings. Store update results now use `[{path, value}]` entries instead
+  of path-to-value objects.
 
 
 ## Version 0.2.0

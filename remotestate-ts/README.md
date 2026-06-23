@@ -185,6 +185,8 @@ Low-level path helpers live in `remotestate/path`:
 - `getPathAt(value, path)` reads a nested value
 - `setPathAt(value, path, nextValue)` writes a nested value without mutating when nothing changes
 - `isPrefixPath(prefixPath, path)` checks whether one path is a prefix of another
+- `pathsOverlap(leftPath, rightPath)` checks whether either path is a prefix of the other
+- `getRelativePath(prefixPath, path)` removes a prefix from a path or returns `null`
 
 RemoteState paths use a simplified [JSONPath](https://www.rfc-editor.org/info/rfc9535/)
 subset without the `$.` prefix:

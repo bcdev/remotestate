@@ -15,7 +15,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "count",
+      path: ["count"],
       value: 42,
     });
 
@@ -30,7 +30,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "",
+      path: [],
       value,
     });
 
@@ -45,7 +45,10 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { count: 99, "user.name": "Norman" },
+      updates: [
+        { path: ["count"], value: 99 },
+        { path: ["user", "name"], value: "Norman" },
+      ],
     });
 
     expect(store.get(["count"])).toBe(99);
@@ -61,7 +64,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "count",
+      path: ["count"],
       value: 1,
     });
 
@@ -77,7 +80,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[1].label": "Test 2" },
+      updates: [{ path: ["items", 1, "label"], value: "Test 2" }],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -92,7 +95,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[1].label": "Test 2" },
+      updates: [{ path: ["items", 1, "label"], value: "Test 2" }],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -107,10 +110,10 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: {
-        "items[1].label": "Test 2",
-        "items[0].label": "Test 1",
-      },
+      updates: [
+        { path: ["items", 1, "label"], value: "Test 2" },
+        { path: ["items", 0, "label"], value: "Test 1" },
+      ],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -125,7 +128,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[0].label": "Test 1" },
+      updates: [{ path: ["items", 0, "label"], value: "Test 1" }],
     });
 
     expect(listener).not.toHaveBeenCalled();
@@ -140,7 +143,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[1]": { id: 1, label: "Test 2" } },
+      updates: [{ path: ["items", 1], value: { id: 1, label: "Test 2" } }],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -155,7 +158,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "x.y.z": "changed" },
+      updates: [{ path: ["x", "y", "z"], value: "changed" }],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -170,7 +173,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "x.yz": "changed" },
+      updates: [{ path: ["x", "yz"], value: "changed" }],
     });
 
     expect(listener).not.toHaveBeenCalled();
@@ -187,14 +190,14 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "items",
+      path: ["items"],
       value: items,
     });
 
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[1].label": "Test 2" },
+      updates: [{ path: ["items", 1, "label"], value: "Test 2" }],
     });
 
     expect(store.get(["items"])).toEqual([
@@ -212,14 +215,14 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "",
+      path: [],
       value: root,
     });
 
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[0].label": "x" },
+      updates: [{ path: ["items", 0, "label"], value: "x" }],
     });
 
     expect(store.get([])).toEqual({ items: [{ label: "x" }] });
@@ -235,7 +238,12 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "processRequests.sleep_a_while.inputs.duration": 123 },
+      updates: [
+        {
+          path: ["processRequests", "sleep_a_while", "inputs", "duration"],
+          value: 123,
+        },
+      ],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -252,14 +260,19 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "processRequests.sleep_a_while.inputs.duration": 123 },
+      updates: [
+        {
+          path: ["processRequests", "sleep_a_while", "inputs", "duration"],
+          value: 123,
+        },
+      ],
     });
     transport.send.mockClear();
 
     store.provide(["processRequests"]);
 
     expect(transport.send).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "get", path: "processRequests" }),
+      expect.objectContaining({ type: "get", path: ["processRequests"] }),
     );
   });
 
@@ -272,11 +285,14 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: {
-        processRequests: {
-          sleep_a_while: { inputs: { duration: 123 }, outputs: {} },
+      updates: [
+        {
+          path: ["processRequests"],
+          value: {
+            sleep_a_while: { inputs: { duration: 123 }, outputs: {} },
+          },
         },
-      },
+      ],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -294,7 +310,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "": { items: [{ label: "x" }] } },
+      updates: [{ path: [], value: { items: [{ label: "x" }] } }],
     });
 
     expect(listener).toHaveBeenCalledOnce();
@@ -310,7 +326,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "processRequests",
+      path: ["processRequests"],
       value: {
         sleep_a_while: { inputs: { duration: 123 }, outputs: {} },
       },
@@ -329,14 +345,14 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "items[1].label",
+      path: ["items", 1, "label"],
       value: "bar",
     });
 
     transport._triggerMessage({
       type: "action_result",
       call_id: "abc",
-      updates: { "items[1]": { id: 1, label: "Test 2" } },
+      updates: [{ path: ["items", 1], value: { id: 1, label: "Test 2" } }],
     });
 
     expect(store.get(["items", 1, "label"])).toBe("Test 2");
@@ -352,7 +368,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "count",
+      path: ["count"],
       value: 1,
     });
 
@@ -366,7 +382,7 @@ describe("StoreImpl", () => {
     store.provide(["count"]);
 
     expect(transport.send).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "get", path: "count" }),
+      expect.objectContaining({ type: "get", path: ["count"] }),
     );
   });
 
@@ -377,7 +393,7 @@ describe("StoreImpl", () => {
     store.provide([]);
 
     expect(transport.send).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "get", path: "" }),
+      expect.objectContaining({ type: "get", path: [] }),
     );
   });
 
@@ -390,7 +406,7 @@ describe("StoreImpl", () => {
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "set",
-        path: "count",
+        path: ["count"],
         value: 3,
       }),
     );
@@ -405,7 +421,7 @@ describe("StoreImpl", () => {
     expect(transport.send).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "set",
-        path: "",
+        path: [],
         value: { count: 3 },
       }),
     );
@@ -421,7 +437,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "set_result",
       call_id: sentMsg.call_id,
-      updates: { count: 3 },
+      updates: [{ path: ["count"], value: 3 }],
     });
 
     await expect(promise).resolves.toBeUndefined();
@@ -451,7 +467,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "count",
+      path: ["count"],
       value: 42,
     });
     transport.send.mockClear();
@@ -479,7 +495,7 @@ describe("StoreImpl", () => {
     transport._triggerMessage({
       type: "get_result",
       call_id: "1",
-      path: "count",
+      path: ["count"],
       value: 1,
     });
     transport.send.mockClear();

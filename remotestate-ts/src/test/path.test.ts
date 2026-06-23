@@ -1,8 +1,10 @@
 import { describe, expect, it, expectTypeOf } from "vitest";
 import {
   isPrefixPath,
+  pathsOverlap,
   formatPath,
   getPathAt,
+  getRelativePath,
   normalizePath,
   parsePath,
   setPathAt,
@@ -240,5 +242,42 @@ describe("isPrefixPath", () => {
     expect(isPrefixPath([1, 2, 3], [1, 2, 4, 6])).toBe(false);
     expect(isPrefixPath(["a", "b", "c"], ["a", "b"])).toBe(false);
     expect(isPrefixPath(["a", "b"], ["a"])).toBe(false);
+  });
+});
+
+describe("pathsOverlap", () => {
+  it("yields true for equal paths and prefixes in either direction", () => {
+    expect(pathsOverlap([], [])).toBe(true);
+    expect(pathsOverlap([], ["items", 0])).toBe(true);
+    expect(pathsOverlap(["items"], ["items", 0, "label"])).toBe(true);
+    expect(pathsOverlap(["items", 0, "label"], ["items"])).toBe(true);
+    expect(pathsOverlap(["items", 0], ["items", 0])).toBe(true);
+  });
+
+  it("yields false for siblings and partial segment matches", () => {
+    expect(pathsOverlap(["items", 0], ["items", 1])).toBe(false);
+    expect(pathsOverlap(["x", "y"], ["x", "yz"])).toBe(false);
+    expect(pathsOverlap(["user"], ["items"])).toBe(false);
+  });
+});
+
+describe("getRelativePath", () => {
+  it("returns the remaining path segments when the prefix matches", () => {
+    expect(getRelativePath([], ["items", 0, "label"])).toEqual([
+      "items",
+      0,
+      "label",
+    ]);
+    expect(getRelativePath(["items"], ["items", 0, "label"])).toEqual([
+      0,
+      "label",
+    ]);
+    expect(getRelativePath(["items", 0], ["items", 0])).toEqual([]);
+  });
+
+  it("returns null when the prefix does not match", () => {
+    expect(getRelativePath(["items", 1], ["items", 0, "label"])).toBeNull();
+    expect(getRelativePath(["items", 0, "label"], ["items", 0])).toBeNull();
+    expect(getRelativePath(["x", "y"], ["x", "yz"])).toBeNull();
   });
 });

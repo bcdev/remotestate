@@ -11,6 +11,9 @@
   when no path is passed.
 - `Store.set()` now uses a dedicated store `set` protocol message and receives
   `set_result` updates instead of dispatching a service action named `set`.
+- The WebSocket protocol now carries normalized path arrays instead of path
+  strings. Store update results now use `[{path, value}]` entries instead of
+  path-to-value objects.
 - Updated the transport-backed store cache so root subscriptions overlap all
   descendant updates, root updates materialize cached descendants, and leaf
   updates can patch cached root snapshots.

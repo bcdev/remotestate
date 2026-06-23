@@ -1,6 +1,32 @@
+from collections.abc import Sequence
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
+
+from .path import Path, PathSegmentInput, normalize_path
+
+
+def _normalize_protocol_path(path: Sequence[PathSegmentInput]) -> Path:
+    if isinstance(path, str):
+        raise ValueError("RemoteState protocol paths must be arrays of segments")
+    try:
+        return normalize_path(path)
+    except TypeError as e:
+        raise ValueError(str(e)) from e
+
+
+ProtocolPath = Annotated[Path, BeforeValidator(_normalize_protocol_path)]
+
+
+class StateUpdate(BaseModel):
+    """One changed store value."""
+
+    path: ProtocolPath
+    """Normalized path into the store's state."""
+
+    value: Any
+    """The JSON value at ``path``."""
+
 
 # ----------------------------------------------------
 # JS --> Python
@@ -16,8 +42,8 @@ class GetMessage(BaseModel):
     call_id: str
     """An internal get-ID."""
 
-    path: str
-    """Path into store's state using a simplified JSON-Path format."""
+    path: ProtocolPath
+    """Normalized path into the store's state."""
 
 
 class SetMessage(BaseModel):
@@ -29,8 +55,8 @@ class SetMessage(BaseModel):
     call_id: str
     """An internal set-ID."""
 
-    path: str
-    """Path into store's state using a simplified JSON-Path format."""
+    path: ProtocolPath
+    """Normalized path into the store's state."""
 
     value: Any
     """New value to assign at ``path``."""
@@ -101,8 +127,8 @@ class GetResultMessage(BaseModel):
     call_id: str
     """An internal get-ID."""
 
-    path: str
-    """Path into store's state using a simplified JSON-Path format."""
+    path: ProtocolPath
+    """Normalized path into the store's state."""
 
     value: Any
     """The JSON value of the state value."""
@@ -117,8 +143,8 @@ class ActionResultMessage(BaseModel):
     call_id: str
     """An internal action-ID."""
 
-    updates: dict[str, Any]
-    """Mapping from state paths to changed state values. May be empty."""
+    updates: list[StateUpdate]
+    """Changed state values. May be empty."""
 
 
 class SetResultMessage(BaseModel):
@@ -130,8 +156,8 @@ class SetResultMessage(BaseModel):
     call_id: str
     """An internal set-ID."""
 
-    updates: dict[str, Any]
-    """Mapping from state paths to changed state values."""
+    updates: list[StateUpdate]
+    """Changed state values."""
 
 
 class QueryResultMessage(BaseModel):

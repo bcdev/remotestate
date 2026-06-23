@@ -7,9 +7,9 @@ from html import escape
 from typing import Any, Generic, TypeVar, cast
 
 from .context import _call_context
-from .path import Path, PathInput, PathSegment, format_path, normalize_path
+from .path import Path, PathInput, PathSegment, normalize_path
 
-type PendingUpdates = dict[str, Any]
+type PendingUpdates = dict[Path, Any]
 type DefaultFactory = Callable[[Path], Any]
 T = TypeVar("T")
 
@@ -126,24 +126,23 @@ class Store(Generic[T]):
         if ctx is not None and ctx.readonly:
             raise PermissionError("query methods cannot mutate store")
 
-        parsed = normalize_path(path)
+        norm_path = normalize_path(path)
         self._state = cast(
             T,
             _set_at(
                 self._state,
-                parsed,
+                norm_path,
                 value,
                 default_factory=self._default_factory,
             ),
         )
 
         pending = _batch_context.get()
-        update_path = format_path(parsed)
-        update_value = _serialize(_get_at(self._state, parsed, require=False))
+        update_value = _serialize(_get_at(self._state, norm_path, require=False))
         if pending is not None:
-            pending[update_path] = update_value
+            pending[norm_path] = update_value
         else:
-            self._notify({update_path: update_value})
+            self._notify({norm_path: update_value})
 
     def subscribe(
         self, callback: Callable[[PendingUpdates], None]

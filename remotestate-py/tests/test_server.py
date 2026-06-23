@@ -13,6 +13,7 @@ from remotestate.protocol import (
     ActionResultMessage,
     QueryMessage,
     QueryResultMessage,
+    StateUpdate,
 )
 from remotestate.server import Server, WebSocketTransport
 from remotestate.service import Service, action, query
@@ -73,7 +74,7 @@ def test_external_store_set_broadcasts_update(server):
     sent = server._transport.send_nowait.call_args[0][0]
     assert isinstance(sent, SetResultMessage)
     assert sent.call_id == "store_update"
-    assert sent.updates == {"count": 7}
+    assert sent.updates == [StateUpdate(path=("count",), value=7)]
 
 
 @pytest.mark.asyncio
@@ -104,7 +105,7 @@ async def test_transport_broadcast_to_all_connections():
     ws2 = AsyncMock()
     transport._connections = {ws1, ws2}
 
-    msg = GetResultMessage(call_id="1", path="count", value=0)
+    msg = GetResultMessage(call_id="1", path=("count",), value=0)
     await transport.send(msg)
 
     ws1.send_text.assert_called_once_with(msg.model_dump_json())
@@ -120,7 +121,7 @@ async def test_transport_removes_dead_connections():
     live_ws = AsyncMock()
     transport._connections = {dead_ws, live_ws}
 
-    msg = GetResultMessage(call_id="1", path="count", value=0)
+    msg = GetResultMessage(call_id="1", path=("count",), value=0)
     await transport.send(msg)
 
     assert dead_ws not in transport._connections
@@ -154,7 +155,7 @@ async def test_dispatch_get(server):
     sent = []
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
-    await server._dispatch(GetMessage(call_id="abc", path="count"))
+    await server._dispatch(GetMessage(call_id="abc", path=("count",)))
 
     assert len(sent) == 1
     assert isinstance(sent[0], GetResultMessage)
@@ -176,7 +177,7 @@ async def test_dispatch_call_action(server):
     assert server._store.get("count") == 1
     assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].call_id == "abc"
-    assert "count" in sent[0].updates
+    assert StateUpdate(path=("count",), value=1) in sent[0].updates
 
 
 @pytest.mark.asyncio
@@ -195,7 +196,10 @@ async def test_dispatch_action_batches_store_updates(server):
     assert len(sent) == 1
     assert isinstance(sent[0], ActionResultMessage)
     assert sent[0].call_id == "abc"
-    assert sent[0].updates == {"count": 7, "user.name": "Klaus"}
+    assert sent[0].updates == [
+        StateUpdate(path=("count",), value=7),
+        StateUpdate(path=("user", "name"), value="Klaus"),
+    ]
 
 
 @pytest.mark.asyncio
@@ -204,13 +208,13 @@ async def test_dispatch_set(server):
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
     server._transport.send_nowait = MagicMock()
 
-    await server._dispatch(SetMessage(call_id="abc", path="count", value=7))
+    await server._dispatch(SetMessage(call_id="abc", path=("count",), value=7))
 
     assert len(sent) == 1
     assert server._store.get("count") == 7
     assert isinstance(sent[0], SetResultMessage)
     assert sent[0].call_id == "abc"
-    assert sent[0].updates == {"count": 7}
+    assert sent[0].updates == [StateUpdate(path=("count",), value=7)]
     server._transport.send_nowait.assert_not_called()
 
 
@@ -219,12 +223,12 @@ async def test_dispatch_set_root(server):
     sent = []
     server._transport.send = AsyncMock(side_effect=lambda m: sent.append(m))
 
-    await server._dispatch(SetMessage(call_id="abc", path="", value={"count": 7}))
+    await server._dispatch(SetMessage(call_id="abc", path=(), value={"count": 7}))
 
     assert len(sent) == 1
     assert server._store.get("count") == 7
     assert isinstance(sent[0], SetResultMessage)
-    assert sent[0].updates[""] == {"count": 7}
+    assert sent[0].updates == [StateUpdate(path=(), value={"count": 7})]
 
 
 @pytest.mark.asyncio

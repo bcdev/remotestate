@@ -6,10 +6,9 @@ import type {
 import {
   getPathAt,
   formatPath,
-  parsePath,
-  makeRelativePath,
+  getRelativePath,
+  pathsOverlap,
   setPathAt,
-  isPrefixPath,
   type Path,
 } from "./path";
 import type { Store, Transport } from "./types";
@@ -18,10 +17,25 @@ import { DebugLog, getDebugLog } from "./debug";
 const ROOT_PATH: Path = [];
 
 type StoreListener = () => void;
+type CacheEntry = {
+  path: PathKey;
+  value: unknown;
+};
 type StoreSubscription = {
-  path: string;
+  path: PathKey;
   listener: StoreListener;
 };
+
+class PathKey {
+  private constructor(
+    readonly key: string,
+    readonly path: Path,
+  ) {}
+
+  static from(path: Path): PathKey {
+    return new PathKey(formatPath(path), [...path]);
+  }
+}
 
 /**
  * Transport-backed reactive store cache.
@@ -30,13 +44,12 @@ type StoreSubscription = {
  * invalidation updates, and notifies listeners when related paths change.
  */
 export class StoreImpl implements Store {
-  private cache: Map<string, unknown> = new Map();
+  private cache: Map<string, CacheEntry> = new Map();
   // Paths that came directly from the backend may satisfy provide().
   // Materialized ancestors are useful snapshots, but still need a full fetch.
   private authoritativePaths: Set<string> = new Set();
   private listeners: Set<StoreSubscription> = new Set();
-  private pendingFetches: Set<string> = new Set();
-  private parsedPaths: Map<string, Path> = new Map();
+  private pendingFetches: Map<string, PathKey> = new Map();
   private readonly unsubscribeTransport: () => void;
   private readonly debugLog: DebugLog;
 
@@ -68,7 +81,7 @@ export class StoreImpl implements Store {
    * @returns The cached value, or `undefined` if the path is not cached.
    */
   get(path: Path = ROOT_PATH): unknown {
-    return this.cache.get(formatPath(path));
+    return this.cache.get(formatPath(path))?.value;
   }
 
   /**
@@ -96,7 +109,7 @@ export class StoreImpl implements Store {
       this.transport.send({
         type: "set",
         call_id: callId,
-        path: formatPath(path),
+        path: [...path],
         value,
       });
     });
@@ -108,18 +121,18 @@ export class StoreImpl implements Store {
    * @param path The parsed state path to provide.
    */
   provide(path: Path): void {
-    const pathKey = formatPath(path);
+    const pathKey = PathKey.from(path);
     if (
-      this.authoritativePaths.has(pathKey) ||
-      this.pendingFetches.has(pathKey)
+      this.authoritativePaths.has(pathKey.key) ||
+      this.pendingFetches.has(pathKey.key)
     ) {
       return;
     }
-    this.pendingFetches.add(pathKey);
+    this.pendingFetches.set(pathKey.key, pathKey);
     this.transport.send({
       type: "get",
       call_id: crypto.randomUUID(),
-      path: pathKey,
+      path: [...pathKey.path],
     });
   }
 
@@ -131,7 +144,7 @@ export class StoreImpl implements Store {
    * @returns A function that unregisters the listener.
    */
   subscribe(path: Path, listener: StoreListener): () => void {
-    const subscription = { listener, path: formatPath(path) };
+    const subscription = { listener, path: PathKey.from(path) };
     this.listeners.add(subscription);
     return () => {
       this.listeners.delete(subscription);
@@ -146,107 +159,103 @@ export class StoreImpl implements Store {
     this.listeners.clear();
     this.cache.clear();
     this.authoritativePaths.clear();
-    this.parsedPaths.clear();
+    this.pendingFetches.clear();
   }
 
   private _onGetResult(msg: GetResultMessage): void {
-    this._applyUpdate(msg.path, msg.value);
-    this.pendingFetches.delete(msg.path);
-    this._notify([msg.path]);
+    const path = PathKey.from(msg.path);
+    this._applyUpdate(path, msg.value);
+    this.pendingFetches.delete(path.key);
+    this._notify([path]);
   }
 
   private _onUpdateResult(msg: ActionResultMessage | SetResultMessage): void {
-    const changedPaths = Object.keys(msg.updates);
-    for (const [path, value] of Object.entries(msg.updates)) {
+    const updates = msg.updates.map(({ path, value }) => ({
+      path: PathKey.from(path),
+      value,
+    }));
+    for (const { path, value } of updates) {
       this._applyUpdate(path, value);
     }
-    this._notify(changedPaths);
+    this._notify(updates.map((update) => update.path));
   }
 
-  private _applyUpdate(path: string, value: unknown): void {
-    this.cache.set(path, value);
-    this.authoritativePaths.add(path);
-    const parsedPath = this._getParsedPath(path);
+  private _applyUpdate(path: PathKey, value: unknown): void {
+    this.cache.set(path.key, { path, value });
+    this.authoritativePaths.add(path.key);
 
-    for (const relatedPath of this._getRelatedPaths(path)) {
-      if (relatedPath === path) {
+    for (const relatedPath of this._getRelatedPaths(path).values()) {
+      if (relatedPath.key === path.key) {
         continue;
       }
 
-      const relatedSegments = this._getParsedPath(relatedPath);
-
-      if (isPrefixPath(relatedSegments, parsedPath)) {
+      const relativePath = getRelativePath(relatedPath.path, path.path);
+      if (relativePath !== null) {
         // A subscribed/cached ancestor changed through a leaf update.
         // Build or patch that parent snapshot so React sees a new value.
-        const relativePath = makeRelativePath(relatedSegments, parsedPath);
-        this.cache.set(
-          relatedPath,
-          setPathAt(this.cache.get(relatedPath), relativePath, value),
-        );
-      } else if (isPrefixPath(parsedPath, relatedSegments)) {
+        this.cache.set(relatedPath.key, {
+          path: relatedPath,
+          value: setPathAt(
+            this.cache.get(relatedPath.key)?.value,
+            relativePath,
+            value,
+          ),
+        });
+        continue;
+      }
+
+      const relatedRelativePath = getRelativePath(path.path, relatedPath.path);
+      if (relatedRelativePath !== null) {
         // A subscribed/cached descendant changed through a parent update.
         // Its value is fully known because it is contained in this update.
-        const relativePath = makeRelativePath(parsedPath, relatedSegments);
-        this.cache.set(relatedPath, getPathAt(value, relativePath));
-        this.authoritativePaths.add(relatedPath);
+        this.cache.set(relatedPath.key, {
+          path: relatedPath,
+          value: getPathAt(value, relatedRelativePath),
+        });
+        this.authoritativePaths.add(relatedPath.key);
       }
     }
   }
 
-  private _notify(changedPaths: Iterable<string>): void {
+  private _notify(changedPaths: Iterable<PathKey>): void {
     const paths = [...changedPaths];
     if (paths.length === 0) {
       return;
     }
 
-    this.debugLog("Values changed for paths:", paths);
+    this.debugLog(
+      "Values changed for paths:",
+      paths.map((path) => path.path),
+    );
 
     for (const { listener, path } of this.listeners) {
-      if (paths.some((changedPath) => pathsOverlap(path, changedPath))) {
+      if (
+        paths.some((changedPath) => pathsOverlap(path.path, changedPath.path))
+      ) {
         listener();
       }
     }
   }
 
-  private _getParsedPath(path: string): Path {
-    const cached = this.parsedPaths.get(path);
-    if (cached) {
-      return cached;
-    }
-    const parsedPath = parsePath(path);
-    this.parsedPaths.set(path, parsedPath);
-    return parsedPath;
-  }
-
-  private _getRelatedPaths(path: string): Set<string> {
+  private _getRelatedPaths(path: PathKey): Map<string, PathKey> {
     // Existing cache entries, active subscriptions, and pending fetches can all
     // produce snapshots that useSyncExternalStore compares after notification.
-    const relatedPaths = new Set(this.cache.keys());
-    for (const { path: listenerPath } of this.listeners) {
-      if (pathsOverlap(path, listenerPath)) {
-        relatedPaths.add(listenerPath);
+    const relatedPaths = new Map<string, PathKey>();
+    for (const entry of this.cache.values()) {
+      if (pathsOverlap(path.path, entry.path.path)) {
+        relatedPaths.set(entry.path.key, entry.path);
       }
     }
-    for (const pendingPath of this.pendingFetches) {
-      if (pathsOverlap(path, pendingPath)) {
-        relatedPaths.add(pendingPath);
+    for (const subscription of this.listeners) {
+      if (pathsOverlap(path.path, subscription.path.path)) {
+        relatedPaths.set(subscription.path.key, subscription.path);
+      }
+    }
+    for (const pendingPath of this.pendingFetches.values()) {
+      if (pathsOverlap(path.path, pendingPath.path)) {
+        relatedPaths.set(pendingPath.key, pendingPath);
       }
     }
     return relatedPaths;
   }
-}
-
-function pathsOverlap(left: string, right: string): boolean {
-  return isPathPrefix(left, right) || isPathPrefix(right, left);
-}
-
-function isPathPrefix(prefix: string, path: string): boolean {
-  if (prefix === "") {
-    return true;
-  }
-  if (prefix === path) {
-    return true;
-  }
-  const next = path[prefix.length];
-  return path.startsWith(prefix) && (next === "." || next === "[");
 }
