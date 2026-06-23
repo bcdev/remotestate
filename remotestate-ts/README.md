@@ -80,14 +80,18 @@ The public TypeScript API is exported from `remotestate`:
 - `RemoteStateProvider`
 - `useRemoteStateClient`
 - `useRemoteStore`
-- `useRemoteTaskStore`
 - `useRemoteStateValue`
 - `useRemoteState`
+
+The `remotestate` module also exports an optional task monitoring API:
+
+- `useRemoteTaskStore`
 - `useRemoteTask`
 - `useRemoteTasks`
 - `createRemoteTaskStore`
 - `TaskStoreImpl`
-- `remotestate/path` for low-level path helpers and types
+
+The `remotestate/path` module is dedicated to low-level path helpers and types.
 
 ## Remote Client
 
