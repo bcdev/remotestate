@@ -1,3 +1,9 @@
+## Version 0.3.1
+
+- Relaxed remotestate Python library dependencies:
+  - fastapi >=0.136,<1
+  - uvicorn >=0.46,<1
+
 ## Version 0.3.0
 
 - Relaxed the shared path grammar so the empty string addresses the root value

@@ -1,6 +1,6 @@
 [project]
 name = "remotestate"
-version = "0.3.1.dev0"
+version = "0.3.1"
 authors = [{name = "forman"}]
 description = "Python state, React UI."
 readme = "README.md"
@@ -9,9 +9,9 @@ license = {text = "MIT"}
 license-files = ["LICENSE"]
 requires-python = ">= 3.12"
 dependencies = [
-  "fastapi>=0.136,<0.137",
+  "fastapi>=0.136,<1",
   "pydantic>=2,<3",
-  "uvicorn>=0.46,<0.47"
+  "uvicorn>=0.46,<1"
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
