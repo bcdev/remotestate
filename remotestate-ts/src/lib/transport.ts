@@ -44,7 +44,7 @@ export class TransportImpl implements Transport {
       this.reconnectDelay = RECONNECT_DELAY_MS;
       // flush pending requests
       for (const msg of this.pendingRequests) {
-        this.ws.send(JSON.stringify(msg));
+        this.ws.send(stringifyMessage(msg));
       }
       this.pendingRequests = [];
     };
@@ -91,7 +91,7 @@ export class TransportImpl implements Transport {
     // Use literal 1 instead of WebSocket.OPEN — the constant may not be
     // available in all environments (e.g. jsdom in tests).
     if (this.ws?.readyState === 1) {
-      this.ws.send(JSON.stringify(msg));
+      this.ws.send(stringifyMessage(msg));
     } else {
       this.pendingRequests.push(msg);
     }
@@ -118,4 +118,12 @@ export class TransportImpl implements Transport {
     this.closed = true;
     this.ws?.close();
   }
+}
+
+function stringifyMessage(msg: IncomingMessage): string {
+  return JSON.stringify(msg, normalizeJsonValue);
+}
+
+function normalizeJsonValue(_key: string, value: unknown): unknown {
+  return value === undefined ? null : value;
 }
