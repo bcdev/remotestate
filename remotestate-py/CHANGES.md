@@ -1,3 +1,7 @@
+## Version 0.3.2
+
+- Fixed issue in TypeScript library. (#42)
+
 ## Version 0.3.1
 
 - Relaxed remotestate Python library dependencies:
