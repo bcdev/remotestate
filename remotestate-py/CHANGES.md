@@ -1,3 +1,9 @@
+## Version 0.3.1
+
+- Relaxed remotestate dependencies:
+  - fastapi >=0.136,<1
+  - uvicorn >=0.46,<1
+
 ## Version 0.3.0
 
 - `Store` now accepts any root state value, exposes it through the typed
