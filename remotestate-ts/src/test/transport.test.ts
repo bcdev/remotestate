@@ -45,6 +45,27 @@ describe("TransportImpl", () => {
     expect(lastMockWs.send).toHaveBeenCalledOnce();
   });
 
+  it("serializes undefined values as null instead of dropping the field", () => {
+    const transport = new TransportImpl("ws://localhost:9753/ws");
+    lastMockWs.readyState = 1; // OPEN
+
+    transport.send({
+      type: "set",
+      call_id: "1",
+      path: ["count"],
+      value: undefined,
+    });
+
+    expect(lastMockWs.send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: "set",
+        call_id: "1",
+        path: ["count"],
+        value: null,
+      }),
+    );
+  });
+
   it("queues messages when not yet connected", () => {
     const transport = new TransportImpl("ws://localhost:9753/ws");
     lastMockWs.readyState = 0; // CONNECTING

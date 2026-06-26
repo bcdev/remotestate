@@ -1,3 +1,8 @@
+## Version 0.3.2 (in development)
+
+- Fixed WebSocket serialization so store `set` messages with `undefined`
+  values preserve the required `value` field by sending JSON `null`. (#42)
+
 ## Version 0.3.1
 
 - Relaxed remotestate Python library dependencies:

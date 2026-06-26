@@ -1,6 +1,6 @@
 {
   "name": "remotestate",
-  "version": "0.3.1",
+  "version": "0.3.2-dev.0",
   "description": "Python state, React UI.",
   "type": "module",
   "main": "./dist/remotestate.js",
