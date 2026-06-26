@@ -1,6 +1,6 @@
 [project]
 name = "remotestate"
-version = "0.3.1"
+version = "0.3.2"
 authors = [{name = "forman"}]
 description = "Python state, React UI."
 readme = "README.md"

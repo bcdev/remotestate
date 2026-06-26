@@ -1,4 +1,4 @@
-## Version 0.3.2 (in development)
+## Version 0.3.2
 
 - Fixed WebSocket serialization so store `set` messages with `undefined`
   values preserve the required `value` field by sending JSON `null`. (#42)
