@@ -1,6 +1,6 @@
 ## Version 0.3.1
 
-- Relaxed remotestate dependencies:
+- Relaxed remotestate Python library dependencies:
   - fastapi >=0.136,<1
   - uvicorn >=0.46,<1
 
