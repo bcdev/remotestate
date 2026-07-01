@@ -1,16 +1,16 @@
-# remotestate/store.py
 from __future__ import annotations
 
 from collections.abc import Callable
 from contextvars import ContextVar
 from html import escape
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, Protocol, TypeVar, cast
 
 from .context import _call_context
 from .path import Path, PathInput, PathSegment, normalize_path
 
 type PendingUpdates = dict[Path, Any]
 type DefaultFactory = Callable[[Path], Any]
+
 T = TypeVar("T")
 
 
@@ -49,7 +49,7 @@ class Store(Generic[T]):
         return self._state
 
     @property
-    def at(self) -> _StoreAt:
+    def at(self) -> StoreAt:
         """Notebook-friendly path accessor for setting nested values.
 
         The accessor builds paths through attribute and item access, then writes
@@ -176,8 +176,18 @@ class Store(Generic[T]):
             self._notify(pending)
 
 
-class _StoreAt:
-    """Path-building proxy returned by ``Store.at``."""
+class StoreAt(Protocol):
+    """Path-building proxy protocol as returned by ``Store.at``."""
+
+    def __getitem__(self, key: str) -> StoreAt: ...
+    def __setitem__(self, key: str, value: Any) -> None: ...
+
+    def __getattr__(self, name: str) -> StoreAt: ...
+    def __setattr__(self, name: str, value: Any) -> None: ...
+
+
+class _StoreAt(StoreAt):
+    """Path-building proxy implementation returned by ``Store.at``."""
 
     _path: Path
     _store: Store[Any]
@@ -190,15 +200,15 @@ class _StoreAt:
         object.__setattr__(self, "_store", store)
         object.__setattr__(self, "_path", path)
 
-    def __getattr__(self, segment: str) -> _StoreAt:
-        if segment.startswith("_"):
-            raise AttributeError(segment)
-        return _StoreAt(self._store, (*self._path, segment))
+    def __getattr__(self, name: str) -> _StoreAt:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return _StoreAt(self._store, (*self._path, name))
 
-    def __setattr__(self, segment: str, value: Any) -> None:
-        if segment.startswith("_"):
-            raise AttributeError(segment)
-        self._store.set((*self._path, segment), value)
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith("_"):
+            raise AttributeError(name)
+        self._store.set((*self._path, name), value)
 
     def __getitem__(self, segment: PathSegment) -> _StoreAt:
         return _StoreAt(self._store, (*self._path, segment))

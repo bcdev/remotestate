@@ -1,3 +1,10 @@
+## Version 0.3.3 (in development)
+
+- Improved usability of the Python `Store` class:
+  - Introduced public protocol `StoreAt` now returned 
+    from `Store.at` instead of internal `_StoreAt` type. 
+  
+
 ## Version 0.3.2
 
 - Fixed issue in TypeScript library. (#42)
