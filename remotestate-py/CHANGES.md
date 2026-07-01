@@ -3,6 +3,8 @@
 - Improved usability of the Python `Store` class:
   - Introduced public protocol `StoreAt` now returned 
     from `Store.at` instead of internal `_StoreAt` type. 
+  - Added `StoreAt.value` read-only property to access the value
+    of a node returned by `Store.at`.
   
 
 ## Version 0.3.2

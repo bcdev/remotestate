@@ -179,11 +179,17 @@ class Store(Generic[T]):
 class StoreAt(Protocol):
     """Path-building proxy protocol as returned by ``Store.at``."""
 
+    @property
+    def value(self) -> Any: ...
+
     def __getattr__(self, name: str) -> StoreAt: ...
     def __setattr__(self, name: str, value: Any) -> None: ...
 
     def __getitem__(self, segment: PathSegment) -> StoreAt: ...
     def __setitem__(self, segment: PathSegment, value: Any) -> None: ...
+
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
 
 
 class _StoreAt(StoreAt):
@@ -199,6 +205,10 @@ class _StoreAt(StoreAt):
     def __init__(self, store: Store[Any], path: Path = ()) -> None:
         object.__setattr__(self, "_store", store)
         object.__setattr__(self, "_path", path)
+
+    @property
+    def value(self) -> Any:
+        return self._store.get(self._path)
 
     def __getattr__(self, name: str) -> _StoreAt:
         if name.startswith("_"):
@@ -216,20 +226,20 @@ class _StoreAt(StoreAt):
     def __setitem__(self, segment: PathSegment, value: Any) -> None:
         self._store.set((*self._path, segment), value)
 
+    def __str__(self) -> str:
+        return str(self.value)
+
     def __repr__(self) -> str:
-        return repr(self._value())
+        return repr(self.value)
 
     def _repr_html_(self) -> str:
-        return f"<pre>{escape(repr(self._value()))}</pre>"
+        return f"<pre>{escape(repr(self.value))}</pre>"
 
     def _repr_pretty_(self, printer: Any, cycle: bool) -> None:
         if cycle:
             printer.text("...")
             return
-        printer.pretty(self._value())
-
-    def _value(self) -> Any:
-        return self._store.get(self._path)
+        printer.pretty(self.value)
 
 
 def _set_or_append_segment(
