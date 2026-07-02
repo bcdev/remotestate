@@ -5,11 +5,10 @@
     from `Store.at` instead of internal `_StoreAt` type. 
   - Added `StoreAt.value` read-only property to access the value
     of a node returned by `Store.at`.
-  
 
 ## Version 0.3.2
 
-- Fixed issue in TypeScript library. (#42)
+- Fixed issue in remotestate TypeScript library. (#42)
 
 ## Version 0.3.1
 
