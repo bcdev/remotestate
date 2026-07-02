@@ -1,3 +1,7 @@
+## Version 0.3.3 (in development)
+
+- Improved usability of the Python `Store` class.
+    
 ## Version 0.3.2
 
 - Fixed WebSocket serialization so store `set` messages with `undefined`

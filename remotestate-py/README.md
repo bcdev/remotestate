@@ -64,15 +64,13 @@ rs.serve(CounterService(), ui_dist="my-ui/dist")
 
 The public Python API is exported from `remotestate`:
 
-- `Store`
-- `Service`
-- `ServeResult`
-- `action`
-- `query`
+- `Store` and `StoreAt`
+- `Service` and `ServeResult`
+- `action` and `query`
 - `serve`
 - `path`
 
-## Store
+## Store and StoreAt
 
 `Store(initial, *, default_factory=None)` holds the Python-side application state.
 
@@ -87,8 +85,10 @@ The public Python API is exported from `remotestate`:
 - `set(path, value)` writes a value and notifies subscribers
 - `store[path]` and `store[path] = value` are notebook-friendly aliases for
   `get()` and `set()`
-- `store.at.some.path = value` is notebook-friendly sugar for nested
-  `set()` calls; use item syntax for keys that are not valid identifiers
+- `store.at` returns a notebook-friendly accessor of type `StoreAt`
+  for nested state variables using item or attribute syntax
+- `store.at.some.path = value` for example executes nested
+  `set()` calls; use item syntax for arrays or keys that are not valid identifiers
 - `subscribe(callback)` receives batched path-to-value updates after changes flush
 - `default_factory` can materialize missing parents while setting nested values
 
