@@ -74,10 +74,7 @@ class ServeResult:
             return escaped
 
         body = "".join(
-            "<tr>"
-            f"<th>{escape(label)}</th>"
-            f"<td>{format_value(value, is_url)}</td>"
-            "</tr>"
+            f"<tr><th>{escape(label)}</th><td>{format_value(value, is_url)}</td></tr>"
             for label, value, is_url in rows
         )
         return (
