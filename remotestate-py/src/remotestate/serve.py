@@ -6,6 +6,7 @@ import time
 import webbrowser
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from html import escape
 from typing import Any, Literal, TypeGuard
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -55,6 +56,36 @@ class ServeResult:
         _stop_server(self.server)
         _wait_for_port_free(self.host, self.port, timeout=timeout)
         _servers.pop(self.registry_key, None)
+
+    def _repr_html_(self) -> str:
+        rows = [
+            ("Host", self.host, False),
+            ("Port", self.port, False),
+            ("Server URL", self.server_url, True),
+            ("WebSocket URL", self.ws_url, True),
+            ("UI Base URL", self.ui_base_url, True),
+            ("UI URL", self.ui_url, True),
+        ]
+
+        def format_value(value: object, is_url: bool) -> str:
+            escaped = escape(str(value))
+            if is_url:
+                return f'<a href="{escaped}">{escaped}</a>'
+            return escaped
+
+        body = "".join(
+            "<tr>"
+            f"<th>{escape(label)}</th>"
+            f"<td>{format_value(value, is_url)}</td>"
+            "</tr>"
+            for label, value, is_url in rows
+        )
+        return (
+            "<table>"
+            "<thead><tr><th>Field</th><th>Value</th></tr></thead>"
+            f"<tbody>{body}</tbody>"
+            "</table>"
+        )
 
 
 Display = DisplayMode | Callable[[ServeResult], None]

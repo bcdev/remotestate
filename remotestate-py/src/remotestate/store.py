@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from contextvars import ContextVar
 from html import escape
@@ -238,8 +239,8 @@ class _StoreAt(StoreAt):
     def _repr_pretty_(self, printer: Any, cycle: bool) -> None:
         if cycle:
             printer.text("...")
-            return
-        printer.pretty(self.value)
+        else:
+            printer.pretty(self.value)
 
 
 def _set_or_append_segment(
