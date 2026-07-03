@@ -5,6 +5,9 @@
     from `Store.at` instead of internal `_StoreAt` type. 
   - Added `StoreAt.value` read-only property to access the value
     of a node returned by `Store.at`.
+  
+- The Python `ServeResult` class now renders as a HTML table in notebooks.
+
 
 ## Version 0.3.2
 
