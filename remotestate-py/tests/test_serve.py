@@ -9,12 +9,52 @@ import pytest
 
 # noinspection PyProtectedMember
 from remotestate.serve import (
+    ServeResult,
     _add_ui_url_params,
     _get_cell_id,
     _get_display_mode,
     _in_jupyter,
     _wait_for_port_free,
 )
+
+
+# --- ServeResult ---
+
+
+def test_serve_result_html_repr_shows_relevant_fields():
+    result = ServeResult(
+        host="local<host>",
+        port=50733,
+        server_url="http://local<host>:50733",
+        ws_url="ws://local<host>:50733/ws",
+        ui_base_url="http://localhost:5173/app?mode=<dev>",
+        ui_url="http://localhost:5173/app?mode=<dev>&ws=ws://local<host>:50733/ws",
+        app=MagicMock(),
+        server=MagicMock(),
+        thread=MagicMock(),
+        registry_key="cell-1",
+    )
+
+    assert result._repr_html_() == (
+        "<table>"
+        "<thead><tr><th>Field</th><th>Value</th></tr></thead>"
+        "<tbody>"
+        "<tr><th>Host</th><td>local&lt;host&gt;</td></tr>"
+        "<tr><th>Port</th><td>50733</td></tr>"
+        '<tr><th>Server URL</th><td><a href="http://local&lt;host&gt;:50733">'
+        "http://local&lt;host&gt;:50733</a></td></tr>"
+        '<tr><th>WebSocket URL</th><td><a href="ws://local&lt;host&gt;:50733/ws">'
+        "ws://local&lt;host&gt;:50733/ws</a></td></tr>"
+        '<tr><th>UI Base URL</th><td><a href="http://localhost:5173/app?mode=&lt;dev&gt;">'
+        "http://localhost:5173/app?mode=&lt;dev&gt;</a></td></tr>"
+        "<tr><th>UI URL</th>"
+        '<td><a href="http://localhost:5173/app?mode=&lt;dev&gt;&amp;ws=ws://local&lt;host&gt;:50733/ws">'
+        "http://localhost:5173/app?mode=&lt;dev&gt;&amp;ws=ws://local&lt;host&gt;:50733/ws"
+        "</a></td></tr>"
+        "</tbody>"
+        "</table>"
+    )
+
 
 # --- _in_jupyter ---
 

@@ -97,6 +97,12 @@ def test_get_index_out_of_bounds_require(simple_store):
         simple_store.get("items[99]", require=True)
 
 
+def test_get_with_at_and_value(simple_store):
+    assert simple_store.at.value == simple_store.state
+    assert simple_store.at.user.value == {"name": "Norman", "age": 42}
+    assert simple_store.at.user.age.value == 42
+
+
 def test_get_pydantic(pydantic_store):
     assert pydantic_store.get("user.name") == "Norman"
 
@@ -161,6 +167,12 @@ def test_set_with_at_accessor(simple_store):
     assert simple_store.get("items[0].label") == "x"
 
 
+def test_set_with_at_and_value(simple_store):
+    with pytest.raises(AttributeError, match="value"):
+        # noinspection PyPropertyAccess
+        simple_store.at.user.age.value = 137
+
+
 def test_set_with_at_accessor_item_keys():
     store = Store({"items.with.dot": {"get": "old"}})
 
@@ -179,6 +191,10 @@ def test_set_with_at_accessor_notifies_exact_path(simple_store):
     assert updates == {("items", 0, "label"): "new"}
 
 
+def test_at_accessor_str_shows_value(simple_store):
+    assert str(simple_store.at.items[0].label) == "foo"
+
+
 def test_at_accessor_repr_shows_value(simple_store):
     assert repr(simple_store.at.items[0].label) == "'foo'"
 
@@ -186,15 +202,17 @@ def test_at_accessor_repr_shows_value(simple_store):
 def test_at_accessor_pretty_repr_shows_value(simple_store):
     printer = MagicMock()
 
+    # noinspection PyCallingNonCallable
     simple_store.at.items[0].label._repr_pretty_(printer, cycle=False)
 
     printer.pretty.assert_called_once_with("foo")
 
 
 def test_at_accessor_html_repr_shows_escaped_value():
-    store = Store({"value": "<tag>"})
+    store = Store({"x": "<tag>"})
 
-    assert store.at.value._repr_html_() == "<pre>&#x27;&lt;tag&gt;&#x27;</pre>"
+    # noinspection PyCallingNonCallable
+    assert store.at.x._repr_html_() == "<pre>&#x27;&lt;tag&gt;&#x27;</pre>"
 
 
 def test_set_pydantic(pydantic_store):

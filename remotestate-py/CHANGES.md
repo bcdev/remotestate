@@ -1,6 +1,17 @@
+## Version 0.3.3 (in development)
+
+- Improved usability of the Python `Store` class:
+  - Introduced public protocol `StoreAt` now returned 
+    from `Store.at` instead of internal `_StoreAt` type. 
+  - Added `StoreAt.value` read-only property to access the value
+    of a node returned by `Store.at`.
+  
+- The Python `ServeResult` class now renders as a HTML table in notebooks.
+
+
 ## Version 0.3.2
 
-- Fixed issue in TypeScript library. (#42)
+- Fixed issue in remotestate TypeScript library. (#42)
 
 ## Version 0.3.1
 
