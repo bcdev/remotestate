@@ -1,4 +1,4 @@
-## Version 0.3.3 (in development)
+## Version 0.3.3
 
 - Improved usability of the Python `Store` class.
     
