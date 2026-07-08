@@ -34,10 +34,9 @@ class Store(Generic[T]):
                 value is supported, including mappings, lists, and scalars.
             default_factory: Optional callable used by ``set()`` to
                 create missing intermediate path values. It receives the
-                missing prefix path as a ``Path`` tuple, such as one
-                containing ``"user"`` or ``0`` segments.
-                If omitted, missing parents raise the same ``KeyError``,
-                ``IndexError``, or ``AttributeError`` as before.
+                missing prefix path as a ``Path`` tuple, such as ``("users", 3)``.
+                If omitted, a missing parent will raise either a ``KeyError``,
+                ``IndexError``, or ``AttributeError``.
         """
         self._state = initial
         self._default_factory = default_factory
@@ -195,8 +194,8 @@ class StoreAt(Protocol):
 class _StoreAt(StoreAt):
     """Path-building proxy implementation returned by ``Store.at``."""
 
-    _path: Path
     _store: Store[Any]
+    _path: Path
 
     # Only these names are real attributes; all other attributes are path segments.
     # It prevents silently and accidentally created attributes.
@@ -208,6 +207,7 @@ class _StoreAt(StoreAt):
 
     @property
     def value(self) -> Any:
+        """The store's value at the current path location."""
         return self._store.get(self._path)
 
     def __getattr__(self, name: str) -> _StoreAt:
