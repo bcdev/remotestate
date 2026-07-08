@@ -20,13 +20,10 @@ jobs:
           manifest-path: remotestate-py/pyproject.toml
           locked: true
 
-      - name: Lint
-        run: pixi run lint
+      - name: Checks
+        run: pixi run checks
 
-      - name: Typecheck
-        run: pixi run mypy
-
-      - name: Test
+      - name: Tests
         run: pixi run tests
 
   typescript-library:

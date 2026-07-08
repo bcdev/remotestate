@@ -141,6 +141,7 @@ async def test_get_and_set_are_available_for_custom_service_methods(store):
 
 def test_notify_method_name_is_reserved():
     with pytest.raises(TypeError, match="conflicts with a reserved"):
+
         class BadNotifyService(Service):
             @action
             async def notify(self):
