@@ -2,8 +2,8 @@
 import socket
 import threading
 import time
-from urllib.parse import parse_qs, urlsplit
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -16,7 +16,6 @@ from remotestate.serve import (
     _in_jupyter,
     _wait_for_port_free,
 )
-
 
 # --- ServeResult ---
 

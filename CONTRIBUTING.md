@@ -24,16 +24,14 @@ you touch.
 ```bash
 cd remotestate-py
 pixi install
-pixi run lint
-pixi run mypy
+pixi run checks
 pixi run tests
 ```
 
-Useful additional commands:
+Useful additional command:
 
 ```bash
 pixi run format
-pixi run isort
 ```
 
 ### TypeScript library

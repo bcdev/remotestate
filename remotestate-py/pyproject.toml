@@ -1,6 +1,6 @@
 [project]
 name = "remotestate"
-version = "0.3.3"
+version = "0.3.4.dev0"
 authors = [{name = "forman"}]
 description = "Python state, React UI."
 readme = "README.md"
@@ -65,8 +65,21 @@ remotestate = { path = ".", editable = true }
 
 [tool.pixi.tasks]
 build = "python -m build"
-format = "ruff format src"
-isort = "isort src"
-lint = "ruff check src"
+isort = "isort src tests"
+jl = "jupyter-lab"
 mypy = "mypy src"
+ruff-check = "ruff check src tests"
+ruff-format = "ruff format src tests"
 tests = "pytest tests"
+
+[tool.pixi.tasks.checks]
+depends-on = [
+  "ruff-check",
+  "mypy",
+]
+
+[tool.pixi.tasks.format]
+depends-on = [
+  "isort",
+  "ruff-format",
+]

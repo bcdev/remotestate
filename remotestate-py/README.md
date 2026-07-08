@@ -30,11 +30,9 @@ pixi add remotestate
 - Python `>= 3.12`
 - from the package directory: `cd remotestate-py`
 - install dependencies with `pixi install`
-- run tests with `pixi run tests`
-- lint with `pixi run lint`
 - format with `pixi run format`
-- reorder imports with `pixi run isort`
-- type-check with `pixi run mypy`
+- run checks with `pixi run checks`
+- run tests with `pixi run tests`
 - build a wheel with `pixi run build`
 
 ## Quick Start
