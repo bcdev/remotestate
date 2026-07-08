@@ -5,14 +5,14 @@ from fastapi import FastAPI
 
 from remotestate.protocol import (
     ActionMessage,
+    ActionResultMessage,
     ErrorMessage,
     GetMessage,
     GetResultMessage,
-    SetMessage,
-    SetResultMessage,
-    ActionResultMessage,
     QueryMessage,
     QueryResultMessage,
+    SetMessage,
+    SetResultMessage,
     StateUpdate,
 )
 from remotestate.server import Server, WebSocketTransport

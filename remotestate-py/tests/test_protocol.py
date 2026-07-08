@@ -4,12 +4,12 @@ import pytest
 from pydantic import TypeAdapter
 
 from remotestate.protocol import (
-    IncomingMessage,
+    ActionMessage,
     GetMessage,
+    IncomingMessage,
+    OutgoingMessage,
     SetMessage,
     SetResultMessage,
-    OutgoingMessage,
-    ActionMessage,
     StateUpdate,
 )
 
@@ -40,9 +40,7 @@ def test_set_result():
             "call_id": "x",
             "updates": [{"path": ["count"], "value": 7}],
         }
-    ) == SetResultMessage(
-        call_id="x", updates=[StateUpdate(path=("count",), value=7)]
-    )
+    ) == SetResultMessage(call_id="x", updates=[StateUpdate(path=("count",), value=7)])
 
 
 def test_rejects_legacy_string_path():

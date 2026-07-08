@@ -1,9 +1,9 @@
-import remotestate as rs
 import pytest
 
+import remotestate as rs
 from remotestate.path import (
-    from_jsonpath,
     format_path,
+    from_jsonpath,
     normalize_path,
     normalize_path_segment,
     parse_path,
