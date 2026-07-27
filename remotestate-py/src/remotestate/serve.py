@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 import webbrowser
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from html import escape
 from typing import Any, Literal, TypeGuard
@@ -101,6 +101,7 @@ def serve(
     ui_dist: PathLike | StaticFiles | None = None,
     mounts: dict[str, PathLike | StaticFiles] | None = None,
     app: FastAPI | None = None,
+    cors_origins: Sequence[str] = (),
     display: Display = "auto",
     width: int | str = DEFAULT_NOTEBOOK_WIDTH,
     height: int | str = DEFAULT_NOTEBOOK_HEIGHT,
@@ -122,6 +123,12 @@ def serve(
         app: A FastAPI instance to use. If not provided,
             a new instance is created and passed to `Service._init_app(app)`
             so that it can be initialized by the user.
+        cors_origins: Origins allowed to make cross-origin HTTP requests. CORS is
+            disabled by default. Configured origins may use all HTTP methods and
+            request headers.
+            May also include wildcard "*", which permits HTTP requests from any origin.
+            This is suitable only for intentionally public, unauthenticated endpoints;
+            it does not allow browser-managed credentials.
         display: Controls how the UI is shown after the server starts.
             Use "auto" to render inline in notebooks and open a browser
             otherwise, "browser", "notebook", "none", or a callback that accepts
@@ -155,7 +162,12 @@ def serve(
         server_url=server_url,
     )
 
-    rs_server = Server(service=service, mounts=mounts_, app=app)
+    rs_server = Server(
+        service=service,
+        mounts=mounts_,
+        app=app,
+        cors_origins=cors_origins,
+    )
 
     uvicorn_settings.update(host=host, port=port)
     if "log_config" not in uvicorn_settings:

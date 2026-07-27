@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import TypeAdapter
+from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import PathLike
 
 from .context import _suppress_store_broadcast
@@ -42,12 +43,22 @@ class Server:
         *,
         mounts: dict[str, PathLike | StaticFiles] | None = None,
         app: FastAPI | None = None,
+        cors_origins: Sequence[str] = (),
     ) -> None:
         self._store = service.store
         self._service = service
         self._transport = WebSocketTransport()
         self._unsubscribe_store = self._store.subscribe(self._broadcast_store_update)
         self._app = app if app is not None else FastAPI()
+        if cors_origins:
+            self._app.add_middleware(
+                CORSMiddleware,
+                allow_origins=list(cors_origins),
+                allow_methods=["*"],
+                allow_headers=["*"],
+                # do not allow browser-managed credentials
+                allow_credentials=False,
+            )
         self._init_app(mounts)
         if app is None:
             # noinspection PyProtectedMember
