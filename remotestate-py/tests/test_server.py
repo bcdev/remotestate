@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from remotestate.protocol import (
     ActionMessage,
@@ -63,6 +64,52 @@ def test_configure_app_called(server):
     service = server.service
     assert hasattr(service, "the_app")
     assert isinstance(service.the_app, FastAPI)
+
+
+def test_cors_allows_configured_origin(service):
+    server = Server(service, cors_origins=["https://ui.example.com"])
+    client = TestClient(server.app)
+
+    response = client.get("/missing", headers={"Origin": "https://ui.example.com"})
+
+    assert response.headers["access-control-allow-origin"] == "https://ui.example.com"
+    assert response.headers["vary"] == "Origin"
+
+
+def test_cors_handles_preflight_for_configured_origin(service):
+    server = Server(service, cors_origins=["https://ui.example.com"])
+    client = TestClient(server.app)
+
+    response = client.options(
+        "/missing",
+        headers={
+            "Origin": "https://ui.example.com",
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "X-Client-Version",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://ui.example.com"
+    assert "PATCH" in response.headers["access-control-allow-methods"]
+    assert response.headers["access-control-allow-headers"] == "X-Client-Version"
+
+
+def test_cors_does_not_allow_unconfigured_origins(service):
+    server = Server(service, cors_origins=["https://ui.example.com"])
+    client = TestClient(server.app)
+
+    response = client.get("/missing", headers={"Origin": "https://other.example.com"})
+
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_cors_is_disabled_by_default(server):
+    client = TestClient(server.app)
+
+    response = client.get("/missing", headers={"Origin": "https://ui.example.com"})
+
+    assert "access-control-allow-origin" not in response.headers
 
 
 def test_external_store_set_broadcasts_update(server):

@@ -163,13 +163,15 @@ creates one.
 
 ## Serving
 
-`serve(service, *, ui_dist, mounts, app, display, width, height, host, port, **uvicorn_settings)` 
+`serve(service, *, ui_dist, mounts, app, cors_origins, display, width, height, host, port, **uvicorn_settings)`
 starts the RemoteState server and connects it to a frontend bundle.
 
 - `service` is a `Service` instance
 - `ui_dist` can be a local React build directory or an HTTP(S) URL
 - `mounts` adds additional static paths
 - `app` lets you supply your own FastAPI app
+- `cors_origins` optionally allows browser HTTP requests from specified origins;
+  cross-origin HTTP access is disabled by default
 - `display` controls how the UI is shown: `"auto"`, `"browser"`, `"notebook"`, `"none"`, or a callback
 - `host` and `port` configure the backend server
 
@@ -185,6 +187,21 @@ print("Server URL:    ", result.server_url)
 print("WebSocket URL: ", result.ws_url)
 print("UI Base URL:   ", result.ui_base_url)
 ```
+
+### Cross-origin access
+
+When the frontend is hosted on a different origin, explicitly allow that origin:
+
+```python
+rs.serve(
+    CounterService(),
+    ui_dist="https://ui.example.com",
+    cors_origins=["https://ui.example.com"],
+)
+```
+
+Only list origins you trust. `cors_origins` enables all HTTP methods and request
+headers for the listed origins, while leaving CORS disabled for every other origin.
 
 ## Paths
 

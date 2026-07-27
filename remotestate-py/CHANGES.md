@@ -1,3 +1,9 @@
+## Version 0.3.4 (in development)
+
+- Added opt-in CORS configuration through the `cors_origins` 
+  argument to `serve()`. (#49)
+
+
 ## Version 0.3.3
 
 - Improved usability of the Python `Store` class:
