@@ -1,13 +1,13 @@
 [project]
 name = "remotestate"
-version = "0.3.4.dev1"
+version = "0.3.4"
 authors = [{name = "forman"}]
 description = "Python state, React UI."
 readme = "README.md"
 keywords = ["python", "state", "react", "ui", "jupyter"]
 license = {text = "MIT"}
 license-files = ["LICENSE"]
-requires-python = ">= 3.12"
+requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.136,<1",
   "pydantic>=2,<3",
@@ -18,10 +18,9 @@ classifiers = [
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 urls = { Homepage = "https://github.com/bcdev/remotestate", Issues = "https://github.com/bcdev/remotestate/issues", Repository = "https://github.com/bcdev/remotestate"}
@@ -45,6 +44,7 @@ channels = ["conda-forge"]
 platforms = ["win-64", "linux-64", "osx-arm64"]
 
 [tool.pixi.dependencies]
+python = ">=3.12"
 # library dependencies
 fastapi = ">=0.136.1,<0.137"
 pydantic = ">=2.13.3,<3"
