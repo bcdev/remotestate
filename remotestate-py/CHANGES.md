@@ -1,4 +1,4 @@
-## Version 0.3.4 (in development)
+## Version 0.3.4
 
 - Added opt-in CORS configuration through the `cors_origins` 
   argument to `serve()`. (#49)
